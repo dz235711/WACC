@@ -33,3 +33,24 @@ builds your WACC compiler. Currently running 'make' will call
 `wacc-compiler`
 in the root directory of the project. If this doesn't work for whatever reason, there are a few
 different alternatives you can try in the makefile. **Do not use the makefile as you're working, it's for labts/CI!**
+
+# Contribution guidelines
+
+Commit messages should be of the form `tag:description`. These tags could be any of the following:
+- `feat`
+- `chore`
+- `ci`
+- `refactor`
+- `perf`
+- `fix`
+- `doc`
+The description should be imperative and lowercase, with no full-stop.
+
+Branch names should have the format `tag/description`, e.g., `feat/combinate-parsers`, where we have dashes between words (kebab case).
+
+Co-authors should be added to commits when pair-programming, in the format:
+```
+[Commit Message]
+
+Co-authored-by: [Name] <[Email]>
+```
