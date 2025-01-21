@@ -3,5 +3,7 @@
 .scala-build/
 .vscode/
 
+wacc-compiler
+
 # Intellij
 .idea/
