@@ -1,0 +1,19 @@
+default:
+  image: gumjoe/wacc-ci-scala:slim
+
+stages:
+  - build
+  - test
+
+build:
+  stage: build
+  script:
+    - scala compile .
+
+
+test:
+  stage: test
+  dependencies:
+    - build
+  script:
+    - scala test . 
