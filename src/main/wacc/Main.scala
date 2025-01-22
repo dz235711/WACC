@@ -13,7 +13,7 @@ def main(args: Array[String]): Unit = {
         val lines = source.mkString
 
         println(s"compiling ${lines.length} lines from $path")
-        parser.parse(source.mkString) match {
+        parser.parse(lines) match {
           case Success(x)   => println(s"$path = $x")
           case Failure(msg) => println(msg)
         }
