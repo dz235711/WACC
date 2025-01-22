@@ -45,6 +45,7 @@ Commit messages should be of the form `tag:description`. These tags could be any
 - `fix`
 - `doc`
 - `test`
+- `wip`
 The description should be imperative and lowercase, with no full-stop.
 
 Branch names should have the format `tag/description`, e.g., `feat/combinate-parsers`, where we have dashes between words (kebab case).
