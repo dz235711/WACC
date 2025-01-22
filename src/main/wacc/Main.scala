@@ -11,13 +11,14 @@ def main(args: Array[String]): Unit = {
       try {
         val source = io.Source.fromFile(path)
         val lines = source.mkString
-        source.close()
 
         println(s"compiling ${lines.length} lines from $path")
         parser.parse(source.mkString) match {
           case Success(x)   => println(s"$path = $x")
           case Failure(msg) => println(msg)
         }
+
+        source.close()
       } catch {
         case e: FileNotFoundException => println(s"file not found: $path")
       }
