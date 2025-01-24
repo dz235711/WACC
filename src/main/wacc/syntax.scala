@@ -3,10 +3,10 @@ package wacc
 sealed trait Type
 sealed trait PairElemType
 enum BaseType extends Type, PairElemType {
-    case Int
-    case Bool
-    case Char
-    case String
+  case Int
+  case Bool
+  case Char
+  case String
 }
 case class ArrayType(t: Type) extends Type, PairElemType
 case class PairType(t1: PairElemType, t2: PairElemType) extends Type
@@ -48,7 +48,7 @@ sealed trait LValue
 sealed trait RValue
 case class ArrayLiter(es: List[Expr]) extends RValue
 case class NewPair(e1: Expr, e2: Expr) extends RValue
-case class Fst(l: LValue)  extends LValue, RValue
+case class Fst(l: LValue) extends LValue, RValue
 case class Snd(l: LValue) extends LValue, RValue
 case class Call(v: Ident, args: List[Expr]) extends RValue
 
