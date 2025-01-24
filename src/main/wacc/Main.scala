@@ -5,6 +5,8 @@ import scala.sys.exit
 import java.io.FileNotFoundException
 
 def runFrontend(args: Array[String]): (Int, String) = {
+  println("hello WACC!")
+  
   args.headOption match {
     case Some(path) =>
       try {
