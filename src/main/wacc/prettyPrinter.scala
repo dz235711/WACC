@@ -43,8 +43,8 @@ def prettyPrintExpr(e: Expr): String =
 
     case IntLiter(x)    => x.toString()
     case BoolLiter(b)   => if b then "true" else "false"
-    case CharLiter(c)   => c.toString()
-    case StringLiter(s) => s
+    case CharLiter(c)   => "'" + c.toString() + "'"
+    case StringLiter(s) => "\"" + s + "\""
     case PairLiter      => "null"
     case Ident(v)       => v
     case ArrayElem(Ident(v), es) =>
