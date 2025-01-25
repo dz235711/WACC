@@ -3,7 +3,8 @@ package wacc
 val INDENTATION_SIZE = 2
 
 def prettyPrint(prog: Program): String = 
-  "begin\n" + prog._1.map(prettyPrintFunc(_)).mkString("\n").indent(INDENTATION_SIZE) + "\n" + prettyPrintStmt(prog._2).indent(INDENTATION_SIZE) + "\nend"
+  "begin\n" + prog._1.map(prettyPrintFunc(_)).mkString("\n").indent(INDENTATION_SIZE) 
+    + "\n" + prettyPrintStmt(prog._2).indent(INDENTATION_SIZE) + "\nend"
 
 
 def prettyPrintType(t: Type | PairElemType): String =
@@ -67,9 +68,8 @@ def prettyPrintStmt(s: Stmt): String =
   s match
     case Skip => "skip"
     case Decl(t, v, r) =>
-      prettyPrintType(t) + " " + prettyPrintExpr(
-        v
-      ) + " = " + prettyPrintLRValue(r)
+      prettyPrintType(t) + " " + prettyPrintExpr(v) 
+        + " = " + prettyPrintLRValue(r)
     case Asgn(l, r) => prettyPrintLRValue(l) + " = " + prettyPrintLRValue(r)
     case Read(l)    => "read " + prettyPrintLRValue(l)
     case Free(e)    => "free " + prettyPrintExpr(e)
