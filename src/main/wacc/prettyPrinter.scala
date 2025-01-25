@@ -2,7 +2,9 @@ package wacc
 
 val INDENTATION_SIZE = 2
 
-def prettyPrint(prog: Program): String = ???
+def prettyPrint(prog: Program): String = 
+  "begin\n" + prog._1.map(prettyPrintFunc(_)).mkString("\n").indent(INDENTATION_SIZE) + "\n" + prettyPrintStmt(prog._2).indent(INDENTATION_SIZE) + "\nend"
+
 
 def prettyPrintType(t: Type | PairElemType): String =
   t match
@@ -84,6 +86,10 @@ def prettyPrintStmt(s: Stmt): String =
       "begin\n" + prettyPrintStmt(body).indent(INDENTATION_SIZE) + "\nend"
     case Semi(s1, s2) => prettyPrintStmt(s1) + ";\n" + prettyPrintStmt(s2)
 
-def prettyPrintFunc(f: Func) = ???
+def prettyPrintFunc(f: Func): String = {
+  val Func(t, v, params, body) = f
+  prettyPrintType(t) + " " + prettyPrintExpr(v) + params.map(prettyPrintParam(_)).mkString("(", ", ", ")") + " is\n" + prettyPrintStmt(body).indent(INDENTATION_SIZE) + "\nend"
+}
 
-def prettyPrintParam(param: Param) = ???
+def prettyPrintParam(param: Param): String = 
+  prettyPrintType(param._1) + " " + prettyPrintExpr(param._2)
