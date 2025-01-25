@@ -1,5 +1,7 @@
 package wacc
 
+type Param = (Type, Ident)
+
 sealed trait Type
 sealed trait PairElemType
 enum BaseType extends Type, PairElemType {
@@ -67,6 +69,6 @@ case class While(cond: Expr, body: Stmt) extends Stmt
 case class Begin(body: Stmt) extends Stmt
 case class Semi(s1: Stmt, s2: Stmt) extends Stmt
 
-case class Func(t: Type, v: Ident, params: List[(Type, Ident)], body: Stmt)
+case class Func(t: Type, v: Ident, params: List[Param], body: Stmt)
 
 case class Program(fs: List[Func], body: Stmt)

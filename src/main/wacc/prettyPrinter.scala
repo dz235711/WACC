@@ -86,4 +86,4 @@ def prettyPrintStmt(s: Stmt): String =
 
 def prettyPrintFunc(f: Func) = ???
 
-def prettyPrintParam(param: (Type, Ident)) = ???
+def prettyPrintParam(param: Param) = ???
