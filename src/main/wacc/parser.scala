@@ -43,19 +43,19 @@ object parser {
   private lazy val paramList: Parsley[List[(Type, Ident)]] = (param <::> many("," ~> param))
   private lazy val param: Parsley[(Type, Ident)] = _type <~> ident.map(Ident.apply)
   // private def stmt(body: String): Result[String, Stmt] = ???
-  private lazy val stmt: Parsley[Stmt] = ("skip" as Skip)
-                                         | (_type, ident.map(Ident.apply), "=" ~> rvalue).zipped(Decl(_, _, _))
-                                         | (lvalue, "=" ~> rvalue).zipped(Asgn(_, _))
-                                         | "read" ~> lvalue.map(Read.apply)
-                                         | "free" ~> expr.map(Free.apply)
-                                         | "return" ~> expr.map(Return.apply)
-                                         | "exit" ~> expr.map(Exit.apply)
-                                         | "print" ~> expr.map(Print.apply)
-                                         | "println" ~> expr.map(PrintLn.apply)
-                                         | ("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi").zipped(If(_, _, _))
-                                         | ("while" ~> expr, "do" ~> stmt <~ "done").zipped(While(_, _))
-                                         | "begin" ~> stmt <~ "end"
-                                         | chain.left1(stmt)(";" as Semi.apply)
+  private lazy val stmt: Parsley[Stmt] = chain.left1(("skip" as Skip)
+                                                     | (_type, ident.map(Ident.apply), "=" ~> rvalue).zipped(Decl(_, _, _))
+                                                     | (_type, ident.map(Ident.apply), "=" ~> rvalue).zipped(Decl(_, _, _))
+                                                     | (lvalue, "=" ~> rvalue).zipped(Asgn(_, _))
+                                                     | "read" ~> lvalue.map(Read.apply)
+                                                     | "free" ~> expr.map(Free.apply)
+                                                     | "return" ~> expr.map(Return.apply)
+                                                     | "exit" ~> expr.map(Exit.apply)
+                                                     | "print" ~> expr.map(Print.apply)
+                                                     | "println" ~> expr.map(PrintLn.apply)
+                                                     | ("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi").zipped(If(_, _, _))
+                                                     | ("while" ~> expr, "do" ~> stmt <~ "done").zipped(While(_, _))
+                                                     | "begin" ~> stmt <~ "end")(";" as Semi.apply)
   private lazy val lvalue: Parsley[LValue] = ident.map(Ident.apply) 
                                            | arrayElem 
                                            | pairElem
@@ -66,8 +66,8 @@ object parser {
   private lazy val argList: Parsley[List[Expr]] = (expr <::> many("," ~> expr))
   private lazy val pairElem: Parsley[LValue] = ("fst" ~> lvalue).map(Fst.apply)
                                                | ("snd" ~> lvalue).map(Snd.apply)
-  private lazy val arrayLiter: Parsley[ArrayLiter] = ("[]" as ArrayLiter(List()))
-                                                     | ("[" ~> expr <::> many("," ~> expr)).map(ArrayLiter(_))
+  private lazy val arrayLiter: Parsley[ArrayLiter] = "[" ~> ("" as ArrayLiter(List())) 
+                                                             | (expr <::> many("," ~> expr)).map(ArrayLiter(_)) <~ "]"
   
   // private val add = (x: BigInt, y: BigInt) => x + y
   // private val sub = (x: BigInt, y: BigInt) => x - y
