@@ -50,7 +50,7 @@ object parser {
     | ("bool" as BaseType.Bool)
     | ("char" as BaseType.Char)
     | "string" as BaseType.String
-  private lazy val arrayType: Parsley[ArrayType] = ???
+  private lazy val arrayType: Parsley[ArrayType] = _type.map(ArrayType.apply) <~ "[]"
   private lazy val pairType: Parsley[PairType] =
     ("pair(" ~> pairElemType <~ ",", pairElemType <~ ")").zipped(PairType(_, _))
   private lazy val pairElemType: Parsley[PairElemType] = baseType
