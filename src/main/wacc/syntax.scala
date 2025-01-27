@@ -63,9 +63,9 @@ case class StringLiter(s: String) extends Expr
 object StringLiter extends generic.ParserBridge1[String, Expr]
 case object PairLiter extends Expr, generic.ParserBridge0[Expr]
 case class Ident(v: String) extends Expr with LValue
-object Ident extends generic.ParserBridge1[String, Expr]
+object Ident extends generic.ParserBridge1[String, Ident]
 case class ArrayElem(v: Ident, es: List[Expr]) extends Expr with LValue
-object ArrayElem extends generic.ParserBridge2[Ident, List[Expr], Expr]
+object ArrayElem extends generic.ParserBridge2[Ident, List[Expr], ArrayElem]
 case class NestedExpr(e: Expr) extends Expr
 object NestedExpr extends generic.ParserBridge1[Expr, Expr]
 

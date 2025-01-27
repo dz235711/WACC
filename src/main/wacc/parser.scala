@@ -21,7 +21,6 @@ object parser {
       StringLiter(str),
       pair ~> pure(PairLiter),
       Ident(ident),
-      ArrayElem(Ident(ident), some("[" ~> expr <~ "]")),
       "(" ~> expr <~ ")"
     )(
       Ops(Prefix)(
@@ -43,7 +42,7 @@ object parser {
       Ops(InfixR)(And <# "&&"),
       Ops(InfixR)(Or <# "||")
     )
-
+  private lazy val arrayElem: Parsley[ArrayElem] = ArrayElem(Ident(ident), some("[" ~> expr <~ "]"))
   private lazy val _type: Parsley[Type] = baseType
     | arrayType
     | pairType
@@ -99,12 +98,4 @@ object parser {
   private lazy val arrayLiter: Parsley[ArrayLiter] =
     "[" ~> (expr <::> many("," ~> expr)).map(ArrayLiter(_))
       | ("" as ArrayLiter(List())) <~ "]"
-
-  // private val add = (x: BigInt, y: BigInt) => x + y
-  // private val sub = (x: BigInt, y: BigInt) => x - y
-
-  // private lazy val expr: Parsley[BigInt] =
-  //   chain.left1(int | "(" ~> expr <~ ")")(
-  //     ("+" as add) | ("-" as sub)
-  //   )
 }
