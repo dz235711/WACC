@@ -71,13 +71,9 @@ object parser {
   private lazy val func: Parsley[Func] = Func(
     typeParser,
     Ident(ident),
-    "(" ~> paramList <~ ")",
+    "(" ~> sepBy(typeParser <~> Ident(ident), ",") <~ ")",
     "is" ~> stmt <~ "end"
   )
-  private lazy val paramList: Parsley[List[(Type, Ident)]] =
-    param <::> many("," ~> param)
-  private lazy val param: Parsley[(Type, Ident)] =
-    typeParser <~> Ident(ident)
   private lazy val stmt: Parsley[Stmt] = chain
     .left1(
       ("skip" as Skip)
@@ -99,12 +95,11 @@ object parser {
   private lazy val rvalue: Parsley[RValue] = expr
     | arrayLiter
     | "newpair(" ~> expr <~ "," ~> expr <~ ")"
+    | pairElem
     | "call" ~> Ident(ident) <~ "(" ~> argList <~ ")"
   private lazy val argList: Parsley[List[Expr]] = expr <::> many("," ~> expr)
-  private lazy val pairElem: Parsley[LValue] = ("fst" ~> Fst(lvalue))
+  private lazy val pairElem: Parsley[LValue & RValue] = ("fst" ~> Fst(lvalue))
     | ("snd" ~> Snd(lvalue))
   private lazy val arrayLiter: Parsley[ArrayLiter] =
-    "[" ~> (atomic(ArrayLiter(expr <::> many("," ~> expr))) </> ArrayLiter(
-      List()
-    )) <~ "]"
+    "[" ~> ArrayLiter(sepBy(expr, ",")) <~ "]"
 }
