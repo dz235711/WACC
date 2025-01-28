@@ -1,9 +1,9 @@
 package wacc
 
 import parsley.{Success, Failure}
-import java.io.FileNotFoundException
+import scala.sys.exit
 
-def main(args: Array[String]): Unit = {
+def runFrontend(args: Array[String]): (Int, String) = {
   println("hello WACC!")
 
   args.headOption match {
@@ -26,4 +26,12 @@ def main(args: Array[String]): Unit = {
   }
 
   println("goodbye WACC!")
+  (100, "Success!")
+}
+import java.io.FileNotFoundException
+
+def main(args: Array[String]): Unit = {
+  val (status, message) = runFrontend(args)
+  println(message)
+  exit(status)
 }
