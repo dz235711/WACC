@@ -9,10 +9,7 @@ import lexer.{int, bool, char, str, pair, ident, fully}
 
 object parser {
   def parse(input: String): Result[String, Program] = parser.parse(input)
-  private val parser = {
-    println("initialising parser")
-    fully(prog)
-  }
+  private val parser = fully(prog)
 
   private lazy val arrayElem: Parsley[ArrayElem] =
     ArrayElem(Ident(ident), some("[" ~> expr <~ "]"))
@@ -73,7 +70,7 @@ object parser {
     Ident(ident),
     "(" ~> sepBy(typeParser <~> Ident(ident), ",") <~ ")",
     "is" ~> stmt <~ "end"
-  )
+  ) //TODO: atomise
   private lazy val stmt: Parsley[Stmt] = chain
     .left1(
       ("skip" as Skip)
@@ -96,8 +93,7 @@ object parser {
     | arrayLiter
     | "newpair(" ~> expr <~ "," ~> expr <~ ")"
     | pairElem
-    | "call" ~> Ident(ident) <~ "(" ~> argList <~ ")"
-  private lazy val argList: Parsley[List[Expr]] = expr <::> many("," ~> expr)
+    | "call" ~> Ident(ident) <~ "(" ~> sepBy(expr, ",") <~ ")"
   private lazy val pairElem: Parsley[LValue & RValue] = ("fst" ~> Fst(lvalue))
     | ("snd" ~> Snd(lvalue))
   private lazy val arrayLiter: Parsley[ArrayLiter] =
