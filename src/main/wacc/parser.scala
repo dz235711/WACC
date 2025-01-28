@@ -9,18 +9,28 @@ import lexer.{int, bool, char, str, pair, ident, fully}
 
 object parser {
   def parse(input: String): Result[String, Program] = parser.parse(input)
-  private val parser = fully(prog)
+  private val parser = {
+    println("initialising parser")
+    fully(prog)
+  }
 
+  private lazy val arrayElem: Parsley[ArrayElem] =
+    ArrayElem(Ident(ident), some("[" ~> expr <~ "]"))
+
+  // Expressions
   private lazy val expr: Parsley[Expr] =
     precedence(
+      // Atoms
       IntLiter(int),
       BoolLiter(bool),
       CharLiter(char),
       StringLiter(str),
       pair ~> pure(PairLiter),
       Ident(ident),
+      arrayElem,
       "(" ~> expr <~ ")"
     )(
+      // Unary operators
       Ops(Prefix)(
         Not <# "!",
         Negate <# "-",
@@ -28,6 +38,7 @@ object parser {
         Ord <# "ord",
         Chr <# "chr"
       ),
+      // Binary operators
       Ops(InfixL)(Mult <# "*", Mod <# "%", Div <# "/"),
       Ops(InfixL)(Add <# "+", Sub <# "-"),
       Ops(InfixN)(
@@ -40,47 +51,48 @@ object parser {
       Ops(InfixR)(And <# "&&"),
       Ops(InfixR)(Or <# "||")
     )
-  private lazy val arrayElem: Parsley[ArrayElem] = ArrayElem(Ident(ident), some("[" ~> expr <~ "]"))
-  private lazy val _type: Parsley[Type] = baseType
-    | arrayType
-    | pairType
+
+  // Types
+  private lazy val typeParser: Parsley[Type] =
+    chain.postfix(baseType | pairType)(ArrayType <# "[]")
   private lazy val baseType: Parsley[BaseType] = ("int" as BaseType.Int)
     | ("bool" as BaseType.Bool)
     | ("char" as BaseType.Char)
-    | "string" as BaseType.String
-  private lazy val arrayType: Parsley[ArrayType] = ArrayType(_type) <~ "[]"
+    | ("string" as BaseType.String)
   private lazy val pairType: Parsley[PairType] =
     PairType("pair(" ~> pairElemType <~ ",", pairElemType <~ ")")
   private lazy val pairElemType: Parsley[PairElemType] = baseType
-    | arrayType
-    | "pair" as ErasedPair
+    | chain.postfix1(typeParser)(ArrayType <# "[]")
+    | ErasedPair <# "pair"
 
+  // Statements
   private lazy val prog: Parsley[Program] =
     Program("begin" ~> many(func), stmt <~ "end")
   private lazy val func: Parsley[Func] = Func(
-    _type,
+    typeParser,
     Ident(ident),
     "(" ~> paramList <~ ")",
     "is" ~> stmt <~ "end"
   )
   private lazy val paramList: Parsley[List[(Type, Ident)]] =
-    (param <::> many("," ~> param))
+    param <::> many("," ~> param)
   private lazy val param: Parsley[(Type, Ident)] =
-    _type <~> Ident(ident)
-  private lazy val stmt: Parsley[Stmt] = chain.left1(
-    ("skip" as Skip)
-      | Decl(_type, Ident(ident), "=" ~> rvalue)
-      | Asgn(lvalue, "=" ~> rvalue)
-      | "read" ~> Read(lvalue)
-      | "free" ~> Free(expr)
-      | "return" ~> Return(expr)
-      | "exit" ~> Exit(expr)
-      | "print" ~> Print(expr)
-      | "println" ~> PrintLn(expr)
-      | If("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi")
-      | While("while" ~> expr, "do" ~> stmt <~ "done")
-      | "begin" ~> stmt <~ "end"
-  )(";" as Semi.apply)
+    typeParser <~> Ident(ident)
+  private lazy val stmt: Parsley[Stmt] = chain
+    .left1(
+      ("skip" as Skip)
+        | Decl(typeParser, Ident(ident), "=" ~> rvalue)
+        | Asgn(lvalue, "=" ~> rvalue)
+        | "read" ~> Read(lvalue)
+        | "free" ~> Free(expr)
+        | "return" ~> Return(expr)
+        | "exit" ~> Exit(expr)
+        | "print" ~> Print(expr)
+        | "println" ~> PrintLn(expr)
+        | If("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi")
+        | While("while" ~> expr, "do" ~> stmt <~ "done")
+        | "begin" ~> stmt <~ "end"
+    )(Semi <# ";")
   private lazy val lvalue: Parsley[LValue] = Ident(ident)
     | arrayElem
     | pairElem
@@ -88,10 +100,11 @@ object parser {
     | arrayLiter
     | "newpair(" ~> expr <~ "," ~> expr <~ ")"
     | "call" ~> Ident(ident) <~ "(" ~> argList <~ ")"
-  private lazy val argList: Parsley[List[Expr]] = (expr <::> many("," ~> expr))
+  private lazy val argList: Parsley[List[Expr]] = expr <::> many("," ~> expr)
   private lazy val pairElem: Parsley[LValue] = ("fst" ~> Fst(lvalue))
     | ("snd" ~> Snd(lvalue))
   private lazy val arrayLiter: Parsley[ArrayLiter] =
-    "[" ~> (ArrayLiter(expr <::> many("," ~> expr))
-      | ("" as ArrayLiter(List()))) <~ "]"
+    "[" ~> (atomic(ArrayLiter(expr <::> many("," ~> expr))) </> ArrayLiter(
+      List()
+    )) <~ "]"
 }
