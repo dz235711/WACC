@@ -60,9 +60,10 @@ object parser {
   )
   private lazy val pairType: Parsley[PairType] =
     PairType("pair(" ~> pairElemType <~ ",", pairElemType <~ ")")
-  private lazy val pairElemType: Parsley[PairElemType] =
-    chain.postfix(baseType)(ArrayType <# "[]")
-      | ErasedPair <# "pair"
+  private lazy val pairElemType: Parsley[PairElemType] = choice(
+    chain.postfix(baseType)(ArrayType <# "[]"),
+    ErasedPair <# "pair"
+  )
 
   // Statements
   private lazy val prog: Parsley[Program] =
@@ -76,29 +77,37 @@ object parser {
     )
   private lazy val stmt: Parsley[Stmt] = chain
     .left1(
-      ("skip" as Skip)
-        | Decl(typeParser, Ident(ident), "=" ~> rvalue)
-        | Asgn(lvalue, "=" ~> rvalue)
-        | "read" ~> Read(lvalue)
-        | "free" ~> Free(expr)
-        | "return" ~> Return(expr)
-        | "exit" ~> Exit(expr)
-        | "print" ~> Print(expr)
-        | "println" ~> PrintLn(expr)
-        | If("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi")
-        | While("while" ~> expr, "do" ~> stmt <~ "done")
-        | "begin" ~> stmt <~ "end"
+      choice(
+        "skip" as Skip,
+        Decl(typeParser, Ident(ident), "=" ~> rvalue),
+        Asgn(lvalue, "=" ~> rvalue),
+        "read" ~> Read(lvalue),
+        "free" ~> Free(expr),
+        "return" ~> Return(expr),
+        "exit" ~> Exit(expr),
+        "print" ~> Print(expr),
+        "println" ~> PrintLn(expr),
+        If("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi"),
+        While("while" ~> expr, "do" ~> stmt <~ "done"),
+        "begin" ~> stmt <~ "end"
+      )
     )(Semi <# ";")
-  private lazy val lvalue: Parsley[LValue] = arrayElem
-    | Ident(ident)
-    | pairElem
-  private lazy val rvalue: Parsley[RValue] = expr
-    | arrayLiter
-    | "newpair(" ~> expr <~ "," ~> expr <~ ")"
-    | pairElem
-    | "call" ~> Ident(ident) <~ "(" ~> sepBy(expr, ",") <~ ")"
-  private lazy val pairElem: Parsley[LValue & RValue] = ("fst" ~> Fst(lvalue))
-    | ("snd" ~> Snd(lvalue))
+  private lazy val lvalue: Parsley[LValue] = choice(
+    arrayElem,
+    Ident(ident),
+    pairElem
+  )
+  private lazy val rvalue: Parsley[RValue] = choice(
+    expr,
+    arrayLiter,
+    "newpair(" ~> expr <~ "," ~> expr <~ ")",
+    pairElem,
+    "call" ~> Ident(ident) <~ "(" ~> sepBy(expr, ",") <~ ")"
+  )
+  private lazy val pairElem: Parsley[LValue & RValue] = choice(
+    "fst" ~> Fst(lvalue),
+    "snd" ~> Snd(lvalue)
+  )
   private lazy val arrayLiter: Parsley[ArrayLiter] =
     "[" ~> ArrayLiter(sepBy(expr, ",")) <~ "]"
 }
