@@ -6,9 +6,9 @@ import org.scalatest.matchers.should.Matchers.*
 class InvalidSyntaxerrFunctionTests extends AnyFlatSpec {
   val dir = "src/test/examples/invalid/syntaxErr/function/"
 
-  it should "pass badlyNamed.wacc" in pending /*{
+  it should "pass badlyNamed.wacc" in {
     runFrontend(Array(dir+"badlyNamed.wacc"))._1 shouldBe 100
-  }*/
+  }
 
   it should "pass badlyPlaced.wacc" in {
     runFrontend(Array(dir+"badlyPlaced.wacc"))._1 shouldBe 100

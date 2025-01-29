@@ -77,10 +77,10 @@ object lexer {
   private val lexer = Lexer(desc)
 
   val int: Parsley[Int] = lexer.lexeme.integer.decimal32
-  val bool: Parsley[Boolean] =
-    atomic(lexer.lexeme.symbol("true") as true) | atomic(
-      lexer.lexeme.symbol("false") as false
-    )
+  val bool: Parsley[Boolean] = choice(
+    lexer.lexeme.symbol("true") as true,
+    lexer.lexeme.symbol("false") as false
+  )
   val char: Parsley[Char] = lexer.lexeme.character.ascii
   val str: Parsley[String] = lexer.lexeme.string.ascii
   val pair: Parsley[Unit] = lexer.lexeme.symbol("null")

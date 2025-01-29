@@ -1,11 +1,10 @@
 package wacc
 
-import parsley.{Parsley, Result}
+import parsley.expr.*
 import parsley.quick.*
-import parsley.expr.{chain, precedence, Ops, InfixL, Prefix, InfixR, InfixN}
-
-import lexer.implicits.implicitSymbol
-import lexer.{int, bool, char, str, pair, ident, fully}
+import parsley.{Parsley, Result}
+import wacc.lexer.implicits.implicitSymbol
+import wacc.lexer.{char, *}
 
 object parser {
   def parse(input: String): Result[String, Program] = parser.parse(input)
@@ -14,7 +13,7 @@ object parser {
   private lazy val arrayElem: Parsley[ArrayElem] =
     atomic(ArrayElem(Ident(ident), some("[" ~> expr <~ "]")))
 
-  // Expressions
+  // Expressions pair(int, int)f() is ...
   private lazy val expr: Parsley[Expr] =
     precedence(
       // Atoms
@@ -51,11 +50,15 @@ object parser {
 
   // Types
   private lazy val typeParser: Parsley[Type] =
-    chain.postfix(baseType | pairType)(ArrayType <# "[]")
-  private lazy val baseType: Parsley[BaseType] = ("int" as BaseType.Int)
-    | ("bool" as BaseType.Bool)
-    | ("char" as BaseType.Char)
-    | ("string" as BaseType.String)
+    chain.postfix(
+      atomic(baseType <~ notFollowedBy(ident) <~ many(" ")) | pairType
+    )(ArrayType <# "[]")
+  private lazy val baseType: Parsley[BaseType] = choice(
+    string("int") as BaseType.Int,
+    string("bool") as BaseType.Bool,
+    string("char") as BaseType.Char,
+    string("string") as BaseType.String
+  )
   private lazy val pairType: Parsley[PairType] =
     PairType("pair(" ~> pairElemType <~ ",", pairElemType <~ ")")
   private lazy val pairElemType: Parsley[PairElemType] =
