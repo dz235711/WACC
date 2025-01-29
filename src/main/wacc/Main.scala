@@ -5,7 +5,7 @@ import scala.sys.exit
 import java.io.FileNotFoundException
 
 def runFrontend(args: Array[String]): (Int, String) = {
-  println("Hello, WACC! 👋😃👍\n")
+  val verbose = args.contains("--verbose") || args.contains("-v")
 
   args.headOption match {
     case Some(path) =>
@@ -14,18 +14,19 @@ def runFrontend(args: Array[String]): (Int, String) = {
         val lines = source.mkString
         source.close()
 
-        println("------------------------------ Input File ------------------------------")
-        println(lines)
-        println("------------------------------ /Input File ------------------------------")
+        if (verbose)
+          println("\n------------------------------ Input File ------------------------------")
+          println(lines)
+          println("------------------------------ /Input File ------------------------------\n")
         parser.parse(lines) match {
           case Success(x)   =>
-            println("\nParsed successfully! 🎉\n")
-            println("------------------------------ Pretty-Printed AST ------------------------------")
-            println(prettyPrint(x))
-            println("------------------------------ /Pretty-Printed AST ------------------------------")
-            (0, "Success!")
+            if (verbose)
+              println("\n------------------------------ Pretty-Printed AST ------------------------------")
+              println(prettyPrint(x))
+              println("------------------------------ /Pretty-Printed AST ------------------------------\n")
+            (0, "Parsed successfully! 🎉")
           case Failure(msg) =>
-            println("\nFailed to parse! 😢\n")
+            println("Failed to parse! 😢")
             (100, msg)
         }
 
@@ -37,6 +38,7 @@ def runFrontend(args: Array[String]): (Int, String) = {
 }
 
 def main(args: Array[String]): Unit = {
+  println("Hello, WACC! 👋😃👍")
   val (status, message) = runFrontend(args)
   println(message)
   exit(status)
