@@ -23,13 +23,12 @@ object parser {
       StringLiter(str),
       pair ~> pure(PairLiter),
       arrayElem,
-      Ident(ident),
+      chain.prefix(Ident(ident))(Negate <# "-"),
       "(" ~> expr <~ ")"
     )(
       // Unary operators
       Ops(Prefix)(
         Not <# "!",
-        Negate <# "-",
         Len <# "len",
         Ord <# "ord",
         Chr <# "chr"

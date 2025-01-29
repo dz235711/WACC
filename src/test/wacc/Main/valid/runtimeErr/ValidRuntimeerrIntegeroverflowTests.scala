@@ -22,13 +22,13 @@ class ValidRuntimeerrIntegeroverflowTests extends AnyFlatSpec {
     runFrontend(Array(dir+"intmultOverflow.wacc"))._1 shouldBe 0
   }
 
-  it should "pass intnegateOverflow.wacc" in pending /*{
+  it should "pass intnegateOverflow.wacc" in {
     runFrontend(Array(dir+"intnegateOverflow.wacc"))._1 shouldBe 0
-  }*/
+  }
 
-  it should "pass intnegateOverflow2.wacc" in pending /*{
+  it should "pass intnegateOverflow2.wacc" in {
     runFrontend(Array(dir+"intnegateOverflow2.wacc"))._1 shouldBe 0
-  }*/
+  }
 
   it should "pass intnegateOverflow3.wacc" in {
     runFrontend(Array(dir+"intnegateOverflow3.wacc"))._1 shouldBe 0
