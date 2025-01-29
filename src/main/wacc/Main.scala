@@ -5,7 +5,7 @@ import scala.sys.exit
 import java.io.FileNotFoundException
 
 def runFrontend(args: Array[String]): (Int, String) = {
-  println("Hello, WACC! 👋😃👍")
+  println("Hello, WACC! 👋😃👍\n")
 
   args.headOption match {
     case Some(path) =>
@@ -14,11 +14,19 @@ def runFrontend(args: Array[String]): (Int, String) = {
         val lines = source.mkString
         source.close()
 
-        println(s"compiling ${lines.length} chars from $path")
+        println("------------------------------ Input File ------------------------------")
         println(lines)
+        println("------------------------------ /Input File ------------------------------")
         parser.parse(lines) match {
-          case Success(x)   => (0, "Success!")
-          case Failure(msg) => (100, msg)
+          case Success(x)   =>
+            println("\nParsed successfully! 🎉\n")
+            println("------------------------------ Pretty-Printed AST ------------------------------")
+            println(prettyPrint(x))
+            println("------------------------------ /Pretty-Printed AST ------------------------------")
+            (0, "Success!")
+          case Failure(msg) =>
+            println("\nFailed to parse! 😢\n")
+            (100, msg)
         }
 
       } catch {
