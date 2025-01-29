@@ -13,7 +13,7 @@ object parser {
   private lazy val arrayElem: Parsley[ArrayElem] =
     atomic(ArrayElem(Ident(ident), some("[" ~> expr <~ "]")))
 
-  // Expressions pair(int, int)f() is ...
+  // Expressions
   private lazy val expr: Parsley[Expr] =
     precedence(
       // Atoms
@@ -69,8 +69,9 @@ object parser {
   private lazy val prog: Parsley[Program] =
     Program("begin" ~> many(func), stmt <~ "end")
   private lazy val func: Parsley[Func] =
-    lift3[(Type, Ident), List[(Type, Ident)], Stmt, Func](
-      (a, b, c) => Func(a._1, a._2, b, c),
+    lift3(
+      (a: (Type, Ident), b: List[(Type, Ident)], c: Stmt) =>
+        Func(a._1, a._2, b, c),
       atomic(typeParser <~> Ident(ident) <~ "("),
       sepBy(typeParser <~> Ident(ident), ",") <~ ")",
       "is" ~> stmt <~ "end"
