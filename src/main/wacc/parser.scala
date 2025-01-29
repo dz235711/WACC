@@ -90,7 +90,7 @@ object parser {
         "println" ~> PrintLn(expr),
         If("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi"),
         While("while" ~> expr, "do" ~> stmt <~ "done"),
-        "begin" ~> stmt <~ "end"
+        "begin" ~> Begin(stmt) <~ "end"
       )
     )(Semi <# ";")
   private lazy val lvalue: Parsley[LValue] = choice(
@@ -101,9 +101,9 @@ object parser {
   private lazy val rvalue: Parsley[RValue] = choice(
     expr,
     arrayLiter,
-    "newpair(" ~> expr <~ "," ~> expr <~ ")",
+    "newpair(" ~> NewPair(expr <~ ",", expr) <~ ")",
     pairElem,
-    "call" ~> Ident(ident) <~ "(" ~> sepBy(expr, ",") <~ ")"
+    "call" ~> Call(Ident(ident) <~ "(", sepBy(expr, ",")) <~ ")"
   )
   private lazy val pairElem: Parsley[LValue & RValue] = choice(
     "fst" ~> Fst(lvalue),
