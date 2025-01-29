@@ -18,16 +18,16 @@ class InvalidSyntaxerrPairsTests extends AnyFlatSpec {
     runFrontend(Array(dir+"elemOfNonPair.wacc"))._1 shouldBe 100
   }
 
-  it should "pass fstNull.wacc" in pending /*{
+  it should "pass fstNull.wacc" in {
     runFrontend(Array(dir+"fstNull.wacc"))._1 shouldBe 100
-  }*/
+  }
 
   it should "pass noNesting.wacc" in {
     runFrontend(Array(dir+"noNesting.wacc"))._1 shouldBe 100
   }
 
-  it should "pass sndNull.wacc" in pending /*{
+  it should "pass sndNull.wacc" in {
     runFrontend(Array(dir+"sndNull.wacc"))._1 shouldBe 100
-  }*/
+  }
 
 }
