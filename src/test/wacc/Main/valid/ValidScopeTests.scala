@@ -22,9 +22,9 @@ class ValidScopeTests extends AnyFlatSpec {
     runFrontend(Array(dir+"intsAndKeywords.wacc"))._1 shouldBe 0
   }
 
-  it should "pass printAllTypes.wacc" in pending /*{
+  it should "pass printAllTypes.wacc" in {
     runFrontend(Array(dir+"printAllTypes.wacc"))._1 shouldBe 0
-  }*/
+  }
 
   it should "pass scope.wacc" in {
     runFrontend(Array(dir+"scope.wacc"))._1 shouldBe 0

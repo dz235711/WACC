@@ -58,9 +58,9 @@ object parser {
     | ("string" as BaseType.String)
   private lazy val pairType: Parsley[PairType] =
     PairType("pair(" ~> pairElemType <~ ",", pairElemType <~ ")")
-  private lazy val pairElemType: Parsley[PairElemType] = baseType
-    | chain.postfix1(typeParser)(ArrayType <# "[]")
-    | ErasedPair <# "pair"
+  private lazy val pairElemType: Parsley[PairElemType] =
+    chain.postfix(baseType)(ArrayType <# "[]")
+      | ErasedPair <# "pair"
 
   // Statements
   private lazy val prog: Parsley[Program] =
