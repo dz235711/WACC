@@ -3,7 +3,7 @@ package wacc
 val INDENTATION_SIZE = 2
 
 def prettyPrint(prog: Program): String = 
-  "begin\n" + prog._1.map(prettyPrintFunc(_)).mkString("\n\n").indent(INDENTATION_SIZE) 
+  "begin" + prog._1.map(prettyPrintFunc(_)).mkString("\n\n").indent(INDENTATION_SIZE)
     + "\n" + prettyPrintStmt(prog._2).indent(INDENTATION_SIZE) + "end"
 
 
@@ -76,12 +76,12 @@ def prettyPrintStmt(s: Stmt): String =
     case Return(e)  => "return " + prettyPrintExpr(e)
     case Exit(e)    => "exit " + prettyPrintExpr(e)
     case Print(e)   => "print " + prettyPrintExpr(e)
-    case PrintLn(e) => "print " + prettyPrintExpr(e)
+    case PrintLn(e) => "println " + prettyPrintExpr(e)
     case If(cond, s1, s2) =>
       "if " + prettyPrintExpr(cond) + " then\n" + prettyPrintStmt(s1).indent(INDENTATION_SIZE) 
         + "else\n" + prettyPrintStmt(s2).indent(INDENTATION_SIZE) + "fi"
     case While(cond, body) =>
-      "while " + prettyPrintExpr(cond) + " do\n" + prettyPrintStmt(body).indent(INDENTATION_SIZE)
+      "while " + prettyPrintExpr(cond) + " do\n" + prettyPrintStmt(body).indent(INDENTATION_SIZE) + "done"
     case Begin(body) =>
       "begin\n" + prettyPrintStmt(body).indent(INDENTATION_SIZE) + "end"
     case Semi(s1, s2) => prettyPrintStmt(s1) + ";\n" + prettyPrintStmt(s2)
