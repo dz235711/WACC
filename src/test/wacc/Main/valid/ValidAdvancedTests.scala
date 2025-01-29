@@ -7,7 +7,7 @@ class ValidAdvancedTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/advanced/"
 
   it should "pass binarySortTree.wacc" in {
-    runFrontend(Array(dir + "binarySortTree.wacc"))._1 shouldBe 0
+    runFrontend(Array(dir+"binarySortTree.wacc"))._1 shouldBe 0
   }
 
   it should "pass hashTable.wacc" in {
