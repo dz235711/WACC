@@ -12,7 +12,7 @@ object parser {
   private val parser = fully(prog)
 
   private lazy val arrayElem: Parsley[ArrayElem] =
-    ArrayElem(Ident(ident), some("[" ~> expr <~ "]"))
+    atomic(ArrayElem(Ident(ident), some("[" ~> expr <~ "]")))
 
   // Expressions
   private lazy val expr: Parsley[Expr] =
@@ -23,8 +23,8 @@ object parser {
       CharLiter(char),
       StringLiter(str),
       pair ~> pure(PairLiter),
-      Ident(ident),
       arrayElem,
+      Ident(ident),
       "(" ~> expr <~ ")"
     )(
       // Unary operators
@@ -87,8 +87,8 @@ object parser {
         | While("while" ~> expr, "do" ~> stmt <~ "done")
         | "begin" ~> stmt <~ "end"
     )(Semi <# ";")
-  private lazy val lvalue: Parsley[LValue] = Ident(ident)
-    | arrayElem
+  private lazy val lvalue: Parsley[LValue] = arrayElem
+    | Ident(ident)
     | pairElem
   private lazy val rvalue: Parsley[RValue] = expr
     | arrayLiter
