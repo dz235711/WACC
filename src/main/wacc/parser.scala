@@ -3,6 +3,7 @@ package wacc
 import parsley.expr.*
 import parsley.quick.*
 import parsley.{Parsley, Result}
+import parsley.errors.combinator.*
 import wacc.lexer.implicits.implicitSymbol
 import wacc.lexer.{char, *}
 
@@ -68,6 +69,15 @@ object parser {
   // Statements
   private lazy val prog: Parsley[Program] =
     Program("begin" ~> many(func), stmt <~ "end")
+  private def endsInReturn(s: Stmt): Boolean = s match {
+    case Exit(_) => true
+    case Return(_) => true
+    case Semi(_, b) => endsInReturn(b)
+    case Begin(b) => endsInReturn(b)
+    case If(_, t, e) => endsInReturn(t) && endsInReturn(e)
+    case While(_, b) => endsInReturn(b)
+    case _ => false
+  }
   private lazy val func: Parsley[Func] =
     lift3(
       (a: (Type, Ident), b: List[(Type, Ident)], c: Stmt) =>
@@ -75,7 +85,7 @@ object parser {
       atomic(typeParser <~> Ident(ident) <~ "("),
       sepBy(typeParser <~> Ident(ident), ",") <~ ")",
       "is" ~> stmt <~ "end"
-    )
+    ).guardAgainst{ case Func(_, _, _, b) if !endsInReturn(b) => Seq("Functions must either end directly with return or with a returning block") }
   private lazy val stmt: Parsley[Stmt] = chain
     .left1(
       choice(
