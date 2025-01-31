@@ -13,10 +13,11 @@ enum BaseType extends Type, PairElemType {
   case String
 }
 case class ArrayType(t: Type) extends Type, PairElemType
-object ArrayType extends generic.ParserBridge1[Type, ArrayType]
 case class PairType(t1: PairElemType, t2: PairElemType) extends Type
-object PairType extends generic.ParserBridge2[PairElemType, PairElemType, PairType]
+
+object ArrayType extends generic.ParserBridge1[Type, ArrayType]
 object ErasedPair extends PairElemType, generic.ParserBridge0[PairElemType]
+object PairType extends generic.ParserBridge2[PairElemType, PairElemType, PairType]
 
 sealed trait Expr extends RValue
 case class Not(e: Expr) extends Expr
