@@ -22,13 +22,13 @@ class InvalidSyntaxerrFunctionTests extends AnyFlatSpec {
     runFrontend(Array(dir+"funcExpr2.wacc"))._1 shouldBe 100
   }
 
-  it should "pass functionConditionalNoReturn.wacc" in pending /*{
+  it should "pass functionConditionalNoReturn.wacc" in {
     runFrontend(Array(dir+"functionConditionalNoReturn.wacc"))._1 shouldBe 100
-  }*/
+  }
 
-  it should "pass functionEndingNotReturn.wacc" in pending /*{
+  it should "pass functionEndingNotReturn.wacc" in {
     runFrontend(Array(dir+"functionEndingNotReturn.wacc"))._1 shouldBe 100
-  }*/
+  }
 
   it should "pass functionLateDefine.wacc" in {
     runFrontend(Array(dir+"functionLateDefine.wacc"))._1 shouldBe 100
@@ -50,21 +50,21 @@ class InvalidSyntaxerrFunctionTests extends AnyFlatSpec {
     runFrontend(Array(dir+"functionMissingType.wacc"))._1 shouldBe 100
   }
 
-  it should "pass functionNoReturn.wacc" in pending /*{
+  it should "pass functionNoReturn.wacc" in {
     runFrontend(Array(dir+"functionNoReturn.wacc"))._1 shouldBe 100
-  }*/
+  }
 
-  it should "pass functionReturnInLoop.wacc" in pending /*{
+  it should "pass functionReturnInLoop.wacc" in {
     runFrontend(Array(dir+"functionReturnInLoop.wacc"))._1 shouldBe 100
-  }*/
+  }
 
   it should "pass functionScopeDef.wacc" in {
     runFrontend(Array(dir+"functionScopeDef.wacc"))._1 shouldBe 100
   }
 
-  it should "pass mutualRecursionNoReturn.wacc" in pending /*{
+  it should "pass mutualRecursionNoReturn.wacc" in {
     runFrontend(Array(dir+"mutualRecursionNoReturn.wacc"))._1 shouldBe 100
-  }*/
+  }
 
   it should "pass noBodyAfterFuncs.wacc" in {
     runFrontend(Array(dir+"noBodyAfterFuncs.wacc"))._1 shouldBe 100
