@@ -2,9 +2,12 @@ package wacc
 
 import parsley.Parsley
 import parsley.quick.*
-import parsley.token.{Basic, Lexer}
 import parsley.token.descriptions.*
 import parsley.token.symbol.ImplicitSymbol
+import parsley.token.{Basic, Lexer}
+
+val MIN_GRAPHIC_CHAR = 32
+val MAX_GRAPHIC_CHAR = 126
 
 object lexer {
   private val desc = LexicalDesc.plain.copy(
@@ -63,7 +66,11 @@ object lexer {
     ),
     textDesc = TextDesc.plain.copy(
       graphicCharacter = Basic(c =>
-        31 < c.toInt && c.toInt < 127 && !Set('\\', '\'', '"').contains(c)
+        MIN_GRAPHIC_CHAR <= c.toInt && c.toInt <= MAX_GRAPHIC_CHAR && !Set(
+          '\\',
+          '\'',
+          '"'
+        ).contains(c)
       ),
       escapeSequences = EscapeDesc.plain.copy(
         literals = Set('0', 'b', 't', 'n', 'f', 'r', '"', '\'', '\\')
