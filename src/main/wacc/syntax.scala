@@ -64,7 +64,7 @@ case class IntLiter(x: Int) extends Expr
 case class BoolLiter(b: Boolean) extends Expr
 case class CharLiter(c: Char) extends Expr
 case class StringLiter(s: String) extends Expr
-case object PairLiter extends Expr
+object PairLiter extends Expr
 case class Ident(v: String) extends Expr with LValue
 case class ArrayElem(v: Ident, es: List[Expr]) extends Expr with LValue
 case class NestedExpr(e: Expr) extends Expr
@@ -93,7 +93,7 @@ object Snd extends generic.ParserBridge1[LValue, Snd]
 object Call extends generic.ParserBridge2[Ident, List[Expr], Call]
 
 sealed trait Stmt
-case object Skip extends Stmt
+object Skip extends Stmt
 case class Decl(t: Type, v: Ident, r: RValue) extends Stmt
 case class Asgn(l: LValue, r: RValue) extends Stmt
 case class Read(l: LValue) extends Stmt
