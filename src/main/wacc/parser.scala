@@ -11,6 +11,16 @@ object parser {
   def parse(input: String): Result[String, Program] = parser.parse(input)
   private val parser = fully(prog)
 
+  // Helpers
+  private def endsInReturn(s: Stmt): Boolean = s match {
+    case Exit(_) => true
+    case Return(_) => true
+    case Semi(_, b) => endsInReturn(b)
+    case Begin(b) => endsInReturn(b)
+    case If(_, t, e) => endsInReturn(t) && endsInReturn(e)
+    case _ => false
+  }
+
   private lazy val arrayElem: Parsley[ArrayElem] =
     atomic(ArrayElem(Ident(ident), some("[" ~> expr <~ "]")))
 
@@ -70,15 +80,6 @@ object parser {
   // Statements
   private lazy val prog: Parsley[Program] =
     Program("begin" ~> many(func), stmt <~ "end")
-  private def endsInReturn(s: Stmt): Boolean = s match {
-    case Exit(_) => true
-    case Return(_) => true
-    case Semi(_, b) => endsInReturn(b)
-    case Begin(b) => endsInReturn(b)
-    case If(_, t, e) => endsInReturn(t) && endsInReturn(e)
-    case While(_, b) => endsInReturn(b)
-    case _ => false
-  }
   private lazy val func: Parsley[Func] =
     lift3(
       (a: (Type, Ident), b: List[(Type, Ident)], c: Stmt) =>
