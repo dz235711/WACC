@@ -26,7 +26,8 @@ def runFrontend(args: Array[String]): (Int, String) = {
               println("------------------------------ /Pretty-Printed AST ------------------------------\n")
             (0, "Parsed successfully! 🎉")
           case Failure(msg) =>
-            println("Failed to parse! 😢")
+            if (verbose)
+              println("Failed to parse! 😢")
             (100, msg)
         }
 

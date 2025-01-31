@@ -51,18 +51,19 @@ object parser {
   // Types
   private lazy val typeParser: Parsley[Type] =
     chain.postfix(
-      atomic(baseType <~ notFollowedBy(ident) <~ many(" ")) | pairType
-    )(ArrayType <# "[]")
+      atomic(baseType | pairType)
+    )(ArrayType <# ("[" <~> "]"))
   private lazy val baseType: Parsley[BaseType] = choice(
     string("int") as BaseType.Int,
     string("bool") as BaseType.Bool,
     string("char") as BaseType.Char,
     string("string") as BaseType.String
-  )
+  ) <~ notFollowedBy(ident) <~ many(whitespace)
   private lazy val pairType: Parsley[PairType] =
-    PairType("pair(" ~> pairElemType <~ ",", pairElemType <~ ")")
+    PairType("pair" ~> "(" ~> pairElemType <~ ",", pairElemType <~ ")")
   private lazy val pairElemType: Parsley[PairElemType] = choice(
-    chain.postfix(baseType)(ArrayType <# "[]"),
+    atomic(chain.postfix1(baseType | pairType)(ArrayType <# ("[" <~> "]"))),
+    baseType,
     ErasedPair <# "pair"
   )
 
@@ -111,7 +112,7 @@ object parser {
   private lazy val rvalue: Parsley[RValue] = choice(
     expr,
     arrayLiter,
-    "newpair(" ~> NewPair(expr <~ ",", expr) <~ ")",
+    "newpair" ~> "(" ~> NewPair(expr <~ ",", expr) <~ ")",
     pairElem,
     "call" ~> Call(Ident(ident) <~ "(", sepBy(expr, ",")) <~ ")"
   )
