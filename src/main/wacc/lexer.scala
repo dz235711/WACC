@@ -5,6 +5,7 @@ import parsley.quick.*
 import parsley.token.descriptions.*
 import parsley.token.symbol.ImplicitSymbol
 import parsley.token.{Basic, Lexer}
+import parsley.token.errors.*
 
 val MIN_GRAPHIC_CHAR = 32
 val MAX_GRAPHIC_CHAR = 126
@@ -53,7 +54,6 @@ object lexer {
         "/",
         "%",
         "+",
-        "-",
         ">",
         ">=",
         "<",
@@ -81,7 +81,30 @@ object lexer {
       integerNumbersCanBeOctal = false
     )
   )
-  private val lexer = Lexer(desc)
+
+  private val errConfig = new ErrorConfig {
+    override def labelSymbol = Map(
+      "+"   -> Label("binary operator"),
+      "*"   -> Label("binary operator"),
+      "/"   -> Label("binary operator"),
+      "%"   -> Label("binary operator"),
+      "-"   -> Label("binary operator"),
+      ">"   -> Label("binary operator"),
+      ">="  -> Label("binary operator"),
+      "<"   -> Label("binary operator"),
+      "<="  -> Label("binary operator"),
+      "=="  -> Label("binary operator"),
+      "!="  -> Label("binary operator"),
+      "&&"  -> Label("binary operator"),
+      "||"  -> Label("binary operator"),
+      "chr" -> Label("unary operator"),
+      "!"   -> Label("unary operator"),
+      "len" -> Label("unary operator"),
+      "ord" -> Label("unary operator"),
+    )
+    override def labelIntegerSignedNumber = Label("number")
+  }
+  private val lexer = Lexer(desc, errConfig)
 
   val int: Parsley[Int] = lexer.lexeme.integer.decimal32
   val bool: Parsley[Boolean] = choice(

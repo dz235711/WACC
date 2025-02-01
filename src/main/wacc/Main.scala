@@ -32,16 +32,15 @@ def runFrontend(args: Array[String]): (Int, String) = {
         }
 
       } catch {
-        case _: FileNotFoundException => (-1, s"file not found: $path")
+        case _: FileNotFoundException => (-1, s"file not found: $path 💀")
       }
-    case None => (-1, "please enter a file path")
+    case None => (-1, "please enter a file path 😡")
   }
 }
 
 def main(args: Array[String]): Unit = {
-  exit((args.head.length%3) * 100)
-//  println("Hello, WACC! 👋😃👍")
-//  val (status, message) = runFrontend(args)
-//  println(message)
-//  exit(status)
+  println("Hello, WACC! 👋😃👍")
+  val (status, message) = runFrontend(args)
+  println(message)
+  exit(status)
 }
