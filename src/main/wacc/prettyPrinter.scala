@@ -49,7 +49,6 @@ def prettyPrintExpr(e: Expr): String =
     case Ident(v)       => v
     case ArrayElem(Ident(v), es) =>
       v + es.map(prettyPrintExpr(_)).mkString("[", "][", "]")
-    case NestedExpr(e) => "(" + prettyPrintExpr(e) + ")"
 
 def prettyPrintLRValue(r: RValue | LValue): String =
   r match
