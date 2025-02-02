@@ -60,22 +60,22 @@ object NotEquals extends generic.ParserBridge2[Expr, Expr, NotEquals]
 object And extends generic.ParserBridge2[Expr, Expr, And]
 object Or extends generic.ParserBridge2[Expr, Expr, Or]
 
-case class IntLiter(x: Int) extends Expr
-case class BoolLiter(b: Boolean) extends Expr
-case class CharLiter(c: Char) extends Expr
-case class StringLiter(s: String) extends Expr
+case class IntLiter(x: Int)(val pos: (Int, Int)) extends Expr
+case class BoolLiter(b: Boolean)(val pos: (Int, Int)) extends Expr
+case class CharLiter(c: Char)(val pos: (Int, Int)) extends Expr
+case class StringLiter(s: String)(val pos: (Int, Int)) extends Expr
 object PairLiter extends Expr
-case class Ident(v: String) extends Expr with LValue
-case class ArrayElem(v: Ident, es: List[Expr]) extends Expr with LValue
-case class NestedExpr(e: Expr) extends Expr
+case class Ident(v: String)(val pos: (Int, Int)) extends Expr with LValue
+case class ArrayElem(v: Ident, es: List[Expr])(val pos: (Int, Int)) extends Expr with LValue
+case class NestedExpr(e: Expr)(val pos: (Int, Int)) extends Expr
 
-object IntLiter extends generic.ParserBridge1[Int, IntLiter]
-object BoolLiter extends generic.ParserBridge1[Boolean, BoolLiter]
-object CharLiter extends generic.ParserBridge1[Char, CharLiter]
-object StringLiter extends generic.ParserBridge1[String, StringLiter]
-object Ident extends generic.ParserBridge1[String, Ident]
-object ArrayElem extends generic.ParserBridge2[Ident, List[Expr], ArrayElem]
-object NestedExpr extends generic.ParserBridge1[Expr, NestedExpr]
+object IntLiter extends ParserBridgePos1[Int, IntLiter]
+object BoolLiter extends ParserBridgePos1[Boolean, BoolLiter]
+object CharLiter extends ParserBridgePos1[Char, CharLiter]
+object StringLiter extends ParserBridgePos1[String, StringLiter]
+object Ident extends ParserBridgePos1[String, Ident]
+object ArrayElem extends ParserBridgePos2[Ident, List[Expr], ArrayElem]
+object NestedExpr extends ParserBridgePos1[Expr, NestedExpr]
 
 sealed trait LValue
 
