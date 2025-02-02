@@ -101,11 +101,11 @@ object lexer {
       "!"   -> Label("unary operator"),
       "len" -> Label("unary operator"),
       "ord" -> Label("unary operator"),
-      "true" -> Label("bool"),
-      "false" -> Label("bool"),
+      "true" -> Label("boolean"),
+      "false" -> Label("boolean"),
     )
     override def labelIntegerSignedNumber = Label("number")
-    override def labelCharAscii = Label("char")
+    override def labelCharAscii = Label("chararacter")
     override def labelStringAscii(multi: Boolean, raw: Boolean) = Label("string")
   }
   private val lexer = Lexer(desc, errConfig)
