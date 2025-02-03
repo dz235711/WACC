@@ -87,17 +87,17 @@ object NestedExpr extends ParserBridgePos1[Expr, NestedExpr]
 sealed trait LValue
 
 sealed trait RValue
-case class ArrayLiter(es: List[Expr]) extends RValue
-case class NewPair(e1: Expr, e2: Expr) extends RValue
-case class Fst(l: LValue) extends LValue, RValue
-case class Snd(l: LValue) extends LValue, RValue
-case class Call(v: Ident, args: List[Expr]) extends RValue
+case class ArrayLiter(es: List[Expr])(val pos: (Int, Int)) extends RValue
+case class NewPair(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
+case class Fst(l: LValue)(val pos: (Int, Int)) extends LValue, RValue
+case class Snd(l: LValue)(val pos: (Int, Int)) extends LValue, RValue
+case class Call(v: Ident, args: List[Expr])(val pos: (Int, Int)) extends RValue
 
-object ArrayLiter extends generic.ParserBridge1[List[Expr], ArrayLiter]
-object NewPair extends generic.ParserBridge2[Expr, Expr, NewPair]
-object Fst extends generic.ParserBridge1[LValue, Fst]
-object Snd extends generic.ParserBridge1[LValue, Snd]
-object Call extends generic.ParserBridge2[Ident, List[Expr], Call]
+object ArrayLiter extends ParserBridgePos1[List[Expr], ArrayLiter]
+object NewPair extends ParserBridgePos2[Expr, Expr, NewPair]
+object Fst extends ParserBridgePos1[LValue, Fst]
+object Snd extends ParserBridgePos1[LValue, Snd]
+object Call extends ParserBridgePos2[Ident, List[Expr], Call]
 
 sealed trait Stmt
 object Skip extends Stmt
