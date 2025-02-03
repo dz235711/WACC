@@ -7,6 +7,11 @@ import WaccErrorItem.*
 
 import parsley.errors.tokenextractors.SingleChar
 
+private object Indents {
+  val Lines = "\t"
+  val LinesInfo = "\t\t"
+}
+
 case class WaccError(pos: (Int, Int), source: Option[String], lines: WaccErrorLines)
 
 case class WaccLineInfo(line: String, linesBefore: Seq[String], linesAfter: Seq[String], lineNum: Int, errorPointsAt: Int, errorWidth: Int)
@@ -43,8 +48,8 @@ private def printLines(lines: WaccErrorLines, sBuilder: StringBuilder): StringBu
 }
 
 private def printVanillaError(vErr: WaccErrorLines.VanillaError, sBuilder: StringBuilder): StringBuilder = {
-  if (vErr.unexpected.isDefined) sBuilder.append(s"\tUnexpected {${{extractWaccErrorItem(vErr.unexpected.get)}}}").append("\n")
-  sBuilder.append(s"\tExpected {${vErr.expecteds.map(extractWaccErrorItem).mkString(", ")}}").append("\n")
+  if (vErr.unexpected.isDefined) sBuilder.append(Indents.Lines).append(s"Unexpected {${{extractWaccErrorItem(vErr.unexpected.get)}}}").append("\n")
+  sBuilder.append(Indents.Lines).append(s"Expected {${vErr.expecteds.map(extractWaccErrorItem).mkString(", ")}}").append("\n")
   printLineInfo(vErr.lineinfo, sBuilder)
 }
 
@@ -55,14 +60,15 @@ private def extractWaccErrorItem(wErrItem: WaccErrorItem) = wErrItem match {
 }
 
 private def printSpecialisedError(sErr: WaccErrorLines.SpecialisedError, sBuilder: StringBuilder): StringBuilder = {
-  sBuilder.append("\t").append(sErr.msgs.mkString("\n"))
+  sBuilder.append(Indents.Lines).append(sErr.msgs.mkString("\n"))
   printLineInfo(sErr.lineinfo, sBuilder)
 }
 
 private def printLineInfo(lineinfo: WaccLineInfo, sBuilder: StringBuilder): StringBuilder = {
-  if (lineinfo.linesBefore.nonEmpty) sBuilder.append("\t\t").append(lineinfo.linesBefore.mkString("\n")).append("\n")
-  sBuilder.append(s"\t\t${lineinfo.line}\n${" " * lineinfo.errorPointsAt}${"^" * lineinfo.errorWidth}")
-  if (lineinfo.linesAfter.nonEmpty) sBuilder.append("\t\t").append(lineinfo.linesAfter.mkString("\n")).append("\n")
+  if (lineinfo.linesBefore.nonEmpty) sBuilder.append(Indents.LinesInfo).append(lineinfo.linesBefore.mkString("\n")).append("\n")
+  sBuilder.append(Indents.LinesInfo).append(s"${lineinfo.line}\n")
+  sBuilder.append(Indents.LinesInfo).append(s"${" " * lineinfo.errorPointsAt}${"^" * lineinfo.errorWidth}\n")
+  if (lineinfo.linesAfter.nonEmpty) sBuilder.append(Indents.LinesInfo).append(lineinfo.linesAfter.mkString("\n")).append("\n")
   sBuilder
 }
 
