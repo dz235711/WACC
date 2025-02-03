@@ -66,7 +66,7 @@ def prettyPrintLRValue(r: RValue | LValue): String =
 
 def prettyPrintStmt(s: Stmt): String =
   s match
-    case Skip => "skip"
+    case Skip() => "skip"
     case Decl(t, v, r) =>
       prettyPrintType(t) + " " + prettyPrintExpr(v) 
         + " = " + prettyPrintLRValue(r)

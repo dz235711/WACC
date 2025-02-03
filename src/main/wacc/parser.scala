@@ -91,7 +91,7 @@ object parser {
   private lazy val stmt: Parsley[Stmt] = chain
     .left1(
       choice(
-        "skip" as Skip,
+        Skip <# "skip",
         Decl(typeParser, Ident(ident), "=" ~> rvalue),
         Asgn(lvalue, "=" ~> rvalue),
         "read" ~> Read(lvalue),

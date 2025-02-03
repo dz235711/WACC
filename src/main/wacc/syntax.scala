@@ -101,7 +101,7 @@ object Snd extends ParserBridgePos1[LValue, Snd]
 object Call extends ParserBridgePos2[Ident, List[Expr], Call]
 
 sealed trait Stmt
-object Skip extends Stmt
+case class Skip()(val pos: (Int, Int)) extends Stmt
 case class Decl(t: Type, v: Ident, r: RValue)(val pos: (Int, Int)) extends Stmt
 case class Asgn(l: LValue, r: RValue)(val pos: (Int, Int)) extends Stmt
 case class Read(l: LValue)(val pos: (Int, Int)) extends Stmt
@@ -115,6 +115,7 @@ case class While(cond: Expr, body: Stmt)(val pos: (Int, Int)) extends Stmt
 case class Begin(body: Stmt)(val pos: (Int, Int)) extends Stmt
 case class Semi(s1: Stmt, s2: Stmt)(val pos: (Int, Int)) extends Stmt
 
+object Skip extends ParserBridgePos0[Skip]
 object Decl extends ParserBridgePos3[Type, Ident, RValue, Decl]
 object Asgn extends ParserBridgePos2[LValue, RValue, Asgn]
 object Read extends ParserBridgePos1[LValue, Read]
