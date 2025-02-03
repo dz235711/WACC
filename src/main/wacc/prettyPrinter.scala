@@ -17,7 +17,7 @@ def prettyPrintType(t: Type | PairElemType): String =
     case ArrayType(t) => prettyPrintType(t) + "[]"
     case PairType(t1, t2) =>
       s"pair(${prettyPrintType(t1)}, ${prettyPrintType(t2)})"
-    case ErasedPair => "pair"
+    case ErasedPair() => "pair"
 
 def prettyPrintExpr(e: Expr): String =
   e match

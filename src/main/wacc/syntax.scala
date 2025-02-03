@@ -13,17 +13,18 @@ case class BoolType()(val pos: (Int, Int)) extends BaseType
 case class CharType()(val pos: (Int, Int)) extends BaseType
 case class StringType()(val pos: (Int, Int)) extends BaseType
 
-case class ArrayType(t: Type) extends Type, PairElemType
-case class PairType(t1: PairElemType, t2: PairElemType) extends Type
+case class ArrayType(t: Type)(val pos: (Int, Int)) extends Type, PairElemType
+case class ErasedPair()(val pos: (Int, Int)) extends PairElemType
+case class PairType(t1: PairElemType, t2: PairElemType)(val pos: (Int, Int)) extends Type
 
 object IntType extends ParserBridgePos0[IntType]
 object BoolType extends ParserBridgePos0[BoolType]
 object CharType extends ParserBridgePos0[CharType]
 object StringType extends ParserBridgePos0[StringType]
 
-object ArrayType extends generic.ParserBridge1[Type, ArrayType]
-object ErasedPair extends PairElemType, generic.ParserBridge0[PairElemType]
-object PairType extends generic.ParserBridge2[PairElemType, PairElemType, PairType]
+object ArrayType extends ParserBridgePos1[Type, ArrayType]
+object ErasedPair extends ParserBridgePos0[PairElemType]
+object PairType extends ParserBridgePos2[PairElemType, PairElemType, PairType]
 
 sealed trait Expr extends RValue
 case class Not(e: Expr)(val pos: (Int, Int)) extends Expr
