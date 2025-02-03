@@ -1,24 +1,26 @@
 package wacc:
-  package ast {
+  package scopedast {
 
     import parsley.generic
 
-    type Param = (Type, Ident)
+    type Param = (SemType, Ident)
 
-    sealed trait Type
-    sealed trait PairElemType
-    enum BaseType extends Type, PairElemType {
+    sealed abstract class SemType
+    case object ? extends SemType
+    enum KnownType extends SemType {
       case Int
       case Bool
       case Char
       case String
+      case Array(ty: SemType)
+      case Pair(t1: SemType, t2: SemType) // erased pair would be Pair(?, ?)
     }
-    case class ArrayType(t: Type) extends Type, PairElemType
-    case class PairType(t1: PairElemType, t2: PairElemType) extends Type
 
-    object ArrayType extends generic.ParserBridge1[Type, ArrayType]
-    object ErasedPair extends PairElemType, generic.ParserBridge0[PairElemType]
-    object PairType extends generic.ParserBridge2[PairElemType, PairElemType, PairType]
+    case class QualifiedName(
+      val originalName: String,
+      val UID: Int,
+      val declType: ast.Type
+    )
 
     sealed trait Expr extends RValue
     case class Not(e: Expr) extends Expr
@@ -66,7 +68,7 @@ package wacc:
     case class CharLiter(c: Char) extends Expr
     case class StringLiter(s: String) extends Expr
     object PairLiter extends Expr
-    case class Ident(v: String) extends Expr with LValue
+    case class Ident(v: QualifiedName) extends Expr with LValue
     case class ArrayElem(v: Ident, es: List[Expr]) extends Expr with LValue
     case class NestedExpr(e: Expr) extends Expr
 
@@ -74,7 +76,7 @@ package wacc:
     object BoolLiter extends generic.ParserBridge1[Boolean, BoolLiter]
     object CharLiter extends generic.ParserBridge1[Char, CharLiter]
     object StringLiter extends generic.ParserBridge1[String, StringLiter]
-    object Ident extends generic.ParserBridge1[String, Ident]
+    object Ident extends generic.ParserBridge1[QualifiedName, Ident]
     object ArrayElem extends generic.ParserBridge2[Ident, List[Expr], ArrayElem]
     object NestedExpr extends generic.ParserBridge1[Expr, NestedExpr]
 
@@ -95,7 +97,7 @@ package wacc:
 
     sealed trait Stmt
     object Skip extends Stmt
-    case class Decl(t: Type, v: Ident, r: RValue) extends Stmt
+    case class Decl(t: KnownType, v: Ident, r: RValue) extends Stmt
     case class Asgn(l: LValue, r: RValue) extends Stmt
     case class Read(l: LValue) extends Stmt
     case class Free(e: Expr) extends Stmt
@@ -108,7 +110,7 @@ package wacc:
     case class Begin(body: Stmt) extends Stmt
     case class Semi(s1: Stmt, s2: Stmt) extends Stmt
 
-    object Decl extends generic.ParserBridge3[Type, Ident, RValue, Decl]
+    object Decl extends generic.ParserBridge3[KnownType, Ident, RValue, Decl]
     object Asgn extends generic.ParserBridge2[LValue, RValue, Asgn]
     object Read extends generic.ParserBridge1[LValue, Read]
     object Free extends generic.ParserBridge1[Expr, Free]
@@ -121,8 +123,8 @@ package wacc:
     object Begin extends generic.ParserBridge1[Stmt, Begin]
     object Semi extends generic.ParserBridge2[Stmt, Stmt, Semi]
 
-    case class Func(t: Type, v: Ident, params: List[Param], body: Stmt)
-    object Func extends generic.ParserBridge4[Type, Ident, List[Param], Stmt, Func]
+    case class Func(t: KnownType, v: Ident, params: List[Param], body: Stmt)
+    object Func extends generic.ParserBridge4[KnownType, Ident, List[Param], Stmt, Func]
 
     case class Program(fs: List[Func], body: Stmt)
     object Program extends generic.ParserBridge2[List[Func], Stmt, Program]
