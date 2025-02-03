@@ -64,7 +64,7 @@ case class IntLiter(x: Int)(val pos: (Int, Int)) extends Expr
 case class BoolLiter(b: Boolean)(val pos: (Int, Int)) extends Expr
 case class CharLiter(c: Char)(val pos: (Int, Int)) extends Expr
 case class StringLiter(s: String)(val pos: (Int, Int)) extends Expr
-object PairLiter extends Expr
+case class PairLiter()(val pos: (Int, Int)) extends Expr
 case class Ident(v: String)(val pos: (Int, Int)) extends Expr with LValue
 case class ArrayElem(v: Ident, es: List[Expr])(val pos: (Int, Int)) extends Expr with LValue
 case class NestedExpr(e: Expr)(val pos: (Int, Int)) extends Expr
@@ -73,6 +73,7 @@ object IntLiter extends ParserBridgePos1[Int, IntLiter]
 object BoolLiter extends ParserBridgePos1[Boolean, BoolLiter]
 object CharLiter extends ParserBridgePos1[Char, CharLiter]
 object StringLiter extends ParserBridgePos1[String, StringLiter]
+object PairLiter extends ParserBridgePos0[PairLiter]
 object Ident extends ParserBridgePos1[String, Ident]
 object ArrayElem extends ParserBridgePos2[Ident, List[Expr], ArrayElem]
 object NestedExpr extends ParserBridgePos1[Expr, NestedExpr]

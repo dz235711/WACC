@@ -45,7 +45,7 @@ def prettyPrintExpr(e: Expr): String =
     case BoolLiter(b)   => if b then "true" else "false"
     case CharLiter(c)   => "'" + c.toString() + "'"
     case StringLiter(s) => "\"" + s + "\""
-    case PairLiter      => "null"
+    case PairLiter()    => "null"
     case Ident(v)       => v
     case ArrayElem(Ident(v), es) =>
       v + es.map(prettyPrintExpr(_)).mkString("[", "][", "]")

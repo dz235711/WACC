@@ -4,6 +4,15 @@ import parsley.Parsley
 import parsley.position.pos
 import parsley.ap._
 
+trait ParserBridgePos0[+B] {
+    def apply()(pos: (Int, Int)): B
+
+    private def applyPos(pos: (Int, Int)): B = this.apply()(pos)
+
+    infix def from(op: Parsley[Any]): Parsley[B] = pos.map(applyPos) <~ op
+    infix def <#(op: Parsley[Any]): Parsley[B] = this from op
+}
+
 /**
  * Similar to PraserBridge1, except it is combined with the pos combinator for data types that require a position.
  */

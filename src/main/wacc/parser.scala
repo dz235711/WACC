@@ -32,7 +32,7 @@ object parser {
       BoolLiter(bool),
       CharLiter(char),
       StringLiter(str),
-      pair ~> pure(PairLiter),
+      PairLiter <# pair,
       arrayElem,
       chain.prefix(Ident(ident))(Negate <# "-"),
       "(" ~> expr <~ ")"
