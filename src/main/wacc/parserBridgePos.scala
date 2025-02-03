@@ -33,7 +33,7 @@ trait ParserBridgePos2[-A, -B, +C] {
 
     private def applyPos(pos: (Int, Int)): (A, B) => C = this.apply(_, _)(pos)
 
-    def apply(a: Parsley[A], b: Parsley[B]): Parsley[C] =
+    def apply(a: Parsley[A], b: =>Parsley[B]): Parsley[C] =
         ap2(pos.map(applyPos), a, b)
 
     infix def from(op: Parsley[Any]): Parsley[(A, B) => C] = pos.map(applyPos) <~ op
@@ -45,7 +45,7 @@ trait ParserBridgePos3[-A, -B, -C, +D] {
 
     private def applyPos(pos: (Int, Int)): (A, B, C) => D = this.apply(_, _, _)(pos)
 
-    def apply(a: Parsley[A], b: Parsley[B], c: Parsley[C]): Parsley[D] =
+    def apply(a: Parsley[A], b: =>Parsley[B], c: =>Parsley[C]): Parsley[D] =
         ap3(pos.map(applyPos), a, b, c)
 
     infix def from(op: Parsley[Any]): Parsley[(A, B, C) => D] = pos.map(applyPos) <~ op
@@ -56,7 +56,7 @@ trait ParserBridgePos4[-A, -B, -C, -D, +E] {
 
     private def applyPos(pos: (Int, Int)): (A, B, C, D) => E = this.apply(_, _, _, _)(pos)
 
-    def apply(a: Parsley[A], b: Parsley[B], c: Parsley[C], d: Parsley[D]): Parsley[E] =
+    def apply(a: Parsley[A], b: =>Parsley[B], c: =>Parsley[C], d: =>Parsley[D]): Parsley[E] =
         ap4(pos.map(applyPos), a, b, c, d)
     
     infix def from(op: Parsley[Any]): Parsley[(A, B, C, D) => E] = pos.map(applyPos) <~ op
