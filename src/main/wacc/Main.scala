@@ -39,9 +39,8 @@ def runFrontend(args: Array[String]): (Int, String) = {
 }
 
 def main(args: Array[String]): Unit = {
-  exit((args.head.length%3) * 100)
-//  println("Hello, WACC! 👋😃👍")
-//  val (status, message) = runFrontend(args)
-//  println(message)
-//  exit(status)
+  println("Hello, WACC! 👋😃👍")
+  val (status, message) = runFrontend(args)
+  println(message)
+  exit(status)
 }
