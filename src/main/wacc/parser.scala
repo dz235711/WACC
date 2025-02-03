@@ -94,15 +94,15 @@ object parser {
         Skip <# "skip",
         Decl(typeParser, Ident(ident), "=" ~> rvalue),
         Asgn(lvalue, "=" ~> rvalue),
-        "read" ~> Read(lvalue),
-        "free" ~> Free(expr),
-        "return" ~> Return(expr),
-        "exit" ~> Exit(expr),
-        "print" ~> Print(expr),
-        "println" ~> PrintLn(expr),
+        Read("read" ~> lvalue),
+        Free("free" ~> expr),
+        Return("return" ~> expr),
+        Exit("exit" ~> expr),
+        Print("print" ~> expr),
+        PrintLn("println" ~> expr),
         If("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi"),
         While("while" ~> expr, "do" ~> stmt <~ "done"),
-        "begin" ~> Begin(stmt) <~ "end"
+        Begin("begin" ~> stmt <~ "end")
       )
     )(Semi <# ";")
   private lazy val lvalue: Parsley[LValue] = choice(
@@ -113,14 +113,14 @@ object parser {
   private lazy val rvalue: Parsley[RValue] = choice(
     expr,
     arrayLiter,
-    "newpair" ~> "(" ~> NewPair(expr <~ ",", expr) <~ ")",
+    NewPair("newpair" ~> "(" ~> expr <~ ",", expr <~ ")"),
     pairElem,
-    "call" ~> Call(Ident(ident) <~ "(", sepBy(expr, ",")) <~ ")"
+    Call("call" ~> Ident(ident) <~ "(", sepBy(expr, ",") <~ ")") 
   )
   private lazy val pairElem: Parsley[LValue & RValue] = choice(
-    "fst" ~> Fst(lvalue),
-    "snd" ~> Snd(lvalue)
+    Fst("fst" ~> lvalue),
+    Snd("snd" ~> lvalue)
   )
   private lazy val arrayLiter: Parsley[ArrayLiter] =
-    "[" ~> ArrayLiter(sepBy(expr, ",")) <~ "]"
+    ArrayLiter("[" ~> sepBy(expr, ",") <~ "]")
 }
