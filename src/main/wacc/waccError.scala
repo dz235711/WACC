@@ -29,12 +29,44 @@ enum WaccErrorItem {
   case WaccEndOfInput
 }
 
-def printWaccError(wErr: WaccError): String = {
-  return "a"
+def printWaccError(wErr: WaccError, sBuilder: StringBuilder): StringBuilder = {
+  val pos = wErr.pos
+  sBuilder.append("Error")
+  if (wErr.source.isDefined) sBuilder.append(s" in ${wErr.source.get} ")
+  sBuilder.append(s"at ${pos._1}:${pos._2}\n")
+  printLines(wErr.lines, sBuilder)
 }
 
+private def printLines(lines: WaccErrorLines, sBuilder: StringBuilder): StringBuilder = lines match {
+  case vErr@VanillaError(_, _, _, _) => printVanillaError(vErr, sBuilder)
+  case sErr@SpecialisedError(msgs, lineinfo) => printSpecialisedError(sErr, sBuilder)
+}
 
-class WaccErrorBuilder[Error] extends ErrorBuilder[WaccError] {
+private def printVanillaError(vErr: WaccErrorLines.VanillaError, sBuilder: StringBuilder): StringBuilder = {
+  if (vErr.unexpected.isDefined) sBuilder.append(s"\tUnexpected {${{extractWaccErrorItem(vErr.unexpected.get)}}}").append("\n")
+  sBuilder.append(s"\tExpected {${vErr.expecteds.map(extractWaccErrorItem).mkString(", ")}}").append("\n")
+  printLineInfo(vErr.lineinfo, sBuilder)
+}
+
+private def extractWaccErrorItem(wErrItem: WaccErrorItem) = wErrItem match {
+  case WaccRaw(item) => item
+  case WaccNamed(item) => item
+  case WaccEndOfInput => "end of line"
+}
+
+private def printSpecialisedError(sErr: WaccErrorLines.SpecialisedError, sBuilder: StringBuilder): StringBuilder = {
+  sBuilder.append("\t").append(sErr.msgs.mkString("\n"))
+  printLineInfo(sErr.lineinfo, sBuilder)
+}
+
+private def printLineInfo(lineinfo: WaccLineInfo, sBuilder: StringBuilder): StringBuilder = {
+  if (lineinfo.linesBefore.nonEmpty) sBuilder.append("\t\t").append(lineinfo.linesBefore.mkString("\n")).append("\n")
+  sBuilder.append(s"\t\t${lineinfo.line}\n${" " * lineinfo.errorPointsAt}${"^" * lineinfo.errorWidth}")
+  if (lineinfo.linesAfter.nonEmpty) sBuilder.append("\t\t").append(lineinfo.linesAfter.mkString("\n")).append("\n")
+  sBuilder
+}
+
+class WaccErrorBuilder[Error](source: String) extends ErrorBuilder[WaccError] {
 
   override def unexpectedToken(cs: Iterable[Char], amountOfInputParserWanted: Int, lexicalError: Boolean): Token = SingleChar.unexpectedToken(cs)
 
@@ -45,7 +77,7 @@ class WaccErrorBuilder[Error] extends ErrorBuilder[WaccError] {
   override def pos(line: Int, col: Int): Position = (line, col)
 
   type Source = Option[String]
-  override def source(sourceName: Option[String]): Source = sourceName
+  override def source(sourceName: Option[String]): Source = Some(source)
 
   type ErrorInfoLines = WaccErrorLines
   override def vanillaError(unexpected: UnexpectedLine, expected: ExpectedLine, reasons: Messages, line: LineInfo): ErrorInfoLines = {

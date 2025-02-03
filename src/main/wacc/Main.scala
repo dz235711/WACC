@@ -20,7 +20,7 @@ def runFrontend(args: Array[String]): (Int, Either[String, WaccError]) = {
           println("\n------------------------------ Input File ------------------------------")
           println(lines)
           println("------------------------------ /Input File ------------------------------\n")
-        given ErrorBuilder[WaccError] = new WaccErrorBuilder
+        given ErrorBuilder[WaccError] = new WaccErrorBuilder(path)
         parser.parse(lines) match {
           case Success(x) =>
             if (verbose)
@@ -45,7 +45,7 @@ def main(args: Array[String]): Unit = {
   val (status, output) = runFrontend(args)
   output match {
     case Left(msg) => println(msg)
-    case Right(err) => printWaccError(err)
+    case Right(err) => println(printWaccError(err, new StringBuilder).result())
   }
   exit(status)
 }
