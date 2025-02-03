@@ -101,31 +101,31 @@ object Call extends ParserBridgePos2[Ident, List[Expr], Call]
 
 sealed trait Stmt
 object Skip extends Stmt
-case class Decl(t: Type, v: Ident, r: RValue) extends Stmt
-case class Asgn(l: LValue, r: RValue) extends Stmt
-case class Read(l: LValue) extends Stmt
-case class Free(e: Expr) extends Stmt
-case class Return(e: Expr) extends Stmt
-case class Exit(e: Expr) extends Stmt
-case class Print(e: Expr) extends Stmt
-case class PrintLn(e: Expr) extends Stmt
-case class If(cond: Expr, s1: Stmt, s2: Stmt) extends Stmt
-case class While(cond: Expr, body: Stmt) extends Stmt
-case class Begin(body: Stmt) extends Stmt
-case class Semi(s1: Stmt, s2: Stmt) extends Stmt
+case class Decl(t: Type, v: Ident, r: RValue)(val pos: (Int, Int)) extends Stmt
+case class Asgn(l: LValue, r: RValue)(val pos: (Int, Int)) extends Stmt
+case class Read(l: LValue)(val pos: (Int, Int)) extends Stmt
+case class Free(e: Expr)(val pos: (Int, Int)) extends Stmt
+case class Return(e: Expr)(val pos: (Int, Int)) extends Stmt
+case class Exit(e: Expr)(val pos: (Int, Int)) extends Stmt
+case class Print(e: Expr)(val pos: (Int, Int)) extends Stmt
+case class PrintLn(e: Expr)(val pos: (Int, Int)) extends Stmt
+case class If(cond: Expr, s1: Stmt, s2: Stmt)(val pos: (Int, Int)) extends Stmt
+case class While(cond: Expr, body: Stmt)(val pos: (Int, Int)) extends Stmt
+case class Begin(body: Stmt)(val pos: (Int, Int)) extends Stmt
+case class Semi(s1: Stmt, s2: Stmt)(val pos: (Int, Int)) extends Stmt
 
-object Decl extends generic.ParserBridge3[Type, Ident, RValue, Decl]
-object Asgn extends generic.ParserBridge2[LValue, RValue, Asgn]
-object Read extends generic.ParserBridge1[LValue, Read]
-object Free extends generic.ParserBridge1[Expr, Free]
-object Return extends generic.ParserBridge1[Expr, Return]
-object Exit extends generic.ParserBridge1[Expr, Exit]
-object Print extends generic.ParserBridge1[Expr, Print]
-object PrintLn extends generic.ParserBridge1[Expr, PrintLn]
-object If extends generic.ParserBridge3[Expr, Stmt, Stmt, If]
-object While extends generic.ParserBridge2[Expr, Stmt, While]
-object Begin extends generic.ParserBridge1[Stmt, Begin]
-object Semi extends generic.ParserBridge2[Stmt, Stmt, Semi]
+object Decl extends ParserBridgePos3[Type, Ident, RValue, Decl]
+object Asgn extends ParserBridgePos2[LValue, RValue, Asgn]
+object Read extends ParserBridgePos1[LValue, Read]
+object Free extends ParserBridgePos1[Expr, Free]
+object Return extends ParserBridgePos1[Expr, Return]
+object Exit extends ParserBridgePos1[Expr, Exit]
+object Print extends ParserBridgePos1[Expr, Print]
+object PrintLn extends ParserBridgePos1[Expr, PrintLn]
+object If extends ParserBridgePos3[Expr, Stmt, Stmt, If]
+object While extends ParserBridgePos2[Expr, Stmt, While]
+object Begin extends ParserBridgePos1[Stmt, Begin]
+object Semi extends ParserBridgePos2[Stmt, Stmt, Semi]
 
 case class Func(t: Type, v: Ident, params: List[Param], body: Stmt)
 object Func extends generic.ParserBridge4[Type, Ident, List[Param], Stmt, Func]
