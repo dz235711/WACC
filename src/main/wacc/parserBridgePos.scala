@@ -13,9 +13,6 @@ trait ParserBridgePos0[+B] {
     infix def <#(op: Parsley[Any]): Parsley[B] = this from op
 }
 
-/**
- * Similar to PraserBridge1, except it is combined with the pos combinator for data types that require a position.
- */
 trait ParserBridgePos1[-A, +B] {
     def apply(a: A)(pos: (Int, Int)): B
 
@@ -51,6 +48,7 @@ trait ParserBridgePos3[-A, -B, -C, +D] {
     infix def from(op: Parsley[Any]): Parsley[(A, B, C) => D] = pos.map(applyPos) <~ op
     infix def <#(op: Parsley[Any]): Parsley[(A, B, C) => D] = this from op
 }
+
 trait ParserBridgePos4[-A, -B, -C, -D, +E] {
     def apply(a: A, b: B, c: C, d: D)(pos: (Int, Int)): E
 
