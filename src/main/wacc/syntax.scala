@@ -67,7 +67,6 @@ case class StringLiter(s: String)(val pos: (Int, Int)) extends Expr
 case class PairLiter()(val pos: (Int, Int)) extends Expr
 case class Ident(v: String)(val pos: (Int, Int)) extends Expr with LValue
 case class ArrayElem(v: Ident, es: List[Expr])(val pos: (Int, Int)) extends Expr with LValue
-case class NestedExpr(e: Expr)(val pos: (Int, Int)) extends Expr
 
 object IntLiter extends ParserBridgePos1[Int, IntLiter]
 object BoolLiter extends ParserBridgePos1[Boolean, BoolLiter]
@@ -76,7 +75,6 @@ object StringLiter extends ParserBridgePos1[String, StringLiter]
 object PairLiter extends ParserBridgePos0[PairLiter]
 object Ident extends ParserBridgePos1[String, Ident]
 object ArrayElem extends ParserBridgePos2[Ident, List[Expr], ArrayElem]
-object NestedExpr extends ParserBridgePos1[Expr, NestedExpr]
 
 sealed trait LValue
 

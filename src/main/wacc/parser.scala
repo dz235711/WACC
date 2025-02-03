@@ -6,9 +6,10 @@ import parsley.{Parsley, Result}
 import parsley.errors.combinator.*
 import wacc.lexer.implicits.implicitSymbol
 import wacc.lexer.{char, *}
+import parsley.errors.ErrorBuilder
 
 object parser {
-  def parse(input: String): Result[String, Program] = parser.parse(input)
+  def parse[Err: ErrorBuilder](input: String): Result[Err, Program] = parser.parse(input)
   private val parser = fully(prog)
 
   // Helpers

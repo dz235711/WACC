@@ -5,6 +5,8 @@ import parsley.errors.*
 import WaccErrorLines.*
 import WaccErrorItem.*
 
+import parsley.errors.tokenextractors.SingleChar
+
 case class WaccError(pos: (Int, Int), source: Option[String], lines: WaccErrorLines)
 
 case class WaccLineInfo(line: String, linesBefore: Seq[String], linesAfter: Seq[String], lineNum: Int, errorPointsAt: Int, errorWidth: Int)
@@ -27,7 +29,14 @@ enum WaccErrorItem {
   case WaccEndOfInput
 }
 
-abstract class WaccErrorBuilder extends ErrorBuilder[WaccError] {
+def printWaccError(wErr: WaccError): String = {
+  return "a"
+}
+
+
+class WaccErrorBuilder[Error] extends ErrorBuilder[WaccError] {
+
+  override def unexpectedToken(cs: Iterable[Char], amountOfInputParserWanted: Int, lexicalError: Boolean): Token = SingleChar.unexpectedToken(cs)
 
   type Item = WaccErrorItem
   override def build(pos: Position, source: Source, lines: ErrorInfoLines): WaccError = WaccError(pos, source, lines)
