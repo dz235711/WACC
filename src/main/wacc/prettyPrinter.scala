@@ -9,10 +9,10 @@ def prettyPrint(prog: Program): String =
 
 def prettyPrintType(t: Type | PairElemType): String =
   t match
-    case BaseType.Int    => "int"
-    case BaseType.Bool   => "bool"
-    case BaseType.Char   => "char"
-    case BaseType.String => "string"
+    case IntType()    => "int"
+    case BoolType()   => "bool"
+    case CharType()   => "char"
+    case StringType() => "string"
 
     case ArrayType(t) => prettyPrintType(t) + "[]"
     case PairType(t1, t2) =>

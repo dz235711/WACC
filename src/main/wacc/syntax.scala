@@ -6,14 +6,20 @@ type Param = (Type, Ident)
 
 sealed trait Type
 sealed trait PairElemType
-enum BaseType extends Type, PairElemType {
-  case Int
-  case Bool
-  case Char
-  case String
-}
+sealed trait BaseType extends Type, PairElemType
+
+case class IntType()(val pos: (Int, Int)) extends BaseType
+case class BoolType()(val pos: (Int, Int)) extends BaseType
+case class CharType()(val pos: (Int, Int)) extends BaseType
+case class StringType()(val pos: (Int, Int)) extends BaseType
+
 case class ArrayType(t: Type) extends Type, PairElemType
 case class PairType(t1: PairElemType, t2: PairElemType) extends Type
+
+object IntType extends ParserBridgePos0[IntType]
+object BoolType extends ParserBridgePos0[BoolType]
+object CharType extends ParserBridgePos0[CharType]
+object StringType extends ParserBridgePos0[StringType]
 
 object ArrayType extends generic.ParserBridge1[Type, ArrayType]
 object ErasedPair extends PairElemType, generic.ParserBridge0[PairElemType]
