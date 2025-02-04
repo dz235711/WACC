@@ -148,17 +148,28 @@ class renamer {
 
   private def renameRValue(
       r: ast.RValue,
-      parentScope: Map[String, QualifiedName]
-  ): scopedast.RValue = ???
+      scope: Map[String, QualifiedName]
+  ): scopedast.RValue = r match {
+    case ast.ArrayLiter(es) => scopedast.ArrayLiter(es.map(e=>renameExpr(e, scope)))
+    case ast.NewPair(e1, e2) => scopedast.NewPair(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.Fst(l) => scopedast.Fst(renameLValue(l, scope))
+    case ast.Snd(l) => scopedast.Snd(renameLValue(l, scope))
+    case ast.Call(v, args) =>
+      if (!functionIds.contains(v.v)) {
+        // TODO: Error handling
+      }
+      scopedast.Call(scopedast.Ident(functionIds(v.v)), args.map(e=>renameExpr(e, scope)))
+    case e: ast.Expr => renameExpr(e, scope)
+  }
 
   private def renameLValue(
       l: ast.LValue,
-      parentScope: Map[String, QualifiedName]
+      scope: Map[String, QualifiedName]
   ): scopedast.LValue = ???
 
   private def renameExpr(
       e: ast.Expr,
-      parentScope: Map[String, QualifiedName]
+      scope: Map[String, QualifiedName]
   ): scopedast.Expr = ???
 
   private def renameFunc(f: ast.Func): scopedast.Func = ???
