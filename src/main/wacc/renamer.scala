@@ -6,23 +6,6 @@ class renamer {
   private var uid: Int = 0
   private var functionIds: Map[String, QualifiedName] = Map()
 
-  /** Translates between a syntactic type and a semantic type.
-   * 
-   * @param synType The syntactic type
-   * @return The semantic type
-   *  */
-  private def translateType(synType: ast.Type | ast.PairElemType): KnownType =
-    synType match {
-      case ast.BaseType.Int    => KnownType.Int
-      case ast.BaseType.Bool   => KnownType.Bool
-      case ast.BaseType.Char   => KnownType.Char
-      case ast.BaseType.String => KnownType.String
-      case ast.ArrayType(t)    => KnownType.Array(translateType(t))
-      case ast.ErasedPair      => KnownType.Pair(?, ?)
-      case ast.PairType(t1, t2) =>
-        KnownType.Pair(translateType(t1), translateType(t2))
-    }
-
   /** Generates a unique identifier.
    *
    * @return The unique identifier
@@ -61,6 +44,60 @@ class renamer {
 
     // Return the renamed program
     scopedast.Program(renamedFuncs, renamedBody)
+  }
+
+  /** Translates between a syntactic type and a semantic type.
+   *
+   * @param synType The syntactic type
+   * @return The semantic type
+   * */
+  private def translateType(synType: ast.Type | ast.PairElemType): KnownType =
+    synType match {
+      case ast.BaseType.Int => KnownType.Int
+      case ast.BaseType.Bool => KnownType.Bool
+      case ast.BaseType.Char => KnownType.Char
+      case ast.BaseType.String => KnownType.String
+      case ast.ArrayType(t) => KnownType.Array(translateType(t))
+      case ast.ErasedPair => KnownType.Pair(?, ?)
+      case ast.PairType(t1, t2) =>
+        KnownType.Pair(translateType(t1), translateType(t2))
+    }
+
+  /** Rename a function.
+   *
+   * @param f             The function to rename
+   * @param qualifiedName The qualified name of the function
+   * @return The renamed function
+   */
+  private def renameFunc(
+    f: ast.Func,
+    qualifiedName: QualifiedName
+  ): scopedast.Func = {
+    // Construct a map of the parameters to use as a scope for the body
+    val params: Map[String, QualifiedName] =
+      f.params.foldLeft(Map())((params, param) => {
+        val (t, id) = param
+
+        // Check for redeclaration of parameter
+        if (params.contains(id.v)) {
+          // TODO: Error handling
+          params
+        } else {
+          // Add the parameter to the params map if it is not already declared
+          params + (id.v -> QualifiedName(
+            id.v,
+            generateUid(),
+            translateType(t)
+          ))
+        }
+      })
+
+    val scopedBody = renameStmt(f.body, Map(), params, true)._1
+    scopedast.Func(
+      scopedast.Ident(qualifiedName),
+      params.values.map(scopedast.Ident.apply).toList,
+      scopedBody
+    )
   }
 
   /** Rename a statement.
@@ -270,42 +307,5 @@ class renamer {
         es.map(e => renameExpr(e, scope))
       )
     case ast.NestedExpr(e) => scopedast.NestedExpr(renameExpr(e, scope))
-  }
-
-  /** Rename a function.
-   *
-   * @param f The function to rename
-   * @param qualifiedName The qualified name of the function
-   * @return The renamed function
-   */
-  private def renameFunc(
-      f: ast.Func,
-      qualifiedName: QualifiedName
-  ): scopedast.Func = {
-    // Construct a map of the parameters to use as a scope for the body
-    val params: Map[String, QualifiedName] =
-      f.params.foldLeft(Map())((params, param) => {
-        val (t, id) = param
-
-        // Check for redeclaration of parameter
-        if (params.contains(id.v)) {
-          // TODO: Error handling
-          params
-        } else {
-          // Add the parameter to the params map if it is not already declared
-          params + (id.v -> QualifiedName(
-            id.v,
-            generateUid(),
-            translateType(t)
-          ))
-        }
-      })
-
-    val scopedBody = renameStmt(f.body, Map(), params, true)._1
-    scopedast.Func(
-      scopedast.Ident(qualifiedName),
-      params.values.map(scopedast.Ident.apply).toList,
-      scopedBody
-    )
   }
 }
