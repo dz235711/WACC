@@ -23,9 +23,10 @@ class renamer {
   def rename(p: ast.Program): renamedast.Program = {
     // Generate unique identifiers for all functions
     val fids = p.fs.map(f => {
-      val name = f.ident.v
+      val (t, id) = f.decl
+      val name = id.v
       val uid = generateUid()
-      val fqn = QualifiedName(name, uid, translateType(f.t))
+      val fqn = QualifiedName(name, uid, translateType(t))
 
       // Check for redeclaration of function
       if (this.functionIds.contains(name)) {
@@ -53,12 +54,12 @@ class renamer {
    * */
   private def translateType(synType: ast.Type | ast.PairElemType): KnownType =
     synType match {
-      case ast.BaseType.Int    => KnownType.Int
-      case ast.BaseType.Bool   => KnownType.Bool
-      case ast.BaseType.Char   => KnownType.Char
-      case ast.BaseType.String => KnownType.String
-      case ast.ArrayType(t)    => KnownType.Array(translateType(t))
-      case ast.ErasedPair      => KnownType.Pair(?, ?)
+      case ast.IntType()    => KnownType.Int
+      case ast.BoolType()   => KnownType.Bool
+      case ast.CharType()   => KnownType.Char
+      case ast.StringType() => KnownType.String
+      case ast.ArrayType(t) => KnownType.Array(translateType(t))
+      case ast.ErasedPair() => KnownType.Pair(?, ?)
       case ast.PairType(t1, t2) =>
         KnownType.Pair(translateType(t1), translateType(t2))
     }
@@ -114,7 +115,7 @@ class renamer {
       isFunc: Boolean
   ): (renamedast.Stmt, Map[String, QualifiedName]) = stmt match {
 
-    case ast.Skip => (renamedast.Skip, currentScope)
+    case ast.Skip() => (renamedast.Skip, currentScope)
 
     case ast.Decl(t, v, r) =>
       val name = QualifiedName(v.v, generateUid(), translateType(t))
@@ -305,7 +306,7 @@ class renamer {
     case ast.BoolLiter(b)   => renamedast.BoolLiter(b)
     case ast.CharLiter(c)   => renamedast.CharLiter(c)
     case ast.StringLiter(s) => renamedast.StringLiter(s)
-    case ast.PairLiter      => renamedast.PairLiter
+    case ast.PairLiter()    => renamedast.PairLiter
     case ast.Ident(v) => renamedast.Ident(QualifiedName(v, generateUid(), ?))
     case ast.ArrayElem(v, es) =>
       renamedast.ArrayElem(
