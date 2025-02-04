@@ -3,8 +3,8 @@ package wacc
 val INDENTATION_SIZE = 2
 
 def prettyPrint(prog: Program): String = 
-  "begin" + prog._1.map(prettyPrintFunc(_)).mkString("\n\n").indent(INDENTATION_SIZE)
-    + "\n" + prettyPrintStmt(prog._2).indent(INDENTATION_SIZE) + "end"
+  "begin" + prog.fs.map(prettyPrintFunc(_)).mkString("\n\n").indent(INDENTATION_SIZE)
+    + "\n" + prettyPrintStmt(prog.body).indent(INDENTATION_SIZE) + "end"
 
 
 def prettyPrintType(t: Type | PairElemType): String =
