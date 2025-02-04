@@ -3,8 +3,19 @@ package wacc:
     case class QualifiedName(
                               originalName: String,
                               UID: Int,
-                              declType: ast.Type
+                              declType: SemType
                             )
+
+    sealed abstract class SemType
+    case object ? extends SemType
+    enum KnownType extends SemType {
+      case Int
+      case Bool
+      case Char
+      case String
+      case Array(ty: SemType)
+      case Pair(t1: SemType, t2: SemType) // erased pair would be Pair(?, ?)
+    }
 
     sealed trait Expr extends RValue
     case class Not(e: Expr) extends Expr
@@ -46,7 +57,7 @@ package wacc:
 
     sealed trait Stmt
     object Skip extends Stmt
-    case class Decl(t: ast.Type, v: Ident, r: RValue) extends Stmt
+    case class Decl(t: KnownType, v: Ident, r: RValue) extends Stmt
     case class Asgn(l: LValue, r: RValue) extends Stmt
     case class Read(l: LValue) extends Stmt
     case class Free(e: Expr) extends Stmt

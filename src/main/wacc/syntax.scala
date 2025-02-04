@@ -17,7 +17,7 @@ package wacc:
     case class PairType(t1: PairElemType, t2: PairElemType) extends Type
 
     object ArrayType extends generic.ParserBridge1[Type, ArrayType]
-    object ErasedPair extends PairElemType, generic.ParserBridge0[PairElemType]
+    case object ErasedPair extends PairElemType, generic.ParserBridge0[PairElemType]
     object PairType extends generic.ParserBridge2[PairElemType, PairElemType, PairType]
 
     sealed trait Expr extends RValue

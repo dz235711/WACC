@@ -1,11 +1,32 @@
 package wacc
 
-import wacc.scopedast.QualifiedName
+import wacc.scopedast.{KnownType, QualifiedName, ?}
 
 class renamer {
   private var uid: Int = 0
   private var functionIds: Map[String, QualifiedName] = Map()
 
+  /** Translates between a syntactic type and a semantic type.
+   * 
+   * @param synType The syntactic type
+   * @return The semantic type
+   *  */
+  private def translateType(synType: ast.Type | ast.PairElemType): KnownType =
+    synType match {
+      case ast.BaseType.Int    => KnownType.Int
+      case ast.BaseType.Bool   => KnownType.Bool
+      case ast.BaseType.Char   => KnownType.Char
+      case ast.BaseType.String => KnownType.String
+      case ast.ArrayType(t)    => KnownType.Array(translateType(t))
+      case ast.ErasedPair      => KnownType.Pair(?, ?)
+      case ast.PairType(t1, t2) =>
+        KnownType.Pair(translateType(t1), translateType(t2))
+    }
+
+  /** Generates a unique identifier.
+   *
+   * @return The unique identifier
+   */
   private def generateUid(): Int = {
     this.uid += 1
     this.uid
@@ -21,7 +42,7 @@ class renamer {
     val fids = p.fs.map(f => {
       val name = f.ident.v
       val uid = generateUid()
-      val fqn = QualifiedName(name, uid, f.t)
+      val fqn = QualifiedName(name, uid, translateType(f.t))
 
       // Check for redeclaration of function
       if (this.functionIds.contains(name)) {
@@ -59,9 +80,10 @@ class renamer {
     case ast.Skip => (scopedast.Skip, currentScope)
 
     case ast.Decl(t, v, r) =>
-      val name = QualifiedName(v.v, generateUid(), t)
+      val name = QualifiedName(v.v, generateUid(), translateType(t))
       val scopedR = renameRValue(r, parentScope ++ currentScope)
-      val scopedDecl = scopedast.Decl(t, scopedast.Ident(name), scopedR)
+      val scopedDecl =
+        scopedast.Decl(translateType(t), scopedast.Ident(name), scopedR)
 
       // Check if the variable is already declared in the current scope
       if (currentScope.contains(v.v)) {
@@ -187,10 +209,10 @@ class renamer {
   ): scopedast.LValue = l match {
     case ast.Fst(l)   => scopedast.Fst(renameLValue(l, scope))
     case ast.Snd(l)   => scopedast.Snd(renameLValue(l, scope))
-    case ast.Ident(v) => scopedast.Ident(QualifiedName(v, generateUid(), ???))
+    case ast.Ident(v) => scopedast.Ident(QualifiedName(v, generateUid(), ?))
     case ast.ArrayElem(v, es) =>
       scopedast.ArrayElem(
-        scopedast.Ident(QualifiedName(v.v, generateUid(), ???)),
+        scopedast.Ident(QualifiedName(v.v, generateUid(), ?)),
         es.map(e => renameExpr(e, scope))
       )
   }
@@ -241,10 +263,10 @@ class renamer {
     case ast.CharLiter(c)   => scopedast.CharLiter(c)
     case ast.StringLiter(s) => scopedast.StringLiter(s)
     case ast.PairLiter      => scopedast.PairLiter
-    case ast.Ident(v) => scopedast.Ident(QualifiedName(v, generateUid(), ???))
+    case ast.Ident(v) => scopedast.Ident(QualifiedName(v, generateUid(), ?))
     case ast.ArrayElem(v, es) =>
       scopedast.ArrayElem(
-        scopedast.Ident(QualifiedName(v.v, generateUid(), ???)),
+        scopedast.Ident(QualifiedName(v.v, generateUid(), ?)),
         es.map(e => renameExpr(e, scope))
       )
     case ast.NestedExpr(e) => scopedast.NestedExpr(renameExpr(e, scope))
@@ -271,7 +293,11 @@ class renamer {
           params
         } else {
           // Add the parameter to the params map if it is not already declared
-          params + (id.v -> QualifiedName(id.v, generateUid(), t))
+          params + (id.v -> QualifiedName(
+            id.v,
+            generateUid(),
+            translateType(t)
+          ))
         }
       })
 
