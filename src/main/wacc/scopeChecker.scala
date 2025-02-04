@@ -175,7 +175,34 @@ class renamer {
   private def renameExpr(
       e: ast.Expr,
       scope: Map[String, QualifiedName]
-  ): scopedast.Expr = ???
+  ): scopedast.Expr = e match {
+    case ast.Not(e) => scopedast.Not(renameExpr(e, scope))
+    case ast.Negate(e) => scopedast.Negate(renameExpr(e, scope))
+    case ast.Len(e) => scopedast.Len(renameExpr(e, scope))
+    case ast.Ord(e) => scopedast.Ord(renameExpr(e, scope))
+    case ast.Chr(e) => scopedast.Chr(renameExpr(e, scope))
+    case ast.Mult(e1, e2) => scopedast.Mult(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.Div(e1, e2) => scopedast.Div(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.Mod(e1, e2) => scopedast.Mod(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.Add(e1, e2) => scopedast.Add(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.Sub(e1, e2) => scopedast.Sub(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.Greater(e1, e2) => scopedast.Greater(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.GreaterEq(e1, e2) => scopedast.GreaterEq(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.Smaller(e1, e2) => scopedast.Smaller(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.SmallerEq(e1, e2) => scopedast.SmallerEq(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.Equals(e1, e2) => scopedast.Equals(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.NotEquals(e1, e2) => scopedast.NotEquals(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.And(e1, e2) => scopedast.And(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.Or(e1, e2) => scopedast.Or(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.IntLiter(x) => scopedast.IntLiter(x)
+    case ast.BoolLiter(b) => scopedast.BoolLiter(b)
+    case ast.CharLiter(c) => scopedast.CharLiter(c)
+    case ast.StringLiter(s) => scopedast.StringLiter(s)
+    case ast.PairLiter => scopedast.PairLiter
+    case ast.Ident(v) => scopedast.Ident(QualifiedName(v, generateUid(), ???))
+    case ast.ArrayElem(v, es) => scopedast.ArrayElem(scopedast.Ident(QualifiedName(v.v, generateUid(), ???)), es.map(e=>renameExpr(e, scope)))
+    case ast.NestedExpr(e) => scopedast.NestedExpr(renameExpr(e, scope))
+  }
 
   private def renameFunc(f: ast.Func): scopedast.Func = ???
 }
