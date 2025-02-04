@@ -148,6 +148,12 @@ class renamer {
       )
   }
 
+  /** Rename an rvalue.
+   *
+   * @param r The rvalue to rename
+   * @param scope The scope of the rvalue
+   * @return The renamed rvalue
+   */
   private def renameRValue(
       r: ast.RValue,
       scope: Map[String, QualifiedName]
@@ -164,6 +170,12 @@ class renamer {
     case e: ast.Expr => renameExpr(e, scope)
   }
 
+  /** Rename an lvalue.
+   *
+   * @param l The lvalue to rename
+   * @param scope The scope of the lvalue
+   * @return The renamed lvalue
+   */
   private def renameLValue(
       l: ast.LValue,
       scope: Map[String, QualifiedName]
@@ -174,6 +186,12 @@ class renamer {
     case ast.ArrayElem(v, es) => scopedast.ArrayElem(scopedast.Ident(QualifiedName(v.v, generateUid(), ???)), es.map(e=>renameExpr(e, scope)))
   }
 
+  /** Rename an expression.
+   *
+   * @param e The expression to rename
+   * @param scope The scope of the expression
+   * @return The renamed expression
+   */
   private def renameExpr(
       e: ast.Expr,
       scope: Map[String, QualifiedName]
@@ -206,6 +224,12 @@ class renamer {
     case ast.NestedExpr(e) => scopedast.NestedExpr(renameExpr(e, scope))
   }
 
+  /** Rename a function.
+   *
+   * @param f The function to rename
+   * @param qualifiedName The qualified name of the function
+   * @return The renamed function
+   */
   private def renameFunc(f: ast.Func, qualifiedName: QualifiedName): scopedast.Func = {
     // Construct a map of the parameters to use as a scope for the body
     val params: Map[String, QualifiedName] = f.params.foldLeft(Map())((params, param) => {
