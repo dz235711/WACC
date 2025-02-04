@@ -121,7 +121,7 @@ package wacc:
     object Begin extends generic.ParserBridge1[Stmt, Begin]
     object Semi extends generic.ParserBridge2[Stmt, Stmt, Semi]
 
-    case class Func(t: Type, v: Ident, params: List[Param], body: Stmt)
+    case class Func(t: Type, ident: Ident, params: List[Param], body: Stmt)
     object Func extends generic.ParserBridge4[Type, Ident, List[Param], Stmt, Func]
 
     case class Program(fs: List[Func], body: Stmt)

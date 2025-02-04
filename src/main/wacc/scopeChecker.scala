@@ -18,22 +18,24 @@ class renamer {
    */
   def rename(p: ast.Program): scopedast.Program = {
     // Generate unique identifiers for all functions
-    this.functionIds =
-      p.fs.foldLeft(Map[String, QualifiedName]())((fids, f) => {
-        val name = f.v.v
-        val uid = generateUid()
+    val fids = p.fs.map(f => {
+      val name = f.ident.v
+      val uid = generateUid()
+      val fqn = QualifiedName(name, uid, f.t)
 
-        // Check for redeclaration of function
-        if (fids.contains(name)) {
-          // TODO: Error handling
-          fids
-        } else {
-          fids + (name -> QualifiedName(name, uid, f.t))
-        }
-      })
+      // Check for redeclaration of function
+      if (this.functionIds.contains(name)) {
+        // TODO: Error handling
+      } else {
+        // Add the function to the functionIds map if it is not already declared
+        this.functionIds += (name -> fqn)
+      }
+
+      fqn
+    })
 
     // Rename all functions and the body
-    val renamedFuncs = p.fs.map(f => renameFunc(f))
+    val renamedFuncs = p.fs.zip(fids).map(renameFunc.tupled)
     val renamedBody = renameStmt(p.body, Map(), Map(), false)._1
 
     // Return the renamed program
@@ -204,5 +206,22 @@ class renamer {
     case ast.NestedExpr(e) => scopedast.NestedExpr(renameExpr(e, scope))
   }
 
-  private def renameFunc(f: ast.Func): scopedast.Func = ???
+  private def renameFunc(f: ast.Func, qualifiedName: QualifiedName): scopedast.Func = {
+    // Construct a map of the parameters to use as a scope for the body
+    val params: Map[String, QualifiedName] = f.params.foldLeft(Map())((params, param) => {
+      val (t, id) = param
+
+      // Check for redeclaration of parameter
+      if (params.contains(id.v)) {
+        // TODO: Error handling
+        params
+      } else {
+        // Add the parameter to the params map if it is not already declared
+        params + (id.v -> QualifiedName(id.v, generateUid(), t))
+      }
+    })
+
+    val scopedBody = renameStmt(f.body, Map(), params, true)._1
+    scopedast.Func(scopedast.Ident(qualifiedName), params.values.map(scopedast.Ident.apply).toList, scopedBody)
+  }
 }
