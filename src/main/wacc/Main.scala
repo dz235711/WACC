@@ -20,7 +20,7 @@ def runFrontend(args: Array[String]): (Int, Either[String, WaccError]) = {
           println("\n------------------------------ Input File ------------------------------")
           println(lines)
           println("------------------------------ /Input File ------------------------------\n")
-        given ErrorBuilder[WaccError] = new WaccErrorBuilder(path)
+        given ErrorBuilder[WaccError] = new WaccErrorBuilder
         parser.parse(lines) match {
           case Success(x) =>
             if (verbose)
@@ -31,7 +31,7 @@ def runFrontend(args: Array[String]): (Int, Either[String, WaccError]) = {
           case Failure(err) =>
             if (verbose)
               println("Failed to parse! 😢")
-            (100, Right(err))
+            (100, Right(WaccErrorBuilder.format(err, Some(path), ErrType.Syntax)))
         }
       } catch {
         case _: FileNotFoundException => (-1, Left(s"file not found: $path 💀"))

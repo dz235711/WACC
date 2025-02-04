@@ -12,10 +12,15 @@ val DefaultLinesAfter = 1
 val LinesIndent = 2
 val LinesInfoIndent = 2
 
+enum ErrType{
+  case Syntax, Semantic,
+}
+
 case class WaccError(
     pos: (Int, Int),
-    source: Option[String],
-    lines: WaccErrorLines
+    var source: Option[String],
+    lines: WaccErrorLines,
+    var errType: Option[ErrType],
 )
 
 case class WaccLineInfo(
@@ -45,7 +50,9 @@ enum WaccErrorItem {
 
 def printWaccError(wErr: WaccError, sBuilder: StringBuilder): StringBuilder = {
   val pos = wErr.pos
-  sBuilder.append("Error")
+  sBuilder.append("\n")
+  if (wErr.errType.isDefined) sBuilder.append(s"${wErr.errType.get} error")
+  else sBuilder.append("Error")
   if (wErr.source.isDefined) sBuilder.append(s" in ${wErr.source.get} ")
   sBuilder.append(s"at ${pos._1}:${pos._2}\n")
   printLines(wErr.lines, sBuilder)
@@ -109,7 +116,7 @@ private def printLineInfo(
   sBuilder
 }
 
-class WaccErrorBuilder[Error](source: String) extends ErrorBuilder[WaccError] {
+class WaccErrorBuilder extends ErrorBuilder[WaccError] {
 
   override def unexpectedToken(
       cs: Iterable[Char],
@@ -122,13 +129,13 @@ class WaccErrorBuilder[Error](source: String) extends ErrorBuilder[WaccError] {
       pos: Position,
       source: Source,
       lines: ErrorInfoLines
-  ): WaccError = WaccError(pos, source, lines)
+  ): WaccError = WaccError(pos, source, lines, None)
 
   type Position = (Int, Int)
   override def pos(line: Int, col: Int): Position = (line, col)
 
   type Source = Option[String]
-  override def source(sourceName: Option[String]): Source = Some(source)
+  override def source(sourceName: Option[String]): Source = sourceName
 
   type ErrorInfoLines = WaccErrorLines
   override def vanillaError(
@@ -194,4 +201,12 @@ class WaccErrorBuilder[Error](source: String) extends ErrorBuilder[WaccError] {
 
   type EndOfInput = WaccEndOfInput.type
   override val endOfInput: EndOfInput = WaccEndOfInput
+}
+
+object WaccErrorBuilder extends WaccErrorBuilder {
+    def format(wErr: WaccError, source: Source, errType: ErrType): WaccError = {
+    wErr.source = source
+    wErr.errType = Some(errType)
+    wErr
+  }
 }

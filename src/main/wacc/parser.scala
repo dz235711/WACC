@@ -119,7 +119,7 @@ object parser {
         If("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi"),
         While("while" ~> expr, "do" ~> stmt <~ "done"),
         Begin("begin" ~> stmt <~ "end")
-      ).label("statement").explain("Unnecessary semicolon at the end of the block")
+      ).label("statement")
     )(Semi <# ";")
   private lazy val lvalue: Parsley[LValue] = choice(
     arrayElem,
@@ -129,14 +129,14 @@ object parser {
   private lazy val rvalue: Parsley[RValue] = choice(
     expr,
     arrayLiter,
-    NewPair("newpair" ~> "(" ~> expr <~ ",", expr <~ ")").hide,
+    NewPair("newpair" ~> "(" ~> expr <~ ",", expr <~ ")").label("pair construction"),
     pairElem,
     Call("call" ~> Ident(ident) <~ "(", sepBy(expr, ",") <~ ")").label("function call")
   )
   private lazy val pairElem: Parsley[LValue & RValue] = choice(
     Fst("fst" ~> lvalue),
     Snd("snd" ~> lvalue)
-  ).label("pair element").explain("Pair elements can be extracted by calling fst or snd on a pair corresponding to the first or second element respectively")
+  ).label("pair element")
   private lazy val arrayLiter: Parsley[ArrayLiter] =
     ArrayLiter("[".label("array literal") ~> sepBy(expr, ",") <~ "]")
 }
