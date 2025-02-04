@@ -260,8 +260,14 @@ class renamer {
       }
       renamedast.Ident(scope(v))
     case ast.ArrayElem(v, es) =>
+      val renamedIdent = if (!scope.contains(v.v)) {
+        // TODO: Error handling
+        renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
+      } else {
+        renamedast.Ident(scope(v.v))
+      }
       renamedast.ArrayElem(
-        renamedast.Ident(QualifiedName(v.v, generateUid(), ?)),
+        renamedIdent,
         es.map(e => renameExpr(e, scope))
       )
   }
