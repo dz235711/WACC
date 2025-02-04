@@ -7,10 +7,10 @@ import WaccErrorItem.*
 
 import parsley.errors.tokenextractors.TillNextWhitespace
 
-private object Indents {
-  val Lines = "\t"
-  val LinesInfo = "\t"
-}
+val DefaultLinesBefore = 1
+val DefaultLinesAfter = 1
+val LinesIndent = 2
+val LinesInfoIndent = 2
 
 case class WaccError(
     pos: (Int, Int),
@@ -66,17 +66,13 @@ private def printVanillaError(
 ): StringBuilder = {
   if (vErr.unexpected.isDefined)
     sBuilder
-      .append(Indents.Lines)
-      .append(s"Unexpected {${{ extractWaccErrorItem(vErr.unexpected.get) }}}")
-      .append("\n")
+      .append(s"Unexpected { ${{ extractWaccErrorItem(vErr.unexpected.get) }} }".indent(LinesIndent))
   sBuilder
-    .append(Indents.Lines)
     .append(
-      s"Expected   {${vErr.expecteds.map(extractWaccErrorItem).mkString(", ")}}"
+      s"Expected   { ${vErr.expecteds.map(extractWaccErrorItem).mkString(", ")} }".indent(LinesIndent)
     )
-    .append("\n")
   if (vErr.reasons.nonEmpty)
-    sBuilder.append(Indents.Lines).append(vErr.reasons.mkString("\n")).append("\n")
+    sBuilder.append(vErr.reasons.mkString("\n").indent(LinesIndent))
   printLineInfo(vErr.lineinfo, sBuilder)
 }
 
@@ -90,7 +86,7 @@ private def printSpecialisedError(
     sErr: WaccErrorLines.SpecialisedError,
     sBuilder: StringBuilder
 ): StringBuilder = {
-  sBuilder.append(Indents.Lines).append(sErr.msgs.mkString("\n"))
+  sBuilder.append(sErr.msgs.mkString("\n").indent(LinesIndent))
   printLineInfo(sErr.lineinfo, sBuilder)
 }
 
@@ -99,18 +95,17 @@ private def printLineInfo(
     sBuilder: StringBuilder
 ): StringBuilder = {
   if (lineinfo.linesBefore.nonEmpty) {
-    val start = lineinfo.lineNum - lineinfo.linesBefore.length - 1
-    for (i <- Seq(1, 2, 3)) 
-      sBuilder.append(Indents.LinesInfo).append(s"|${start + i}. ${lineinfo.linesBefore(i)}\n")
+    val start = lineinfo.lineNum - lineinfo.linesBefore.length
+    for (i <- 0 until lineinfo.linesBefore.length) 
+      sBuilder.append(s"|${start + i}. ${lineinfo.linesBefore(i)}\n".indent(LinesInfoIndent))
   }
   val linePrefix = f"|${lineinfo.lineNum}. "
-  sBuilder.append(Indents.LinesInfo).append(linePrefix).append(s"${lineinfo.line}\n")
+  sBuilder.append(s"${linePrefix}${lineinfo.line}\n".indent(LinesInfoIndent))
   sBuilder
-    .append(Indents.LinesInfo)
-    .append(s"${" " * (lineinfo.errorPointsAt + linePrefix.length())}${"^" * lineinfo.errorWidth}\n")
+    .append(s"${" " * (lineinfo.errorPointsAt + linePrefix.length())}${"^" * lineinfo.errorWidth}\n".indent(LinesInfoIndent))
   if (lineinfo.linesAfter.nonEmpty)
-    for (i <- Seq(1, 2, 3)) 
-      sBuilder.append(Indents.LinesInfo).append(s"|${lineinfo.lineNum + i}. ${lineinfo.linesBefore(i)}\n")
+    for (i <- 0 until lineinfo.linesAfter.length) 
+      sBuilder.append(s"|${lineinfo.lineNum + i + 1}. ${lineinfo.linesAfter(i)}\n".indent(LinesInfoIndent))
   sBuilder
 }
 
@@ -187,9 +182,9 @@ class WaccErrorBuilder[Error](source: String) extends ErrorBuilder[WaccError] {
       errorWidth
     )
 
-  override val numLinesBefore: Int = 0
+  override val numLinesBefore: Int = 1
 
-  override val numLinesAfter: Int = 0
+  override val numLinesAfter: Int = 1
 
   type Raw = WaccRaw
   override def raw(item: String): Raw = WaccRaw(item)

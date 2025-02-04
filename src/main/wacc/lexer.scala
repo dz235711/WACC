@@ -14,10 +14,10 @@ object lexer {
   private val desc = LexicalDesc.plain.copy(
     nameDesc = NameDesc.plain.copy(
       identifierStart = Basic(c => c.isLetter || c == '_'),
-      identifierLetter = Basic(c => c.isLetterOrDigit || c == '_')
+      identifierLetter = Basic(c => c.isLetterOrDigit || c == '_'),
     ),
     spaceDesc = SpaceDesc.plain.copy(
-      lineCommentStart = "#"
+      lineCommentStart = "#",
     ),
     symbolDesc = SymbolDesc.plain.copy(
       hardKeywords = Set(
@@ -42,7 +42,7 @@ object lexer {
         "call",
         "fst",
         "snd",
-        "null"
+        "null",
       ),
       hardOperators = Set(
         "!",
@@ -61,24 +61,24 @@ object lexer {
         "==",
         "!=",
         "&&",
-        "||"
-      )
+        "||",
+      ),
     ),
     textDesc = TextDesc.plain.copy(
       graphicCharacter = Basic(c =>
         MIN_GRAPHIC_CHAR <= c.toInt && c.toInt <= MAX_GRAPHIC_CHAR && !Set(
           '\\',
           '\'',
-          '"'
-        ).contains(c)
+          '"',
+        ).contains(c),
       ),
       escapeSequences = EscapeDesc.plain.copy(
-        literals = Set('0', 'b', 't', 'n', 'f', 'r', '"', '\'', '\\')
+        literals = Set('0', 'b', 't', 'n', 'f', 'r', '"', '\'', '\\'),
       )
     ),
     numericDesc = NumericDesc.plain.copy(
       integerNumbersCanBeHexadecimal = false,
-      integerNumbersCanBeOctal = false
+      integerNumbersCanBeOctal = false,
     )
   )
 

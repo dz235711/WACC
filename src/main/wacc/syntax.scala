@@ -127,7 +127,11 @@ object Begin extends ParserBridgePos1[Stmt, Begin]
 object Semi extends ParserBridgePos2[Stmt, Stmt, Semi]
 
 case class Func(decl: FuncDecl, params: List[Param], body: Stmt)(val pos: (Int, Int))
-object Func extends ParserBridgePos3[FuncDecl, List[Param], Stmt, Func] 
+object Func extends ParserBridgePos3[FuncDecl, List[Param], Stmt, Func] {
+    override def labels: List[String] = List("function")
+}
 
 case class Program(fs: List[Func], body: Stmt)(val pos: (Int, Int))
-object Program extends ParserBridgePos2[List[Func], Stmt, Program]
+object Program extends ParserBridgePos2[List[Func], Stmt, Program] {
+    override def labels: List[String] = List("program")
+}
