@@ -22,7 +22,7 @@ trait ParserBridgePos1[-A, +B] extends ParserSingletonBridgePos[A => B] {
 
     override final def applyPos(pos: (Int, Int)): A => B = this.apply(_)(pos)
 
-    def apply(a: Parsley[A]): Parsley[B] = ap1(pos.map(applyPos), a)
+    def apply(p: Parsley[A]): Parsley[B] = ap1(pos.map(applyPos), p)
 }
 
 trait ParserBridgePos2[-A, -B, +C] extends ParserSingletonBridgePos[(A, B) => C] {
@@ -30,8 +30,8 @@ trait ParserBridgePos2[-A, -B, +C] extends ParserSingletonBridgePos[(A, B) => C]
 
     override final def applyPos(pos: (Int, Int)): (A, B) => C = this.apply(_, _)(pos)
 
-    def apply(a: Parsley[A], b: =>Parsley[B]): Parsley[C] =
-        ap2(pos.map(applyPos), a, b)
+    def apply(p1: Parsley[A], p2: =>Parsley[B]): Parsley[C] =
+        ap2(pos.map(applyPos), p1, p2)
 }
 
 trait ParserBridgePos3[-A, -B, -C, +D] extends ParserSingletonBridgePos[(A, B, C) => D] {
@@ -39,8 +39,8 @@ trait ParserBridgePos3[-A, -B, -C, +D] extends ParserSingletonBridgePos[(A, B, C
 
     override final def applyPos(pos: (Int, Int)): (A, B, C) => D = this.apply(_, _, _)(pos)
 
-    def apply(a: Parsley[A], b: =>Parsley[B], c: =>Parsley[C]): Parsley[D] =
-        ap3(pos.map(applyPos), a, b, c)
+    def apply(p1: Parsley[A], p2: =>Parsley[B], p3: =>Parsley[C]): Parsley[D] =
+        ap3(pos.map(applyPos), p1, p2, p3)
 }
 
 trait ParserBridgePos4[-A, -B, -C, -D, +E] extends ParserSingletonBridgePos[(A, B, C, D) => E] {
@@ -48,6 +48,6 @@ trait ParserBridgePos4[-A, -B, -C, -D, +E] extends ParserSingletonBridgePos[(A, 
 
     override final def applyPos(pos: (Int, Int)): (A, B, C, D) => E = this.apply(_, _, _, _)(pos)
 
-    def apply(a: Parsley[A], b: =>Parsley[B], c: =>Parsley[C], d: =>Parsley[D]): Parsley[E] =
-        ap4(pos.map(applyPos), a, b, c, d)
+    def apply(p1: Parsley[A], p2: =>Parsley[B], p3: =>Parsley[C], p4: =>Parsley[D]): Parsley[E] =
+        ap4(pos.map(applyPos), p1, p2, p3, p4)
 }
