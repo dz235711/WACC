@@ -3,8 +3,9 @@ package wacc
 import parsley.Parsley
 import parsley.position.pos
 import parsley.ap._
+import parsley.generic.ErrorBridge
 
-trait ParserSingletonBridgePos[+A] {
+trait ParserSingletonBridgePos[+A] extends ErrorBridge {
   protected def applyPos(pos: (Int, Int)): A
 
   infix def from(op: Parsley[Any]): Parsley[A] = pos.map(applyPos) <~ op
