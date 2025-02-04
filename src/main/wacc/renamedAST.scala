@@ -1,10 +1,10 @@
 package wacc:
-  package scopedast {
+  package renamedast {
     case class QualifiedName(
-                              originalName: String,
-                              UID: Int,
-                              declType: SemType
-                            )
+      originalName: String,
+      UID: Int,
+      declType: SemType
+    )
 
     sealed abstract class SemType
     case object ? extends SemType
@@ -14,7 +14,7 @@ package wacc:
       case Char
       case String
       case Array(ty: SemType)
-      case Pair(t1: SemType, t2: SemType) // erased pair would be Pair(?, ?)
+      case Pair(t1: SemType, t2: SemType)
     }
 
     sealed trait Expr extends RValue

@@ -1,6 +1,6 @@
 package wacc
 
-import wacc.scopedast.{KnownType, QualifiedName, ?}
+import wacc.renamedast.{KnownType, QualifiedName, ?}
 
 class renamer {
   private var uid: Int = 0
@@ -20,7 +20,7 @@ class renamer {
    * @param p The program to rename (ast)
    * @return The renamed program (scopedast)
    */
-  def rename(p: ast.Program): scopedast.Program = {
+  def rename(p: ast.Program): renamedast.Program = {
     // Generate unique identifiers for all functions
     val fids = p.fs.map(f => {
       val name = f.ident.v
@@ -43,7 +43,7 @@ class renamer {
     val renamedBody = renameStmt(p.body, Map(), Map(), false)._1
 
     // Return the renamed program
-    scopedast.Program(renamedFuncs, renamedBody)
+    renamedast.Program(renamedFuncs, renamedBody)
   }
 
   /** Translates between a syntactic type and a semantic type.
@@ -53,12 +53,12 @@ class renamer {
    * */
   private def translateType(synType: ast.Type | ast.PairElemType): KnownType =
     synType match {
-      case ast.BaseType.Int => KnownType.Int
-      case ast.BaseType.Bool => KnownType.Bool
-      case ast.BaseType.Char => KnownType.Char
+      case ast.BaseType.Int    => KnownType.Int
+      case ast.BaseType.Bool   => KnownType.Bool
+      case ast.BaseType.Char   => KnownType.Char
       case ast.BaseType.String => KnownType.String
-      case ast.ArrayType(t) => KnownType.Array(translateType(t))
-      case ast.ErasedPair => KnownType.Pair(?, ?)
+      case ast.ArrayType(t)    => KnownType.Array(translateType(t))
+      case ast.ErasedPair      => KnownType.Pair(?, ?)
       case ast.PairType(t1, t2) =>
         KnownType.Pair(translateType(t1), translateType(t2))
     }
@@ -70,9 +70,9 @@ class renamer {
    * @return The renamed function
    */
   private def renameFunc(
-    f: ast.Func,
-    qualifiedName: QualifiedName
-  ): scopedast.Func = {
+      f: ast.Func,
+      qualifiedName: QualifiedName
+  ): renamedast.Func = {
     // Construct a map of the parameters to use as a scope for the body
     val params: Map[String, QualifiedName] =
       f.params.foldLeft(Map())((params, param) => {
@@ -93,9 +93,9 @@ class renamer {
       })
 
     val scopedBody = renameStmt(f.body, Map(), params, true)._1
-    scopedast.Func(
-      scopedast.Ident(qualifiedName),
-      params.values.map(scopedast.Ident.apply).toList,
+    renamedast.Func(
+      renamedast.Ident(qualifiedName),
+      params.values.map(renamedast.Ident.apply).toList,
       scopedBody
     )
   }
@@ -112,15 +112,15 @@ class renamer {
       parentScope: Map[String, QualifiedName],
       currentScope: Map[String, QualifiedName],
       isFunc: Boolean
-  ): (scopedast.Stmt, Map[String, QualifiedName]) = stmt match {
+  ): (renamedast.Stmt, Map[String, QualifiedName]) = stmt match {
 
-    case ast.Skip => (scopedast.Skip, currentScope)
+    case ast.Skip => (renamedast.Skip, currentScope)
 
     case ast.Decl(t, v, r) =>
       val name = QualifiedName(v.v, generateUid(), translateType(t))
       val scopedR = renameRValue(r, parentScope ++ currentScope)
       val scopedDecl =
-        scopedast.Decl(translateType(t), scopedast.Ident(name), scopedR)
+        renamedast.Decl(translateType(t), renamedast.Ident(name), scopedR)
 
       // Check if the variable is already declared in the current scope
       if (currentScope.contains(v.v)) {
@@ -134,7 +134,7 @@ class renamer {
 
     case ast.Asgn(l, r) =>
       (
-        scopedast.Asgn(
+        renamedast.Asgn(
           renameLValue(l, parentScope ++ currentScope),
           renameRValue(r, parentScope ++ currentScope)
         ),
@@ -143,34 +143,40 @@ class renamer {
 
     case ast.Read(l) =>
       (
-        scopedast.Read(renameLValue(l, parentScope ++ currentScope)),
+        renamedast.Read(renameLValue(l, parentScope ++ currentScope)),
         currentScope
       )
 
     case ast.Free(e) =>
-      (scopedast.Free(renameExpr(e, parentScope ++ currentScope)), currentScope)
+      (
+        renamedast.Free(renameExpr(e, parentScope ++ currentScope)),
+        currentScope
+      )
 
     case ast.Return(e) =>
       if (!isFunc) {
         // TODO: Error handling
       }
       (
-        scopedast.Return(renameExpr(e, parentScope ++ currentScope)),
+        renamedast.Return(renameExpr(e, parentScope ++ currentScope)),
         currentScope
       )
 
     case ast.Exit(e) =>
-      (scopedast.Exit(renameExpr(e, parentScope ++ currentScope)), currentScope)
+      (
+        renamedast.Exit(renameExpr(e, parentScope ++ currentScope)),
+        currentScope
+      )
 
     case ast.Print(e) =>
       (
-        scopedast.Print(renameExpr(e, parentScope ++ currentScope)),
+        renamedast.Print(renameExpr(e, parentScope ++ currentScope)),
         currentScope
       )
 
     case ast.PrintLn(e) =>
       (
-        scopedast.PrintLn(renameExpr(e, parentScope ++ currentScope)),
+        renamedast.PrintLn(renameExpr(e, parentScope ++ currentScope)),
         currentScope
       )
 
@@ -180,17 +186,17 @@ class renamer {
         renameStmt(s1, parentScope ++ currentScope, Map(), isFunc)._1
       val scopedElse =
         renameStmt(s2, parentScope ++ currentScope, Map(), isFunc)._1
-      (scopedast.If(scopedCond, scopedThen, scopedElse), currentScope)
+      (renamedast.If(scopedCond, scopedThen, scopedElse), currentScope)
 
     case ast.While(cond, body) =>
       val scopedCond = renameExpr(cond, parentScope ++ currentScope)
       val scopedBody =
         renameStmt(body, parentScope ++ currentScope, Map(), isFunc)._1
-      (scopedast.While(scopedCond, scopedBody), currentScope)
+      (renamedast.While(scopedCond, scopedBody), currentScope)
 
     case ast.Begin(body) =>
       (
-        scopedast.Begin(
+        renamedast.Begin(
           renameStmt(body, parentScope ++ currentScope, Map(), isFunc)._1
         ),
         currentScope
@@ -202,7 +208,7 @@ class renamer {
       val (scopedS2, currentScopeS2) =
         renameStmt(s2, parentScope, currentScopeS1, isFunc)
       (
-        scopedast.Semi(scopedS1, scopedS2),
+        renamedast.Semi(scopedS1, scopedS2),
         currentScopeS2
       )
   }
@@ -216,19 +222,19 @@ class renamer {
   private def renameRValue(
       r: ast.RValue,
       scope: Map[String, QualifiedName]
-  ): scopedast.RValue = r match {
+  ): renamedast.RValue = r match {
     case ast.ArrayLiter(es) =>
-      scopedast.ArrayLiter(es.map(e => renameExpr(e, scope)))
+      renamedast.ArrayLiter(es.map(e => renameExpr(e, scope)))
     case ast.NewPair(e1, e2) =>
-      scopedast.NewPair(renameExpr(e1, scope), renameExpr(e2, scope))
-    case ast.Fst(l) => scopedast.Fst(renameLValue(l, scope))
-    case ast.Snd(l) => scopedast.Snd(renameLValue(l, scope))
+      renamedast.NewPair(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.Fst(l) => renamedast.Fst(renameLValue(l, scope))
+    case ast.Snd(l) => renamedast.Snd(renameLValue(l, scope))
     case ast.Call(v, args) =>
       if (!functionIds.contains(v.v)) {
         // TODO: Error handling
       }
-      scopedast.Call(
-        scopedast.Ident(functionIds(v.v)),
+      renamedast.Call(
+        renamedast.Ident(functionIds(v.v)),
         args.map(e => renameExpr(e, scope))
       )
     case e: ast.Expr => renameExpr(e, scope)
@@ -243,13 +249,13 @@ class renamer {
   private def renameLValue(
       l: ast.LValue,
       scope: Map[String, QualifiedName]
-  ): scopedast.LValue = l match {
-    case ast.Fst(l)   => scopedast.Fst(renameLValue(l, scope))
-    case ast.Snd(l)   => scopedast.Snd(renameLValue(l, scope))
-    case ast.Ident(v) => scopedast.Ident(QualifiedName(v, generateUid(), ?))
+  ): renamedast.LValue = l match {
+    case ast.Fst(l)   => renamedast.Fst(renameLValue(l, scope))
+    case ast.Snd(l)   => renamedast.Snd(renameLValue(l, scope))
+    case ast.Ident(v) => renamedast.Ident(QualifiedName(v, generateUid(), ?))
     case ast.ArrayElem(v, es) =>
-      scopedast.ArrayElem(
-        scopedast.Ident(QualifiedName(v.v, generateUid(), ?)),
+      renamedast.ArrayElem(
+        renamedast.Ident(QualifiedName(v.v, generateUid(), ?)),
         es.map(e => renameExpr(e, scope))
       )
   }
@@ -263,49 +269,49 @@ class renamer {
   private def renameExpr(
       e: ast.Expr,
       scope: Map[String, QualifiedName]
-  ): scopedast.Expr = e match {
-    case ast.Not(e)    => scopedast.Not(renameExpr(e, scope))
-    case ast.Negate(e) => scopedast.Negate(renameExpr(e, scope))
-    case ast.Len(e)    => scopedast.Len(renameExpr(e, scope))
-    case ast.Ord(e)    => scopedast.Ord(renameExpr(e, scope))
-    case ast.Chr(e)    => scopedast.Chr(renameExpr(e, scope))
+  ): renamedast.Expr = e match {
+    case ast.Not(e)    => renamedast.Not(renameExpr(e, scope))
+    case ast.Negate(e) => renamedast.Negate(renameExpr(e, scope))
+    case ast.Len(e)    => renamedast.Len(renameExpr(e, scope))
+    case ast.Ord(e)    => renamedast.Ord(renameExpr(e, scope))
+    case ast.Chr(e)    => renamedast.Chr(renameExpr(e, scope))
     case ast.Mult(e1, e2) =>
-      scopedast.Mult(renameExpr(e1, scope), renameExpr(e2, scope))
+      renamedast.Mult(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.Div(e1, e2) =>
-      scopedast.Div(renameExpr(e1, scope), renameExpr(e2, scope))
+      renamedast.Div(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.Mod(e1, e2) =>
-      scopedast.Mod(renameExpr(e1, scope), renameExpr(e2, scope))
+      renamedast.Mod(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.Add(e1, e2) =>
-      scopedast.Add(renameExpr(e1, scope), renameExpr(e2, scope))
+      renamedast.Add(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.Sub(e1, e2) =>
-      scopedast.Sub(renameExpr(e1, scope), renameExpr(e2, scope))
+      renamedast.Sub(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.Greater(e1, e2) =>
-      scopedast.Greater(renameExpr(e1, scope), renameExpr(e2, scope))
+      renamedast.Greater(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.GreaterEq(e1, e2) =>
-      scopedast.GreaterEq(renameExpr(e1, scope), renameExpr(e2, scope))
+      renamedast.GreaterEq(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.Smaller(e1, e2) =>
-      scopedast.Smaller(renameExpr(e1, scope), renameExpr(e2, scope))
+      renamedast.Smaller(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.SmallerEq(e1, e2) =>
-      scopedast.SmallerEq(renameExpr(e1, scope), renameExpr(e2, scope))
+      renamedast.SmallerEq(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.Equals(e1, e2) =>
-      scopedast.Equals(renameExpr(e1, scope), renameExpr(e2, scope))
+      renamedast.Equals(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.NotEquals(e1, e2) =>
-      scopedast.NotEquals(renameExpr(e1, scope), renameExpr(e2, scope))
+      renamedast.NotEquals(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.And(e1, e2) =>
-      scopedast.And(renameExpr(e1, scope), renameExpr(e2, scope))
+      renamedast.And(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.Or(e1, e2) =>
-      scopedast.Or(renameExpr(e1, scope), renameExpr(e2, scope))
-    case ast.IntLiter(x)    => scopedast.IntLiter(x)
-    case ast.BoolLiter(b)   => scopedast.BoolLiter(b)
-    case ast.CharLiter(c)   => scopedast.CharLiter(c)
-    case ast.StringLiter(s) => scopedast.StringLiter(s)
-    case ast.PairLiter      => scopedast.PairLiter
-    case ast.Ident(v) => scopedast.Ident(QualifiedName(v, generateUid(), ?))
+      renamedast.Or(renameExpr(e1, scope), renameExpr(e2, scope))
+    case ast.IntLiter(x)    => renamedast.IntLiter(x)
+    case ast.BoolLiter(b)   => renamedast.BoolLiter(b)
+    case ast.CharLiter(c)   => renamedast.CharLiter(c)
+    case ast.StringLiter(s) => renamedast.StringLiter(s)
+    case ast.PairLiter      => renamedast.PairLiter
+    case ast.Ident(v) => renamedast.Ident(QualifiedName(v, generateUid(), ?))
     case ast.ArrayElem(v, es) =>
-      scopedast.ArrayElem(
-        scopedast.Ident(QualifiedName(v.v, generateUid(), ?)),
+      renamedast.ArrayElem(
+        renamedast.Ident(QualifiedName(v.v, generateUid(), ?)),
         es.map(e => renameExpr(e, scope))
       )
-    case ast.NestedExpr(e) => scopedast.NestedExpr(renameExpr(e, scope))
+    case ast.NestedExpr(e) => renamedast.NestedExpr(renameExpr(e, scope))
   }
 }
