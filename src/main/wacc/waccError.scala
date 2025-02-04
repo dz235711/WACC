@@ -5,7 +5,7 @@ import parsley.errors.*
 import WaccErrorLines.*
 import WaccErrorItem.*
 
-import parsley.errors.tokenextractors.SingleChar
+import parsley.errors.tokenextractors.TillNextWhitespace
 
 private object Indents {
   val Lines = "\t"
@@ -25,12 +25,6 @@ case class WaccLineInfo(
     lineNum: Int,
     errorPointsAt: Int,
     errorWidth: Int
-)
-
-case class WaccToken(
-    cs: Iterable[Char],
-    amountOfInputParserWanted: Int,
-    lexicalError: Boolean
 )
 
 enum WaccErrorLines {
@@ -81,13 +75,15 @@ private def printVanillaError(
       s"Expected   {${vErr.expecteds.map(extractWaccErrorItem).mkString(", ")}}"
     )
     .append("\n")
+  if (vErr.reasons.nonEmpty)
+    sBuilder.append(Indents.Lines).append(vErr.reasons.mkString("\n")).append("\n")
   printLineInfo(vErr.lineinfo, sBuilder)
 }
 
 private def extractWaccErrorItem(wErrItem: WaccErrorItem) = wErrItem match {
   case WaccRaw(item)   => item
   case WaccNamed(item) => item
-  case WaccEndOfInput  => "end of line"
+  case WaccEndOfInput  => "end of file"
 }
 
 private def printSpecialisedError(
@@ -124,7 +120,7 @@ class WaccErrorBuilder[Error](source: String) extends ErrorBuilder[WaccError] {
       cs: Iterable[Char],
       amountOfInputParserWanted: Int,
       lexicalError: Boolean
-  ): Token = SingleChar.unexpectedToken(cs)
+  ): Token = TillNextWhitespace.unexpectedToken(cs)
 
   type Item = WaccErrorItem
   override def build(

@@ -80,7 +80,7 @@ object parser {
 
   // Statements
   private lazy val prog: Parsley[Program] =
-    Program("begin" ~> many(func), stmt <~ "end")
+    Program("begin".explain("Programs must be nested start with begin") ~> many(func).label("functions"), stmt.label("statement").explain("Programs can, but doesn't have to, lead with function declarations however they must have atleast one statement as its body") <~ "end".explain("Programs must end with end"))
   private lazy val func: Parsley[Func] =
     lift3(
       (a: (Type, Ident), b: List[(Type, Ident)], c: Stmt) =>
