@@ -18,7 +18,7 @@ class renamer {
   /** Renames all functions and variables in the program.
    *
    * @param p The program to rename (ast)
-   * @return The renamed program (scopedast)
+   * @return The renamed program (renamedast)
    */
   def rename(p: ast.Program): renamedast.Program = {
     // Generate unique identifiers for all functions
@@ -93,11 +93,11 @@ class renamer {
         }
       })
 
-    val scopedBody = renameStmt(f.body, Map(), params, true)._1
+    val renamedBody = renameStmt(f.body, Map(), params, true)._1
     renamedast.Func(
       renamedast.Ident(qualifiedName),
       params.values.map(renamedast.Ident.apply).toList,
-      scopedBody
+      renamedBody
     )
   }
 
@@ -119,18 +119,18 @@ class renamer {
 
     case ast.Decl(t, v, r) =>
       val name = QualifiedName(v.v, generateUid(), translateType(t))
-      val scopedR = renameRValue(r, parentScope ++ currentScope)
-      val scopedDecl =
-        renamedast.Decl(translateType(t), renamedast.Ident(name), scopedR)
+      val renamedR = renameRValue(r, parentScope ++ currentScope)
+      val renamedDecl =
+        renamedast.Decl(translateType(t), renamedast.Ident(name), renamedR)
 
       // Check if the variable is already declared in the current scope
       if (currentScope.contains(v.v)) {
         // TODO: Error handling
-        (scopedDecl, currentScope)
+        (renamedDecl, currentScope)
       } else {
         /* Only add the variable to the current scope if it is not already
          * declared */
-        (scopedDecl, currentScope + (v.v -> name))
+        (renamedDecl, currentScope + (v.v -> name))
       }
 
     case ast.Asgn(l, r) =>
@@ -182,18 +182,18 @@ class renamer {
       )
 
     case ast.If(cond, s1, s2) =>
-      val scopedCond = renameExpr(cond, parentScope ++ currentScope)
-      val scopedThen =
+      val renamedCond = renameExpr(cond, parentScope ++ currentScope)
+      val renamedThen =
         renameStmt(s1, parentScope ++ currentScope, Map(), isFunc)._1
-      val scopedElse =
+      val renamedElse =
         renameStmt(s2, parentScope ++ currentScope, Map(), isFunc)._1
-      (renamedast.If(scopedCond, scopedThen, scopedElse), currentScope)
+      (renamedast.If(renamedCond, renamedThen, renamedElse), currentScope)
 
     case ast.While(cond, body) =>
-      val scopedCond = renameExpr(cond, parentScope ++ currentScope)
-      val scopedBody =
+      val renamedCond = renameExpr(cond, parentScope ++ currentScope)
+      val renamedBody =
         renameStmt(body, parentScope ++ currentScope, Map(), isFunc)._1
-      (renamedast.While(scopedCond, scopedBody), currentScope)
+      (renamedast.While(renamedCond, renamedBody), currentScope)
 
     case ast.Begin(body) =>
       (
@@ -204,12 +204,12 @@ class renamer {
       )
 
     case ast.Semi(s1, s2) =>
-      val (scopedS1, currentScopeS1) =
+      val (renamedS1, currentScopeS1) =
         renameStmt(s1, parentScope, currentScope, isFunc)
-      val (scopedS2, currentScopeS2) =
+      val (renamedS2, currentScopeS2) =
         renameStmt(s2, parentScope, currentScopeS1, isFunc)
       (
-        renamedast.Semi(scopedS1, scopedS2),
+        renamedast.Semi(renamedS1, renamedS2),
         currentScopeS2
       )
   }
@@ -319,13 +319,13 @@ class renamer {
       }
       renamedast.Ident(scope(v))
     case ast.ArrayElem(v, es) =>
-      val scopedIdent = if (!scope.contains(v.v)) {
+      val renamedIdent = if (!scope.contains(v.v)) {
         // TODO: Error handling
         renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
       } else {
         renamedast.Ident(scope(v.v))
       }
-      renamedast.ArrayElem(scopedIdent, es.map(e => renameExpr(e, scope)))
+      renamedast.ArrayElem(renamedIdent, es.map(e => renameExpr(e, scope)))
     case ast.NestedExpr(e) => renamedast.NestedExpr(renameExpr(e, scope))
   }
 }
