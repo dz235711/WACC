@@ -165,7 +165,12 @@ class renamer {
   private def renameLValue(
       l: ast.LValue,
       scope: Map[String, QualifiedName]
-  ): scopedast.LValue = ???
+  ): scopedast.LValue = l match {
+    case ast.Fst(l) => scopedast.Fst(renameLValue(l, scope))
+    case ast.Snd(l) => scopedast.Snd(renameLValue(l, scope))
+    case ast.Ident(v) => scopedast.Ident(QualifiedName(v, generateUid(), ???))
+    case ast.ArrayElem(v, es) => scopedast.ArrayElem(scopedast.Ident(QualifiedName(v.v, generateUid(), ???)), es.map(e=>renameExpr(e, scope)))
+  }
 
   private def renameExpr(
       e: ast.Expr,
