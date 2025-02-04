@@ -65,10 +65,10 @@ object parser {
       atomic(baseType | pairType)
     )(ArrayType <# ("[" <~> "]"))
   private lazy val baseType: Parsley[BaseType] = choice(
-    string("int") as BaseType.Int,
-    string("bool") as BaseType.Bool,
-    string("char") as BaseType.Char,
-    string("string") as BaseType.String
+    IntType <# string("int"),
+    BoolType <# string("bool"),
+    CharType <# string("char"),
+    StringType <# string("string")
   ) <~ notFollowedBy(ident) <~ many(whitespace)
   private lazy val pairType: Parsley[PairType] =
     PairType("pair" ~> "(" ~> pairElemType <~ ",", pairElemType <~ ")")
@@ -81,29 +81,25 @@ object parser {
   // Statements
   private lazy val prog: Parsley[Program] =
     Program("begin".explain("Programs must be nested start with begin") ~> many(func).label("functions"), stmt.label("statement").explain("Programs can, but doesn't have to, lead with function declarations however they must have atleast one statement as its body") <~ "end".explain("Programs must end with end"))
-  private lazy val func: Parsley[Func] =
-    lift3(
-      (a: (Type, Ident), b: List[(Type, Ident)], c: Stmt) =>
-        Func(a._1, a._2, b, c),
-      atomic(typeParser <~> Ident(ident) <~ "("),
-      sepBy(typeParser <~> Ident(ident), ",") <~ ")",
-      "is" ~> stmt <~ "end"
-    ).guardAgainst{ case Func(_, _, _, b) if !endsInReturn(b) => Seq("Functions must either end directly with return or with a returning block") }
+  private lazy val func: Parsley[Func] = {
+    Func(atomic(typeParser <~> Ident(ident) <~ "("), sepBy(typeParser <~> Ident(ident), ",") <~ ")", "is" ~> stmt <~ "end")
+      .guardAgainst{ case Func(_, _, b) if !endsInReturn(b) => Seq("Functions must either end directly with return or with a returning block") }
+  }
   private lazy val stmt: Parsley[Stmt] = chain
     .left1(
       choice(
-        "skip" as Skip,
+        Skip <# "skip",
         Decl(typeParser, Ident(ident), "=" ~> rvalue),
         Asgn(lvalue, "=" ~> rvalue),
-        "read" ~> Read(lvalue),
-        "free" ~> Free(expr),
-        "return" ~> Return(expr),
-        "exit" ~> Exit(expr),
-        "print" ~> Print(expr),
-        "println" ~> PrintLn(expr),
+        Read("read" ~> lvalue),
+        Free("free" ~> expr),
+        Return("return" ~> expr),
+        Exit("exit" ~> expr),
+        Print("print" ~> expr),
+        PrintLn("println" ~> expr),
         If("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi"),
         While("while" ~> expr, "do" ~> stmt <~ "done"),
-        "begin" ~> Begin(stmt) <~ "end"
+        Begin("begin" ~> stmt <~ "end")
       )
     )(Semi <# ";")
   private lazy val lvalue: Parsley[LValue] = choice(
@@ -114,14 +110,14 @@ object parser {
   private lazy val rvalue: Parsley[RValue] = choice(
     expr,
     arrayLiter,
-    "newpair" ~> "(" ~> NewPair(expr <~ ",", expr) <~ ")",
+    NewPair("newpair" ~> "(" ~> expr <~ ",", expr <~ ")"),
     pairElem,
-    "call" ~> Call(Ident(ident) <~ "(", sepBy(expr, ",")) <~ ")"
+    Call("call" ~> Ident(ident) <~ "(", sepBy(expr, ",") <~ ")") 
   )
   private lazy val pairElem: Parsley[LValue & RValue] = choice(
-    "fst" ~> Fst(lvalue),
-    "snd" ~> Snd(lvalue)
+    Fst("fst" ~> lvalue),
+    Snd("snd" ~> lvalue)
   )
   private lazy val arrayLiter: Parsley[ArrayLiter] =
-    "[" ~> ArrayLiter(sepBy(expr, ",")) <~ "]"
+    ArrayLiter("[" ~> sepBy(expr, ",") <~ "]")
 }
