@@ -47,6 +47,7 @@ Commit messages should be of the form `tag:description`. These tags could be any
 - `test`
 - `wip`
 - `revert`
+- `style`
 
 The description should be imperative and lowercase, with no full-stop.
 
