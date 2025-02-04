@@ -80,14 +80,10 @@ object parser {
   // Statements
   private lazy val prog: Parsley[Program] =
     Program("begin" ~> many(func), stmt <~ "end")
-  private lazy val func: Parsley[Func] =
-    lift3(
-      (a: (Type, Ident), b: List[(Type, Ident)], c: Stmt) =>
-        Func(a._1, a._2, b, c),
-      atomic(typeParser <~> Ident(ident) <~ "("),
-      sepBy(typeParser <~> Ident(ident), ",") <~ ")",
-      "is" ~> stmt <~ "end"
-    ).guardAgainst{ case Func(_, _, _, b) if !endsInReturn(b) => Seq("Functions must either end directly with return or with a returning block") }
+  private lazy val func: Parsley[Func] = {
+    Func(atomic(typeParser <~> Ident(ident) <~ "("), sepBy(typeParser <~> Ident(ident), ",") <~ ")", "is" ~> stmt <~ "end")
+      .guardAgainst{ case Func(_, _, b) if !endsInReturn(b) => Seq("Functions must either end directly with return or with a returning block") }
+  }
   private lazy val stmt: Parsley[Stmt] = chain
     .left1(
       choice(

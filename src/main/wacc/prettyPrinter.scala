@@ -87,7 +87,7 @@ def prettyPrintStmt(s: Stmt): String =
     case Semi(s1, s2) => prettyPrintStmt(s1) + ";\n" + prettyPrintStmt(s2)
 
 def prettyPrintFunc(f: Func): String = {
-  val Func(t, v, params, body) = f
+  val Func((t, v), params, body) = f
   prettyPrintType(t) + " " + prettyPrintExpr(v) + params.map(prettyPrintParam(_)).mkString("(", ", ", ")") + " is\n" + prettyPrintStmt(body).indent(INDENTATION_SIZE) + "end"
 }
 

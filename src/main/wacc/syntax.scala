@@ -1,8 +1,7 @@
 package wacc
 
-import parsley.generic
-
 type Param = (Type, Ident)
+type FuncDecl = (Type, Ident)
 
 sealed trait Type
 sealed trait PairElemType
@@ -129,8 +128,8 @@ object While extends ParserBridgePos2[Expr, Stmt, While]
 object Begin extends ParserBridgePos1[Stmt, Begin]
 object Semi extends ParserBridgePos2[Stmt, Stmt, Semi]
 
-case class Func(t: Type, v: Ident, params: List[Param], body: Stmt)
-object Func extends generic.ParserBridge4[Type, Ident, List[Param], Stmt, Func]
+case class Func(decl: FuncDecl, params: List[Param], body: Stmt)(val pos: (Int, Int))
+object Func extends ParserBridgePos3[FuncDecl, List[Param], Stmt, Func] 
 
 case class Program(fs: List[Func], body: Stmt)(val pos: (Int, Int))
 object Program extends ParserBridgePos2[List[Func], Stmt, Program]
