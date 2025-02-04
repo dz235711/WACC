@@ -34,7 +34,7 @@ class renamer {
 
     // Rename all functions and the body
     val renamedFuncs = p.fs.map(f => renameFunc(f))
-    val renamedBody = renameStmt(p.body, Map(), false)._1
+    val renamedBody = renameStmt(p.body, Map(), Map(), false)._1
 
     // Return the renamed program
     scopedast.Program(renamedFuncs, renamedBody)
@@ -50,56 +50,99 @@ class renamer {
   private def renameStmt(
       stmt: ast.Stmt,
       parentScope: Map[String, QualifiedName],
+      currentScope: Map[String, QualifiedName],
       isFunc: Boolean
   ): (scopedast.Stmt, Map[String, QualifiedName]) = stmt match {
-    case ast.Skip => (scopedast.Skip, parentScope)
+
+    case ast.Skip => (scopedast.Skip, currentScope)
+
     case ast.Decl(t, v, r) =>
       val name = QualifiedName(v.v, generateUid(), t)
-      (
-        scopedast.Decl(t, scopedast.Ident(name), renameRValue(r, parentScope)),
-        parentScope + (v.v -> name)
-      )
+      val scopedR = renameRValue(r, parentScope ++ currentScope)
+      val scopedDecl = scopedast.Decl(t, scopedast.Ident(name), scopedR)
+
+      // Check if the variable is already declared in the current scope
+      if (currentScope.contains(v.v)) {
+        // TODO: Error handling
+        (scopedDecl, currentScope)
+      } else {
+        /* Only add the variable to the current scope if it is not already
+         * declared */
+        (scopedDecl, currentScope + (v.v -> name))
+      }
+
     case ast.Asgn(l, r) =>
       (
         scopedast.Asgn(
-          renameLValue(l, parentScope),
-          renameRValue(r, parentScope)
+          renameLValue(l, parentScope ++ currentScope),
+          renameRValue(r, parentScope ++ currentScope)
         ),
-        parentScope
+        currentScope
       )
+
     case ast.Read(l) =>
-      (scopedast.Read(renameLValue(l, parentScope)), parentScope)
+      (
+        scopedast.Read(renameLValue(l, parentScope ++ currentScope)),
+        currentScope
+      )
+
     case ast.Free(e) =>
-      (scopedast.Free(renameExpr(e, parentScope)), parentScope)
+      (scopedast.Free(renameExpr(e, parentScope ++ currentScope)), currentScope)
+
     case ast.Return(e) =>
       if (!isFunc) {
         // TODO: Error handling
       }
-      (scopedast.Return(renameExpr(e, parentScope)), parentScope)
-    case ast.Exit(e) =>
-      (scopedast.Exit(renameExpr(e, parentScope)), parentScope)
-    case ast.Print(e) =>
-      (scopedast.Print(renameExpr(e, parentScope)), parentScope)
-    case ast.PrintLn(e) =>
-      (scopedast.PrintLn(renameExpr(e, parentScope)), parentScope)
-    case ast.If(cond, s1, s2) =>
-      val scopedCond = renameExpr(cond, parentScope)
-      val scopedThen = renameStmt(s1, parentScope, isFunc)._1
-      val scopedElse = renameStmt(s2, parentScope, isFunc)._1
-      (scopedast.If(scopedCond, scopedThen, scopedElse), parentScope)
-    case ast.While(cond, body) =>
-      val scopedCond = renameExpr(cond, parentScope)
-      val scopedBody = renameStmt(body, parentScope, isFunc)._1
-      (scopedast.While(scopedCond, scopedBody), parentScope)
-    case ast.Begin(body) =>
-      (scopedast.Begin(renameStmt(body, parentScope, isFunc)._1), parentScope)
-    case ast.Semi(s1, s2) =>
       (
-        scopedast.Semi(
-          renameStmt(s1, parentScope, isFunc)._1,
-          renameStmt(s2, parentScope, isFunc)._1
+        scopedast.Return(renameExpr(e, parentScope ++ currentScope)),
+        currentScope
+      )
+
+    case ast.Exit(e) =>
+      (scopedast.Exit(renameExpr(e, parentScope ++ currentScope)), currentScope)
+
+    case ast.Print(e) =>
+      (
+        scopedast.Print(renameExpr(e, parentScope ++ currentScope)),
+        currentScope
+      )
+
+    case ast.PrintLn(e) =>
+      (
+        scopedast.PrintLn(renameExpr(e, parentScope ++ currentScope)),
+        currentScope
+      )
+
+    case ast.If(cond, s1, s2) =>
+      val scopedCond = renameExpr(cond, parentScope ++ currentScope)
+      val scopedThen =
+        renameStmt(s1, parentScope ++ currentScope, Map(), isFunc)._1
+      val scopedElse =
+        renameStmt(s2, parentScope ++ currentScope, Map(), isFunc)._1
+      (scopedast.If(scopedCond, scopedThen, scopedElse), currentScope)
+
+    case ast.While(cond, body) =>
+      val scopedCond = renameExpr(cond, parentScope ++ currentScope)
+      val scopedBody =
+        renameStmt(body, parentScope ++ currentScope, Map(), isFunc)._1
+      (scopedast.While(scopedCond, scopedBody), currentScope)
+
+    case ast.Begin(body) =>
+      (
+        scopedast.Begin(
+          renameStmt(body, parentScope ++ currentScope, Map(), isFunc)._1
         ),
-        parentScope
+        currentScope
+      )
+
+    case ast.Semi(s1, s2) =>
+      val (scopedS1, currentScopeS1) =
+        renameStmt(s1, parentScope, currentScope, isFunc)
+      val (scopedS2, currentScopeS2) =
+        renameStmt(s2, parentScope, currentScopeS1, isFunc)
+      (
+        scopedast.Semi(scopedS1, scopedS2),
+        currentScopeS2
       )
   }
 
