@@ -251,9 +251,14 @@ class renamer {
       l: ast.LValue,
       scope: Map[String, QualifiedName]
   ): renamedast.LValue = l match {
-    case ast.Fst(l)   => renamedast.Fst(renameLValue(l, scope))
-    case ast.Snd(l)   => renamedast.Snd(renameLValue(l, scope))
-    case ast.Ident(v) => renamedast.Ident(QualifiedName(v, generateUid(), ?))
+    case ast.Fst(l) => renamedast.Fst(renameLValue(l, scope))
+    case ast.Snd(l) => renamedast.Snd(renameLValue(l, scope))
+    case ast.Ident(v) =>
+      if (!scope.contains(v)) {
+        // TODO: Error handling
+        renamedast.Ident(QualifiedName(v, generateUid(), ?))
+      }
+      renamedast.Ident(scope(v))
     case ast.ArrayElem(v, es) =>
       renamedast.ArrayElem(
         renamedast.Ident(QualifiedName(v.v, generateUid(), ?)),
@@ -307,12 +312,20 @@ class renamer {
     case ast.CharLiter(c)   => renamedast.CharLiter(c)
     case ast.StringLiter(s) => renamedast.StringLiter(s)
     case ast.PairLiter()    => renamedast.PairLiter
-    case ast.Ident(v) => renamedast.Ident(QualifiedName(v, generateUid(), ?))
+    case ast.Ident(v) =>
+      if (!scope.contains(v)) {
+        // TODO: Error handling
+        renamedast.Ident(QualifiedName(v, generateUid(), ?))
+      }
+      renamedast.Ident(scope(v))
     case ast.ArrayElem(v, es) =>
-      renamedast.ArrayElem(
-        renamedast.Ident(QualifiedName(v.v, generateUid(), ?)),
-        es.map(e => renameExpr(e, scope))
-      )
+      val scopedIdent = if (!scope.contains(v.v)) {
+        // TODO: Error handling
+        renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
+      } else {
+        renamedast.Ident(scope(v.v))
+      }
+      renamedast.ArrayElem(scopedIdent, es.map(e => renameExpr(e, scope)))
     case ast.NestedExpr(e) => renamedast.NestedExpr(renameExpr(e, scope))
   }
 }
