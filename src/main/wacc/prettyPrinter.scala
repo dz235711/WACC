@@ -3,21 +3,21 @@ package wacc
 val INDENTATION_SIZE = 2
 
 def prettyPrint(prog: Program): String = 
-  "begin" + prog._1.map(prettyPrintFunc(_)).mkString("\n\n").indent(INDENTATION_SIZE)
-    + "\n" + prettyPrintStmt(prog._2).indent(INDENTATION_SIZE) + "end"
+  "begin" + prog.fs.map(prettyPrintFunc(_)).mkString("\n\n").indent(INDENTATION_SIZE)
+    + "\n" + prettyPrintStmt(prog.body).indent(INDENTATION_SIZE) + "end"
 
 
 def prettyPrintType(t: Type | PairElemType): String =
   t match
-    case BaseType.Int    => "int"
-    case BaseType.Bool   => "bool"
-    case BaseType.Char   => "char"
-    case BaseType.String => "string"
+    case IntType()    => "int"
+    case BoolType()   => "bool"
+    case CharType()   => "char"
+    case StringType() => "string"
 
     case ArrayType(t) => prettyPrintType(t) + "[]"
     case PairType(t1, t2) =>
       s"pair(${prettyPrintType(t1)}, ${prettyPrintType(t2)})"
-    case ErasedPair => "pair"
+    case ErasedPair() => "pair"
 
 def prettyPrintExpr(e: Expr): String =
   e match
@@ -45,7 +45,7 @@ def prettyPrintExpr(e: Expr): String =
     case BoolLiter(b)   => if b then "true" else "false"
     case CharLiter(c)   => "'" + c.toString() + "'"
     case StringLiter(s) => "\"" + s + "\""
-    case PairLiter      => "null"
+    case PairLiter()    => "null"
     case Ident(v)       => v
     case ArrayElem(Ident(v), es) =>
       v + es.map(prettyPrintExpr(_)).mkString("[", "][", "]")
@@ -66,7 +66,7 @@ def prettyPrintLRValue(r: RValue | LValue): String =
 
 def prettyPrintStmt(s: Stmt): String =
   s match
-    case Skip => "skip"
+    case Skip() => "skip"
     case Decl(t, v, r) =>
       prettyPrintType(t) + " " + prettyPrintExpr(v) 
         + " = " + prettyPrintLRValue(r)
@@ -87,7 +87,7 @@ def prettyPrintStmt(s: Stmt): String =
     case Semi(s1, s2) => prettyPrintStmt(s1) + ";\n" + prettyPrintStmt(s2)
 
 def prettyPrintFunc(f: Func): String = {
-  val Func(t, v, params, body) = f
+  val Func((t, v), params, body) = f
   prettyPrintType(t) + " " + prettyPrintExpr(v) + params.map(prettyPrintParam(_)).mkString("(", ", ", ")") + " is\n" + prettyPrintStmt(body).indent(INDENTATION_SIZE) + "end"
 }
 
