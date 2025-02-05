@@ -7,7 +7,9 @@ type Scope = Map[String, QualifiedName]
 
 class renamer {
   private var uid: Int = 0
-  private val functionIds: mutable.Map[String, QualifiedName] = mutable.Map()
+  // Map of function names to their qualified names and number of parameters
+  private val functionIds: mutable.Map[String, (QualifiedName, Int)] =
+    mutable.Map()
 
   /** Generates a unique identifier.
    *
@@ -36,7 +38,7 @@ class renamer {
         // TODO: Error handling
       } else {
         // Add the function to the functionIds map if it is not already declared
-        functionIds += (name -> fqn)
+        functionIds += (name -> (fqn, f.params.length))
       }
 
       fqn
@@ -240,12 +242,21 @@ class renamer {
       case ast.Snd(l) => renamedast.Snd(renameLValue(l, scope))
       case ast.Call(v, args) =>
         val renamedArgs = args.map(renameExpr(_, scope))
+
+        // Check if the function is declared
         val renamedIdent = if (!functionIds.contains(v.v)) {
           // TODO: Error handling
           renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
         } else {
-          renamedast.Ident(functionIds(v.v))
+          val (fqn, argLen) = functionIds(v.v)
+
+          // Check if the number of arguments is correct
+          if (args.length != argLen) {
+            // TODO: Error handling
+          }
+          renamedast.Ident(fqn)
         }
+
         renamedast.Call(renamedIdent, renamedArgs)
       case e: ast.Expr => renameExpr(e, scope)
     }
