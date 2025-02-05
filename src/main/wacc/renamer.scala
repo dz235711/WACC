@@ -241,13 +241,14 @@ class renamer {
     case ast.Fst(l) => renamedast.Fst(renameLValue(l, scope))
     case ast.Snd(l) => renamedast.Snd(renameLValue(l, scope))
     case ast.Call(v, args) =>
-      if (!functionIds.contains(v.v)) {
+      val renamedArgs = args.map(renameExpr(_, scope))
+      val renamedIdent = if (!functionIds.contains(v.v)) {
         // TODO: Error handling
+        renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
+      } else {
+        renamedast.Ident(functionIds(v.v))
       }
-      renamedast.Call(
-        renamedast.Ident(functionIds(v.v)),
-        args.map(e => renameExpr(e, scope))
-      )
+      renamedast.Call(renamedIdent, renamedArgs)
     case e: ast.Expr => renameExpr(e, scope)
   }
 
@@ -332,8 +333,9 @@ class renamer {
       if (!scope.contains(v)) {
         // TODO: Error handling
         renamedast.Ident(QualifiedName(v, generateUid(), ?))
+      } else {
+        renamedast.Ident(scope(v))
       }
-      renamedast.Ident(scope(v))
     case ast.ArrayElem(v, es) =>
       val renamedIdent = if (!scope.contains(v.v)) {
         // TODO: Error handling
