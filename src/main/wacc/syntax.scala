@@ -1,4 +1,5 @@
-package wacc
+package wacc:
+  package ast {
 
 import parsley.generic.ErrorBridge
 
