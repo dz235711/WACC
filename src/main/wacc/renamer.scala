@@ -131,7 +131,7 @@ class renamer {
       val name = QualifiedName(v.v, generateUid(), translateType(t))
       val renamedR = renameRValue(r, parentScope ++ currentScope)
       val renamedDecl =
-        renamedast.Decl(translateType(t), renamedast.Ident(name), renamedR)
+        renamedast.Decl(renamedast.Ident(name), renamedR)
 
       // Check if the variable is already declared in the current scope
       if (currentScope.contains(v.v)) {

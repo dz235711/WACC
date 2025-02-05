@@ -57,7 +57,7 @@ package wacc:
 
     sealed trait Stmt
     object Skip extends Stmt
-    case class Decl(t: KnownType, v: Ident, r: RValue) extends Stmt
+    case class Decl(v: Ident, r: RValue) extends Stmt
     case class Asgn(l: LValue, r: RValue) extends Stmt
     case class Read(l: LValue) extends Stmt
     case class Free(e: Expr) extends Stmt
