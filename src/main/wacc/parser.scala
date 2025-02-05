@@ -82,11 +82,8 @@ object parser {
   // Statements
   private lazy val prog: Parsley[Program] =
     Program(
-      "begin".explain("Programs must start with begin") ~> many(func).label(
-        "function"
-      ),
+      "begin".explain("Programs must start with begin") ~> many(func),
       stmt
-        .label("statement")
         .explain(
           "Programs can lead with function declarations however they must have atleast one statement as its body"
         ) <~ "end".explain("Programs must end with end")
@@ -119,7 +116,7 @@ object parser {
         If("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi"),
         While("while" ~> expr, "do" ~> stmt <~ "done"),
         Begin("begin" ~> stmt <~ "end")
-      ).label("statement")
+      )
     )(Semi <# ";")
   private lazy val lvalue: Parsley[LValue] = choice(
     arrayElem,
@@ -131,12 +128,12 @@ object parser {
     arrayLiter,
     NewPair("newpair" ~> "(" ~> expr <~ ",", expr <~ ")"),
     pairElem,
-    Call("call" ~> Ident(ident) <~ "(", sepBy(expr, ",") <~ ")").label("function call")
+    Call("call" ~> Ident(ident) <~ "(", sepBy(expr, ",") <~ ")")
   )
   private lazy val pairElem: Parsley[LValue & RValue] = choice(
     Fst("fst" ~> lvalue),
     Snd("snd" ~> lvalue)
-  ).label("pair element")
+  )
   private lazy val arrayLiter: Parsley[ArrayLiter] =
     ArrayLiter("[".label("array literal") ~> sepBy(expr, ",") <~ "]")
 }
