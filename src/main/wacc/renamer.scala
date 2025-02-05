@@ -1,10 +1,11 @@
 package wacc
 
 import wacc.renamedast.{KnownType, QualifiedName, ?}
+import scala.collection.mutable
 
 class renamer {
   private var uid: Int = 0
-  private var functionIds: Map[String, QualifiedName] = Map()
+  private val functionIds: mutable.Map[String, QualifiedName] = mutable.Map()
 
   /** Generates a unique identifier.
    *
@@ -29,11 +30,11 @@ class renamer {
       val fqn = QualifiedName(name, uid, translateType(t))
 
       // Check for redeclaration of function
-      if (this.functionIds.contains(name)) {
+      if (functionIds.contains(name)) {
         // TODO: Error handling
       } else {
         // Add the function to the functionIds map if it is not already declared
-        this.functionIds += (name -> fqn)
+        functionIds += (name -> fqn)
       }
 
       fqn
