@@ -94,7 +94,7 @@ class renamer {
         }
       })
 
-    val renamedBody = renameStmt(f.body, Map(), params, true)._1
+    val renamedBody = renameStmt(f.body, params, Map(), true)._1
     renamedast.Func(
       renamedast.Ident(qualifiedName),
       params.values.map(renamedast.Ident.apply).toList,
