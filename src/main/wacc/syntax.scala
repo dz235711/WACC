@@ -92,7 +92,9 @@ case class Snd(l: LValue)(val pos: (Int, Int)) extends LValue, RValue
 case class Call(v: Ident, args: List[Expr])(val pos: (Int, Int)) extends RValue
 
 object ArrayLiter extends ParserBridgePos1[List[Expr], ArrayLiter]
-object NewPair extends ParserBridgePos2[Expr, Expr, NewPair]
+object NewPair extends ParserBridgePos2[Expr, Expr, NewPair] {
+    override def labels: List[String] = List("test")
+}
 object Fst extends ParserBridgePos1[LValue, Fst]
 object Snd extends ParserBridgePos1[LValue, Snd]
 object Call extends ParserBridgePos2[Ident, List[Expr], Call]

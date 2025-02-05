@@ -8,7 +8,7 @@ import parsley.generic.ErrorBridge
 trait ParserSingletonBridgePos[+A] extends ErrorBridge {
   protected def applyPos(pos: (Int, Int)): A
 
-  infix def from(op: Parsley[Any]): Parsley[A] = pos.map(applyPos) <~ op
+  infix def from(op: Parsley[Any]): Parsley[A] = error(pos.map(applyPos) <~ op)
   final def <#(op: Parsley[Any]): Parsley[A] = this from op
 }
 
@@ -23,7 +23,7 @@ trait ParserBridgePos1[-A, +B] extends ParserSingletonBridgePos[A => B] {
 
   override final def applyPos(pos: (Int, Int)): A => B = this.apply(_)(pos)
 
-  def apply(p: Parsley[A]): Parsley[B] = ap1(pos.map(applyPos), p)
+  def apply(p: Parsley[A]): Parsley[B] = error(ap1(pos.map(applyPos), p))
 }
 
 trait ParserBridgePos2[-A, -B, +C] extends ParserSingletonBridgePos[(A, B) => C] {
@@ -33,7 +33,7 @@ trait ParserBridgePos2[-A, -B, +C] extends ParserSingletonBridgePos[(A, B) => C]
     this.apply(_, _)(pos)
 
   def apply(p1: Parsley[A], p2: => Parsley[B]): Parsley[C] =
-    ap2(pos.map(applyPos), p1, p2)
+    error(ap2(pos.map(applyPos), p1, p2))
 }
 
 trait ParserBridgePos3[-A, -B, -C, +D] extends ParserSingletonBridgePos[(A, B, C) => D] {
@@ -43,7 +43,7 @@ trait ParserBridgePos3[-A, -B, -C, +D] extends ParserSingletonBridgePos[(A, B, C
     this.apply(_, _, _)(pos)
 
   def apply(p1: Parsley[A], p2: => Parsley[B], p3: => Parsley[C]): Parsley[D] =
-    ap3(pos.map(applyPos), p1, p2, p3)
+    error(ap3(pos.map(applyPos), p1, p2, p3))
 }
 
 trait ParserBridgePos4[-A, -B, -C, -D, +E] extends ParserSingletonBridgePos[(A, B, C, D) => E] {
@@ -58,5 +58,5 @@ trait ParserBridgePos4[-A, -B, -C, -D, +E] extends ParserSingletonBridgePos[(A, 
     p3: => Parsley[C],
     p4: => Parsley[D]
   ): Parsley[E] =
-    ap4(pos.map(applyPos), p1, p2, p3, p4)
+    error(ap4(pos.map(applyPos), p1, p2, p3, p4))
 }
