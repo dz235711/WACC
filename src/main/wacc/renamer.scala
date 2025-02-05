@@ -41,7 +41,7 @@ class renamer {
     })
 
     // Rename all functions and the body
-    val renamedFuncs = p.fs.zip(fids).map(renameFunc.tupled)
+    val renamedFuncs = p.fs.zip(fids).map(renameFunc)
     val renamedBody = renameStmt(p.body, Map(), Map(), false)._1
 
     // Return the renamed program
@@ -235,7 +235,7 @@ class renamer {
       scope: Map[String, QualifiedName]
   ): renamedast.RValue = r match {
     case ast.ArrayLiter(es) =>
-      renamedast.ArrayLiter(es.map(e => renameExpr(e, scope)))
+      renamedast.ArrayLiter(es.map(renameExpr(_, scope)))
     case ast.NewPair(e1, e2) =>
       renamedast.NewPair(renameExpr(e1, scope), renameExpr(e2, scope))
     case ast.Fst(l) => renamedast.Fst(renameLValue(l, scope))
@@ -270,7 +270,7 @@ class renamer {
       scope: Map[String, QualifiedName]
   ): renamedast.ArrayElem = {
     val renamedIdent = renameIdent(v.v, scope)
-    renamedast.ArrayElem(renamedIdent, es.map(e => renameExpr(e, scope)))
+    renamedast.ArrayElem(renamedIdent, es.map(renameExpr(_, scope)))
   }
 
   /** Rename an lvalue.
