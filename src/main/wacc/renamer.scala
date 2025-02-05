@@ -3,6 +3,8 @@ package wacc
 import wacc.renamedast.{KnownType, QualifiedName, ?}
 import scala.collection.mutable
 
+type Scope = Map[String, QualifiedName]
+
 class renamer {
   private var uid: Int = 0
   private val functionIds: mutable.Map[String, QualifiedName] = mutable.Map()
@@ -76,7 +78,7 @@ class renamer {
       qualifiedName: QualifiedName
   ): renamedast.Func = {
     // Construct a map of the parameters to use as a scope for the body
-    val funcScope: Map[String, QualifiedName] = paramsToScope(f.params)
+    val funcScope: Scope = paramsToScope(f.params)
     val renamedBody = renameStmt(f.body, funcScope, Map(), true)._1
 
     renamedast.Func(
@@ -91,9 +93,7 @@ class renamer {
    * @param params The parameters of the function
    * @return The scope of the parameters
    */
-  private def paramsToScope(
-      params: List[ast.Param]
-  ): Map[String, QualifiedName] =
+  private def paramsToScope(params: List[ast.Param]): Scope =
     params.foldLeft(Map())((params, param) => {
       val (t, id) = param
 
@@ -120,10 +120,10 @@ class renamer {
    */
   private def renameStmt(
       stmt: ast.Stmt,
-      parentScope: Map[String, QualifiedName],
-      currentScope: Map[String, QualifiedName],
+      parentScope: Scope,
+      currentScope: Scope,
       isFunc: Boolean
-  ): (renamedast.Stmt, Map[String, QualifiedName]) = stmt match {
+  ): (renamedast.Stmt, Scope) = stmt match {
 
     case ast.Skip() => (renamedast.Skip, currentScope)
 
@@ -230,32 +230,27 @@ class renamer {
    * @param scope The scope of the rvalue
    * @return The renamed rvalue
    */
-  private def renameRValue(
-      r: ast.RValue,
-      scope: Map[String, QualifiedName]
-  ): renamedast.RValue = r match {
-    case ast.ArrayLiter(es) =>
-      renamedast.ArrayLiter(es.map(renameExpr(_, scope)))
-    case ast.NewPair(e1, e2) =>
-      renamedast.NewPair(renameExpr(e1, scope), renameExpr(e2, scope))
-    case ast.Fst(l) => renamedast.Fst(renameLValue(l, scope))
-    case ast.Snd(l) => renamedast.Snd(renameLValue(l, scope))
-    case ast.Call(v, args) =>
-      val renamedArgs = args.map(renameExpr(_, scope))
-      val renamedIdent = if (!functionIds.contains(v.v)) {
-        // TODO: Error handling
-        renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
-      } else {
-        renamedast.Ident(functionIds(v.v))
-      }
-      renamedast.Call(renamedIdent, renamedArgs)
-    case e: ast.Expr => renameExpr(e, scope)
-  }
+  private def renameRValue(r: ast.RValue, scope: Scope): renamedast.RValue =
+    r match {
+      case ast.ArrayLiter(es) =>
+        renamedast.ArrayLiter(es.map(renameExpr(_, scope)))
+      case ast.NewPair(e1, e2) =>
+        renamedast.NewPair(renameExpr(e1, scope), renameExpr(e2, scope))
+      case ast.Fst(l) => renamedast.Fst(renameLValue(l, scope))
+      case ast.Snd(l) => renamedast.Snd(renameLValue(l, scope))
+      case ast.Call(v, args) =>
+        val renamedArgs = args.map(renameExpr(_, scope))
+        val renamedIdent = if (!functionIds.contains(v.v)) {
+          // TODO: Error handling
+          renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
+        } else {
+          renamedast.Ident(functionIds(v.v))
+        }
+        renamedast.Call(renamedIdent, renamedArgs)
+      case e: ast.Expr => renameExpr(e, scope)
+    }
 
-  private def renameIdent(
-      v: String,
-      scope: Map[String, QualifiedName]
-  ): renamedast.Ident = {
+  private def renameIdent(v: String, scope: Scope): renamedast.Ident = {
     if (!scope.contains(v)) {
       // TODO: Error handling
       renamedast.Ident(QualifiedName(v, generateUid(), ?))
@@ -267,7 +262,7 @@ class renamer {
   private def renameArrayElem(
       v: ast.Ident,
       es: List[ast.Expr],
-      scope: Map[String, QualifiedName]
+      scope: Scope
   ): renamedast.ArrayElem = {
     val renamedIdent = renameIdent(v.v, scope)
     renamedast.ArrayElem(renamedIdent, es.map(renameExpr(_, scope)))
@@ -279,15 +274,13 @@ class renamer {
    * @param scope The scope of the lvalue
    * @return The renamed lvalue
    */
-  private def renameLValue(
-      l: ast.LValue,
-      scope: Map[String, QualifiedName]
-  ): renamedast.LValue = l match {
-    case ast.Fst(l)           => renamedast.Fst(renameLValue(l, scope))
-    case ast.Snd(l)           => renamedast.Snd(renameLValue(l, scope))
-    case ast.Ident(v)         => renameIdent(v, scope)
-    case ast.ArrayElem(v, es) => renameArrayElem(v, es, scope)
-  }
+  private def renameLValue(l: ast.LValue, scope: Scope): renamedast.LValue =
+    l match {
+      case ast.Fst(l)           => renamedast.Fst(renameLValue(l, scope))
+      case ast.Snd(l)           => renamedast.Snd(renameLValue(l, scope))
+      case ast.Ident(v)         => renameIdent(v, scope)
+      case ast.ArrayElem(v, es) => renameArrayElem(v, es, scope)
+    }
 
   /** Rename an expression.
    *
@@ -295,10 +288,7 @@ class renamer {
    * @param scope The scope of the expression
    * @return The renamed expression
    */
-  private def renameExpr(
-      e: ast.Expr,
-      scope: Map[String, QualifiedName]
-  ): renamedast.Expr = e match {
+  private def renameExpr(e: ast.Expr, scope: Scope): renamedast.Expr = e match {
     case ast.Not(e)    => renamedast.Not(renameExpr(e, scope))
     case ast.Negate(e) => renamedast.Negate(renameExpr(e, scope))
     case ast.Len(e)    => renamedast.Len(renameExpr(e, scope))
