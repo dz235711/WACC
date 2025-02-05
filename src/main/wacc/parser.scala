@@ -6,6 +6,7 @@ import parsley.{Parsley, Result}
 import parsley.errors.combinator.*
 import wacc.lexer.implicits.implicitSymbol
 import wacc.lexer.{char, *}
+import wacc.ast.*
 
 object parser {
   def parse(input: String): Result[String, Program] = parser.parse(input)

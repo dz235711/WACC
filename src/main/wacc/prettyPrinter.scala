@@ -1,5 +1,7 @@
 package wacc
 
+import wacc.ast.*
+
 val INDENTATION_SIZE = 2
 
 def prettyPrint(prog: Program): String = 
