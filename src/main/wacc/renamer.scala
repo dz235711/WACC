@@ -76,37 +76,46 @@ class renamer {
       qualifiedName: QualifiedName
   ): renamedast.Func = {
     // Construct a map of the parameters to use as a scope for the body
-    val params: Map[String, QualifiedName] =
-      f.params.foldLeft(Map())((params, param) => {
-        val (t, id) = param
+    val funcScope: Map[String, QualifiedName] = paramsToScope(f.params)
+    val renamedBody = renameStmt(f.body, funcScope, Map(), true)._1
 
-        // Check for redeclaration of parameter
-        if (params.contains(id.v)) {
-          // TODO: Error handling
-          params
-        } else {
-          // Add the parameter to the params map if it is not already declared
-          params + (id.v -> QualifiedName(
-            id.v,
-            generateUid(),
-            translateType(t)
-          ))
-        }
-      })
-
-    val renamedBody = renameStmt(f.body, params, Map(), true)._1
     renamedast.Func(
       renamedast.Ident(qualifiedName),
-      params.values.map(renamedast.Ident.apply).toList,
+      funcScope.values.map(renamedast.Ident.apply).toList,
       renamedBody
     )
   }
 
+  /** Convert a function's parameters to a scope.
+   *
+   * @param params The parameters of the function
+   * @return The scope of the parameters
+   */
+  private def paramsToScope(
+      params: List[ast.Param]
+  ): Map[String, QualifiedName] =
+    params.foldLeft(Map())((params, param) => {
+      val (t, id) = param
+
+      // Check for redeclaration of parameter
+      if (params.contains(id.v)) {
+        // TODO: Error handling
+        params
+      } else {
+        // Add the parameter to the params map if it is not already declared
+        params + (id.v -> QualifiedName(
+          id.v,
+          generateUid(),
+          translateType(t)
+        ))
+      }
+    })
+
   /** Rename a statement.
    *
-   * @param stmt The statement to rename
+   * @param stmt        The statement to rename
    * @param parentScope The scope of the parent statement
-   * @param isFunc Whether the statement is in a function context
+   * @param isFunc      Whether the statement is in a function context
    * @return The renamed statement and the new scope
    */
   private def renameStmt(
@@ -217,7 +226,7 @@ class renamer {
 
   /** Rename an rvalue.
    *
-   * @param r The rvalue to rename
+   * @param r     The rvalue to rename
    * @param scope The scope of the rvalue
    * @return The renamed rvalue
    */
@@ -244,7 +253,7 @@ class renamer {
 
   /** Rename an lvalue.
    *
-   * @param l The lvalue to rename
+   * @param l     The lvalue to rename
    * @param scope The scope of the lvalue
    * @return The renamed lvalue
    */
@@ -275,7 +284,7 @@ class renamer {
 
   /** Rename an expression.
    *
-   * @param e The expression to rename
+   * @param e     The expression to rename
    * @param scope The scope of the expression
    * @return The renamed expression
    */
