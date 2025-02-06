@@ -41,7 +41,7 @@ class Renamer {
         errs += constructSpecialised(
           id.pos,
           name,
-          "Illegal function redeclaration"
+          s"Illegal function redeclaration $name"
         )
       } else {
         // Add the function to the functionIds map if it is not already declared
@@ -113,7 +113,7 @@ class Renamer {
         errs += constructSpecialised(
           id.pos,
           id.v,
-          "Illegal parameter redeclaration"
+          s"Illegal parameter redeclaration ${id.v}"
         )
         params
       } else {
@@ -154,7 +154,7 @@ class Renamer {
         errs += constructSpecialised(
           v.pos,
           v.v,
-          "Illegal variable redeclaration"
+          s"Illegal variable redeclaration ${v.v}"
         )
         (renamedDecl, currentScope)
       } else {
@@ -271,7 +271,7 @@ class Renamer {
           errs += constructSpecialised(
             v.pos,
             v.v,
-            "Attempted usage of undefined function"
+            s"Attempted usage of undefined function ${v.v}"
           )
           renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
         } else {
@@ -282,7 +282,7 @@ class Renamer {
             errs += constructSpecialised(
               v.pos,
               v.v,
-              "Incorrect number of arguments"
+              s"Incorrect number of arguments for function ${v.v}"
             )
           }
           renamedast.Ident(fqn)
@@ -297,7 +297,7 @@ class Renamer {
       errs += constructSpecialised(
         v.pos,
         v.v,
-        "Attempted usage of undefined variable"
+        s"Attempted usage of undefined variable ${v.v}"
       )
       renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
     } else {

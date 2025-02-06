@@ -32,10 +32,10 @@ def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
             val errs = new ListBuffer[WaccError]()
             Renamer.rename(errs)(x)
             val listifiedErrs = errs.toList.reverse
-            if (listifiedErrs.nonEmpty)
-              (200, Right(listifiedErrs.map(e => setLines(format(e, Some(path), ErrType.Semantic), listifiedLines))))
-            else
-              (0, Left("Parsed successfully! 🎉"))
+            // if (listifiedErrs.nonEmpty)
+            //   (200, Right(listifiedErrs.map(e => setLines(format(e, Some(path), ErrType.Semantic), listifiedLines))))
+            // else
+            (0, Left("Parsed successfully! 🎉"))
           case Failure(err) =>
             if (verbose)
               println("Failed to parse! 😢")

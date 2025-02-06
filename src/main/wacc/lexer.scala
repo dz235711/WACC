@@ -47,9 +47,6 @@ object lexer {
       hardOperators = Set(
         "!",
         "-",
-        "len",
-        "ord",
-        "chr",
         "*",
         "/",
         "%",
