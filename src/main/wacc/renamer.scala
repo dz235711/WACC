@@ -24,6 +24,7 @@ class renamer {
 
   /** Renames all functions and variables in the program.
    *
+   * @param errs Mutable list of semantic errors 
    * @param p The program to rename (ast)
    * @return The renamed program (renamedast)
    */
@@ -77,6 +78,7 @@ class renamer {
 
   /** Rename a function.
    *
+   * @param errs          Mutable list of semantic errors
    * @param f             The function to rename
    * @param qualifiedName The qualified name of the function
    * @return The renamed function
@@ -98,6 +100,7 @@ class renamer {
 
   /** Convert a function's parameters to a scope.
    *
+   * @param errs   Mutable list of semantic errors
    * @param params The parameters of the function
    * @return The scope of the parameters
    */
@@ -125,6 +128,7 @@ class renamer {
 
   /** Rename a statement.
    *
+   * @param errs        Mutable list of semantic errors
    * @param stmt        The statement to rename
    * @param parentScope The scope of the parent statement
    * @param isFunc      Whether the statement is in a function context
@@ -246,6 +250,7 @@ class renamer {
 
   /** Rename an rvalue.
    *
+   * @param errs  Mutable list of semantic errors
    * @param r     The rvalue to rename
    * @param scope The scope of the rvalue
    * @return The renamed rvalue
@@ -311,6 +316,7 @@ class renamer {
 
   /** Rename an lvalue.
    *
+   * @param errs  Mutable list of semantic errors
    * @param l     The lvalue to rename
    * @param scope The scope of the lvalue
    * @return The renamed lvalue
