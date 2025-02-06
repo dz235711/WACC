@@ -8,7 +8,7 @@ import WaccErrorItem.*
 import parsley.errors.tokenextractors.TillNextWhitespace
 
 // Constants to format builder 
-val DefaultLinesBefore = 1
+val DefaultLinesBefore = 2
 val DefaultLinesAfter = 1
 
 // Constants to format indentation in stringified errors 
@@ -30,9 +30,9 @@ case class WaccError(
 )
 
 case class WaccLineInfo(
-    line: String,
-    linesBefore: Seq[String],
-    linesAfter: Seq[String],
+    var line: String,
+    var linesBefore: Seq[String],
+    var linesAfter: Seq[String],
     lineNum: Int,
     errorPointsAt: Int,
     errorWidth: Int
@@ -184,6 +184,41 @@ private def printLineInfo(
 // A concrete, lossless implementation of ErrorBuilder for WACC to replace the DefaultErrorBuilder
 class WaccErrorBuilder extends ErrorBuilder[WaccError] {
 
+  /** Adds source and error type to a WACC error
+   *
+   * @param wErr The WACC error to format
+   * @param source The source file
+   * @param errType Whether the error is syntax or semantic
+   * @return Modified wErr
+   */
+  def format(wErr: WaccError, source: Source, errType: ErrType): WaccError = {
+    wErr.source = source
+    wErr.errType = Some(errType)
+    wErr
+  }
+
+  /** Sets the lines of a WACC error to the corresponding source code error position
+   *
+   * @param wErr The WACC error to format
+   * @param sourceCode The source code
+   * @return Modified wErr
+   */
+  def setLines(wErr: WaccError, sourceCode: List[String]): WaccError = {
+    val line = wErr.pos._1
+    val lineinfo = getlineInfo(wErr)
+    lineinfo.line = sourceCode(line)
+    lineinfo.linesBefore = sourceCode.slice(line - numLinesBefore, line)
+    lineinfo.linesAfter = sourceCode.slice(line + 1, line + numLinesAfter + 1)
+    wErr
+  }
+
+  private def getlineInfo(wErr: WaccError): WaccLineInfo = {
+    wErr.lines match {
+      case VanillaError(_, _, _, lineinfo) => lineinfo
+      case SpecialisedError(_, lineinfo) => lineinfo
+    }
+  }
+
   override def unexpectedToken(
       cs: Iterable[Char],
       amountOfInputParserWanted: Int,
@@ -255,9 +290,9 @@ class WaccErrorBuilder extends ErrorBuilder[WaccError] {
       errorWidth
     )
 
-  override val numLinesBefore: Int = 1
+  override val numLinesBefore: Int = DefaultLinesBefore
 
-  override val numLinesAfter: Int = 1
+  override val numLinesAfter: Int = DefaultLinesAfter
 
   type Raw = WaccRaw
   override def raw(item: String): Raw = WaccRaw(item)
@@ -270,20 +305,5 @@ class WaccErrorBuilder extends ErrorBuilder[WaccError] {
 }
 
 
-// An object to allow for easy formatting of WaccErrors with source and error type
-object WaccErrorBuilder extends WaccErrorBuilder {
-
-    
-  /** Adds source and error type to a WACC error
-   *
-   * @param wErr The WACC error to format
-   * @param source The source file
-   * @param errType Whether the error is syntax or semantic
-   * @return Modified wErr
-   */
-    def format(wErr: WaccError, source: Source, errType: ErrType): WaccError = {
-    wErr.source = source
-    wErr.errType = Some(errType)
-    wErr
-  }
-}
+// An object to allow for easy building of WaccErrors
+object WaccErrorBuilder extends WaccErrorBuilder

@@ -157,3 +157,4 @@ case class Program(fs: List[Func], body: Stmt)(val pos: (Int, Int))
 object Program extends ParserBridgePos2[List[Func], Stmt, Program] {
     override def labels: List[String] = List("program")
 }
+}

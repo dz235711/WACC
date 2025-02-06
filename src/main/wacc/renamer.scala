@@ -2,6 +2,7 @@ package wacc
 
 import wacc.renamedast.{KnownType, QualifiedName, ?}
 import scala.collection.mutable
+import WaccErrorBuilder.*
 
 type Scope = Map[String, QualifiedName]
 
@@ -35,7 +36,21 @@ class renamer {
 
       // Check for redeclaration of function
       if (functionIds.contains(name)) {
-        // TODO: Error handling
+        build(
+          pos = pos(f.pos._1, f.pos._2),
+          source = source(None),
+          lines = WaccErrorLines.SpecialisedError(
+            msgs = Set(message("Illegal function redeclaration")),
+            lineinfo = WaccLineInfo(
+              line = "",
+              linesBefore = Seq(),
+              linesAfter = Seq(),
+              lineNum = f.pos._1,
+              errorPointsAt = f.pos._2,
+              errorWidth = name.length,
+            )
+          )
+        )
       } else {
         // Add the function to the functionIds map if it is not already declared
         functionIds += (name -> (fqn, f.params.length))
@@ -101,7 +116,21 @@ class renamer {
 
       // Check for redeclaration of parameter
       if (params.contains(id.v)) {
-        // TODO: Error handling
+        build(
+          pos = pos(id.pos._1, id.pos._2),
+          source = source(None),
+          lines = WaccErrorLines.SpecialisedError(
+            msgs = Set(message("Illegal function redeclaration")),
+            lineinfo = WaccLineInfo(
+              line = "",
+              linesBefore = Seq(),
+              linesAfter = Seq(),
+              lineNum = id.pos._1,
+              errorPointsAt = id.pos._2,
+              errorWidth = id.v.length,
+            )
+          )
+        )
         params
       } else {
         // Add the parameter to the params map if it is not already declared
@@ -137,7 +166,21 @@ class renamer {
 
       // Check if the variable is already declared in the current scope
       if (currentScope.contains(v.v)) {
-        // TODO: Error handling
+        build(
+          pos = pos(v.pos._1, v.pos._2),
+          source = source(None),
+          lines = WaccErrorLines.SpecialisedError(
+            msgs = Set(message("Illegal function redeclaration")),
+            lineinfo = WaccLineInfo(
+              line = "",
+              linesBefore = Seq(),
+              linesAfter = Seq(),
+              lineNum = v.pos._1,
+              errorPointsAt = v.pos._2,
+              errorWidth = v.v.length,
+            )
+          )
+        )
         (renamedDecl, currentScope)
       } else {
         /* Only add the variable to the current scope if it is not already
@@ -245,14 +288,42 @@ class renamer {
 
         // Check if the function is declared
         val renamedIdent = if (!functionIds.contains(v.v)) {
-          // TODO: Error handling
+          build(
+          pos = pos(v.pos._1, v.pos._2),
+          source = source(None),
+          lines = WaccErrorLines.SpecialisedError(
+            msgs = Set(message("Attempted usage of undefined function")),
+            lineinfo = WaccLineInfo(
+              line = "",
+              linesBefore = Seq(),
+              linesAfter = Seq(),
+              lineNum = v.pos._1,
+              errorPointsAt = v.pos._2,
+              errorWidth = v.v.length,
+            )
+          )
+        )
           renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
         } else {
           val (fqn, argLen) = functionIds(v.v)
 
           // Check if the number of arguments is correct
           if (args.length != argLen) {
-            // TODO: Error handling
+            build(
+            pos = pos(v.pos._1, v.pos._2),
+            source = source(None),
+            lines = WaccErrorLines.SpecialisedError(
+              msgs = Set(message("Illegal function redeclaration")),
+              lineinfo = WaccLineInfo(
+                line = "",
+                linesBefore = Seq(),
+                linesAfter = Seq(),
+                lineNum = v.pos._1,
+                errorPointsAt = v.pos._2,
+                errorWidth = v.v.length,
+              ) 
+            )
+        )
           }
           renamedast.Ident(fqn)
         }
@@ -338,6 +409,5 @@ class renamer {
     case ast.PairLiter()      => renamedast.PairLiter
     case ast.Ident(v)         => renameIdent(v, scope)
     case ast.ArrayElem(v, es) => renameArrayElem(v, es, scope)
-    case ast.NestedExpr(e)    => renamedast.NestedExpr(renameExpr(e, scope))
   }
 }
