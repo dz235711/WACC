@@ -6,6 +6,7 @@ import wacc.renamedast.KnownType.*
 enum Constraint {
   case Is(refTy: SemType)
   case IsReadable
+  case IsComparable
 }
 object Constraint {
   val Unconstrained: Constraint = Is(?)
@@ -49,11 +50,55 @@ sealed class TypeChecker {
       case (kty @ Array(_), IsArray)        => Some(kty)
       case (kty @ Pair(_, _), IsPair)       => Some(kty)
       case (kty @ (Int | Char), IsReadable) => Some(kty)
-      case (_, IsReadable) =>
+      case (_, IsReadable)                  =>
+        // TODO: Error handling
+        None
+      case (kty @ (Int | Char), IsComparable) => Some(kty)
+      case (_, IsComparable)                  =>
         // TODO: Error handling
         None
       case _ => None
     }
 
-  def checkProgram(p: renamedast.Program): TypedAST.Program = ???
+  def checkProg(p: renamedast.Program): TypedAST.Program = ???
+
+  private def checkFunc(func: renamedast.Func): TypedAST.Func = ???
+
+  /** Checks a statement and returns a typed statement.
+   *
+   * @param stmt The statement to check
+   * @return The typed statement
+   */
+  private def checkStmt(stmt: renamedast.Stmt): TypedAST.Stmt = stmt match {
+    case renamedast.Skip => TypedAST.Skip
+    case renamedast.Decl(v, r) =>
+      val (ty, rTyped) = checkRVal(r, IsReadable)
+      val (_, vTyped) = checkIdent(v, Is(ty.getOrElse(?)))
+      TypedAST.Decl(vTyped, rTyped)
+    case renamedast.Asgn(l, r) =>
+      val (ty, lTyped) = checkLVal(l, IsReadable)
+      val (_, rTyped) = checkRVal(r, Is(ty.getOrElse(?)))
+      TypedAST.Asgn(lTyped, rTyped)
+    case renamedast.Read(l) => TypedAST.Read(checkLVal(l, IsReadable)._2)
+  }
+
+  private def checkExpr(
+      expr: renamedast.Expr,
+      c: Constraint
+  ): (Option[SemType], TypedAST.Expr) = ???
+
+  private def checkLVal(
+      lval: renamedast.LValue,
+      c: Constraint
+  ): (Option[SemType], TypedAST.LValue) = ???
+
+  private def checkRVal(
+      rval: renamedast.RValue,
+      c: Constraint
+  ): (Option[SemType], TypedAST.RValue) = ???
+
+  private def checkIdent(
+      ident: renamedast.Ident,
+      c: Constraint
+  ): (Option[SemType], TypedAST.Ident) = ???
 }
