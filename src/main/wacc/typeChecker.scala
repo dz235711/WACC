@@ -199,19 +199,9 @@ sealed class TypeChecker {
         // TODO: Error handling
       }
       (Some(Pair(?, ?)), TypedAST.PairLiter)
-    case id @ renamedast.Ident(_) => checkIdent(id, c)
-    case renamedast.ArrayElem(v, es) =>
-      val esTyped = es.map(checkExpr(_, IsInt)._2)
-      val (arrTy, vTyped) = checkIdent(v, IsArray)
-      val elemTy = (for
-        case Array(elemTy) <- arrTy
-        ty <- elemTy.satisfies(c)
-      yield ty).getOrElse {
-        // TODO: Error handling
-        ?
-      }
-      (Some(elemTy), TypedAST.ArrayElem(vTyped, esTyped, elemTy))
-    case renamedast.NestedExpr(e) => checkExpr(e, c)
+    case id @ renamedast.Ident(_)           => checkIdent(id, c)
+    case arrEl @ renamedast.ArrayElem(_, _) => checkArrayElem(arrEl, c)
+    case renamedast.NestedExpr(e)           => checkExpr(e, c)
   }
 
   /** Checks an arithmetic expression and returns a typed arithmetic expression.
@@ -300,10 +290,39 @@ sealed class TypeChecker {
     }
     (Some(Bool), build(checkExpr(e1, IsBool)._2, checkExpr(e2, IsBool)._2))
 
+  /** Checks an lvalue and returns a typed lvalue.
+   *
+   * @param lval The lvalue to check
+   * @param c The constraint on the return type
+   * @return The typed lvalue
+   */
   private def checkLVal(
       lval: renamedast.LValue,
       c: Constraint
-  ): (Option[SemType], TypedAST.LValue) = ???
+  ): (Option[SemType], TypedAST.LValue) = lval match {
+    case id @ renamedast.Ident(_)           => checkIdent(id, c)
+    case arrEl @ renamedast.ArrayElem(_, _) => checkArrayElem(arrEl, c)
+    case renamedast.Fst(l) =>
+      val (ty, lTyped) = checkLVal(l, IsPair)
+      ty match {
+        case Some(Pair(ty1, _)) =>
+          ty1.satisfies(c).getOrElse {
+            // TODO: Error handling
+          }
+          (Some(ty1), TypedAST.Fst(lTyped, ty1))
+        case _ => (Some(?), TypedAST.Fst(lTyped, ?))
+      }
+    case renamedast.Snd(l) =>
+      val (ty, lTyped) = checkLVal(l, IsPair)
+      ty match {
+        case Some(Pair(_, ty2)) =>
+          ty2.satisfies(c).getOrElse {
+            // TODO: Error handling
+          }
+          (Some(ty2), TypedAST.Snd(lTyped, ty2))
+        case _ => (Some(?), TypedAST.Snd(lTyped, ?))
+      }
+  }
 
   private def checkRVal(
       rval: renamedast.RValue,
@@ -314,4 +333,19 @@ sealed class TypeChecker {
       ident: renamedast.Ident,
       c: Constraint
   ): (Option[SemType], TypedAST.Ident) = ???
+
+  private def checkArrayElem(
+      arrElem: renamedast.ArrayElem,
+      c: Constraint
+  ): (Option[SemType], TypedAST.ArrayElem) =
+    val (arrTy, vTyped) = checkIdent(arrElem.v, IsArray)
+    val elemTy = (for
+      case Array(elemTy) <- arrTy
+      ty <- elemTy.satisfies(c)
+    yield ty).getOrElse {
+      // TODO: Error handling
+      ?
+    }
+    val esTyped = arrElem.es.map(checkExpr(_, IsInt)._2)
+    (Some(elemTy), TypedAST.ArrayElem(vTyped, esTyped, elemTy))
 }
