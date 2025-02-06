@@ -1,12 +1,13 @@
 package wacc
 
-import wacc.renamedast.{SemType, ?}
+import wacc.renamedast.{?, KnownType, SemType}
 import wacc.renamedast.KnownType.*
 
 enum Constraint {
   case Is(refTy: SemType)
   case IsReadable
   case IsComparable
+  case IsFreeable
 }
 object Constraint {
   val Unconstrained: Constraint = Is(?)
@@ -57,6 +58,10 @@ sealed class TypeChecker {
       case (_, IsComparable)                  =>
         // TODO: Error handling
         None
+      case (kty @ (Array(_) | Pair(_, _)), IsFreeable) => Some(kty)
+      case (_, IsFreeable) =>
+        // TODO: Error handling
+        None
       case _ => None
     }
 
@@ -67,19 +72,30 @@ sealed class TypeChecker {
   /** Checks a statement and returns a typed statement.
    *
    * @param stmt The statement to check
+   * @param retC The constraint on the return type of the statement
    * @return The typed statement
    */
-  private def checkStmt(stmt: renamedast.Stmt): TypedAST.Stmt = stmt match {
+  private def checkStmt(stmt: renamedast.Stmt, retC: Constraint): TypedAST.Stmt = stmt match {
     case renamedast.Skip => TypedAST.Skip
     case renamedast.Decl(v, r) =>
-      val (ty, rTyped) = checkRVal(r, IsReadable)
-      val (_, vTyped) = checkIdent(v, Is(ty.getOrElse(?)))
+      val (ty, vTyped) = checkIdent(v, Unconstrained)
+      val (_, rTyped) = checkRVal(r, Is(ty.get)) // Identifier in declaration *will* have a type
       TypedAST.Decl(vTyped, rTyped)
     case renamedast.Asgn(l, r) =>
-      val (ty, lTyped) = checkLVal(l, IsReadable)
+      val (ty, lTyped) = checkLVal(l, Unconstrained)
       val (_, rTyped) = checkRVal(r, Is(ty.getOrElse(?)))
+      
+      // Make sure the assignment has a known type
+      if (ty.isEmpty) {
+        // TODO: Error handling
+      }
+      
       TypedAST.Asgn(lTyped, rTyped)
     case renamedast.Read(l) => TypedAST.Read(checkLVal(l, IsReadable)._2)
+    case renamedast.Free(e) => TypedAST.Free(checkExpr(e, IsFreeable)._2)
+    case renamedast.Return(e) => TypedAST.Return(checkExpr(e, retC)._2)
+    case renamedast.Exit(e) => TypedAST.Exit(checkExpr(e, Is(KnownType.Int))._2)
+    case renamedast.Print(e) => TypedAST.Print(checkExpr(e, Unconstrained)._2)
   }
 
   private def checkExpr(
