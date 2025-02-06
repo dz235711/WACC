@@ -24,7 +24,7 @@ object Constraint {
 
 sealed class TypeChecker {
   // Map from function UID to list of function parameters
-  private var funcTable: mutable.Map[Int, List[renamedast.Ident]] =
+  private val funcTable: mutable.Map[Int, List[renamedast.Ident]] =
     mutable.Map()
 
   import Constraint.*
@@ -350,6 +350,7 @@ sealed class TypeChecker {
           val esTyped = es.map(checkExpr(_, Is(ty))._2)
           (Some(Array(ty)), TypedAST.ArrayLiter(esTyped, Array(ty)))
         case _ =>
+          // TODO: Error handling
           (None, TypedAST.ArrayLiter(es.map(checkExpr(_, Unconstrained)._2), ?))
       }
     case renamedast.NewPair(e1, e2) =>
@@ -362,6 +363,7 @@ sealed class TypeChecker {
             TypedAST.NewPair(e1Typed, e2Typed, Pair(ty1, ty2))
           )
         case _ =>
+          // TODO: Error handling
           (
             None,
             TypedAST.NewPair(
