@@ -10,7 +10,7 @@ enum Constraint {
   case IsChar
   case IsString
   case IsReadable
-  case IsComparable
+  case IsOrderable
   case IsFreeable
 }
 object Constraint {
@@ -54,8 +54,8 @@ sealed class TypeChecker {
       case (_, IsReadable)                  =>
         // TODO: Error handling
         None
-      case (kty @ (Int | Char), IsComparable) => Some(kty)
-      case (_, IsComparable)                  =>
+      case (kty @ (Int | Char), IsOrderable) => Some(kty)
+      case (_, IsOrderable)                  =>
         // TODO: Error handling
         None
       case (kty @ (Array(_) | Pair(_, _)), IsFreeable) => Some(kty)
@@ -124,7 +124,181 @@ sealed class TypeChecker {
   private def checkExpr(
       expr: renamedast.Expr,
       c: Constraint
-  ): (Option[SemType], TypedAST.Expr) = ???
+  ): (Option[SemType], TypedAST.Expr) = expr match {
+    case renamedast.Not(e) =>
+      Bool.satisfies(c).getOrElse {
+        // TODO: Error handling
+      }
+      (Some(Bool), TypedAST.Not(checkExpr(e, IsBool)._2))
+    case renamedast.Negate(e) =>
+      Int.satisfies(c).getOrElse {
+        // TODO: Error handling
+      }
+      (Some(Int), TypedAST.Negate(checkExpr(e, IsInt)._2))
+    case renamedast.Len(e) =>
+      Int.satisfies(c).getOrElse {
+        // TODO: Error handling
+      }
+      (Some(Int), TypedAST.Len(checkExpr(e, IsArray)._2))
+    case renamedast.Ord(e) =>
+      Int.satisfies(c).getOrElse {
+        // TODO: Error handling
+      }
+      (Some(Int), TypedAST.Ord(checkExpr(e, IsChar)._2))
+    case renamedast.Chr(e) =>
+      Char.satisfies(c).getOrElse {
+        // TODO: Error handling
+      }
+      (Some(Char), TypedAST.Chr(checkExpr(e, IsInt)._2))
+    case renamedast.Mult(e1, e2) =>
+      checkArithmetic(e1, e2, c)(TypedAST.Mult.apply)
+    case renamedast.Div(e1, e2) =>
+      checkArithmetic(e1, e2, c)(TypedAST.Div.apply)
+    case renamedast.Mod(e1, e2) =>
+      checkArithmetic(e1, e2, c)(TypedAST.Mod.apply)
+    case renamedast.Add(e1, e2) =>
+      checkArithmetic(e1, e2, c)(TypedAST.Add.apply)
+    case renamedast.Sub(e1, e2) =>
+      checkArithmetic(e1, e2, c)(TypedAST.Sub.apply)
+    case renamedast.Greater(e1, e2) =>
+      checkOrdering(e1, e2, c)(TypedAST.Greater.apply)
+    case renamedast.GreaterEq(e1, e2) =>
+      checkOrdering(e1, e2, c)(TypedAST.GreaterEq.apply)
+    case renamedast.Smaller(e1, e2) =>
+      checkOrdering(e1, e2, c)(TypedAST.Smaller.apply)
+    case renamedast.SmallerEq(e1, e2) =>
+      checkOrdering(e1, e2, c)(TypedAST.SmallerEq.apply)
+    case renamedast.Equals(e1, e2) =>
+      checkEquality(e1, e2, c)(TypedAST.Equals.apply)
+    case renamedast.NotEquals(e1, e2) =>
+      checkEquality(e1, e2, c)(TypedAST.NotEquals.apply)
+    case renamedast.And(e1, e2) => checkLogical(e1, e2, c)(TypedAST.And.apply)
+    case renamedast.Or(e1, e2)  => checkLogical(e1, e2, c)(TypedAST.Or.apply)
+    case renamedast.IntLiter(x) =>
+      Int.satisfies(c).getOrElse {
+        // TODO: Error handling
+      }
+      (Some(Int), TypedAST.IntLiter(x))
+    case renamedast.BoolLiter(b) =>
+      Bool.satisfies(c).getOrElse {
+        // TODO: Error handling
+      }
+      (Some(Bool), TypedAST.BoolLiter(b))
+    case renamedast.CharLiter(ch) =>
+      Char.satisfies(c).getOrElse {
+        // TODO: Error handling
+      }
+      (Some(Char), TypedAST.CharLiter(ch))
+    case renamedast.StringLiter(s) =>
+      String.satisfies(c).getOrElse {
+        // TODO: Error handling
+      }
+      (Some(String), TypedAST.StringLiter(s))
+    case renamedast.PairLiter =>
+      Pair(?, ?).satisfies(c).getOrElse {
+        // TODO: Error handling
+      }
+      (Some(Pair(?, ?)), TypedAST.PairLiter)
+    case id @ renamedast.Ident(_) => checkIdent(id, c)
+    case renamedast.ArrayElem(v, es) =>
+      val esTyped = es.map(checkExpr(_, IsInt)._2)
+      val (arrTy, vTyped) = checkIdent(v, IsArray)
+      val elemTy = (for
+        case Array(elemTy) <- arrTy
+        ty <- elemTy.satisfies(c)
+      yield ty).getOrElse {
+        // TODO: Error handling
+        ?
+      }
+      (Some(elemTy), TypedAST.ArrayElem(vTyped, esTyped, elemTy))
+    case renamedast.NestedExpr(e) => checkExpr(e, c)
+  }
+
+  /** Checks an arithmetic expression and returns a typed arithmetic expression.
+   *
+   * @param e1 The first expression
+   * @param e2 The second expression
+   * @param c The constraint on the return type
+   * @param build The function to build the typed arithmetic expression
+   * @return The typed arithmetic expression
+   */
+  private def checkArithmetic(
+      e1: renamedast.Expr,
+      e2: renamedast.Expr,
+      c: Constraint
+  )(
+      build: (e1: TypedAST.Expr, e2: TypedAST.Expr) => TypedAST.Expr
+  ): (Option[SemType], TypedAST.Expr) =
+    Int.satisfies(c).getOrElse {
+      // TODO: Error handling
+    }
+    (Some(Int), build(checkExpr(e1, IsInt)._2, checkExpr(e2, IsInt)._2))
+
+  /** Checks a comparison expression and returns a typed comparison expression.
+   *
+   * @param e1 The first expression
+   * @param e2 The second expression
+   * @param c The constraint on the return type
+   * @param build The function to build the typed comparison expression
+   * @return The typed comparison expression
+   */
+  private def checkOrdering(
+      e1: renamedast.Expr,
+      e2: renamedast.Expr,
+      c: Constraint
+  )(
+      build: (e1: TypedAST.Expr, e2: TypedAST.Expr) => TypedAST.Expr
+  ): (Option[SemType], TypedAST.Expr) =
+    Bool.satisfies(c).getOrElse {
+      // TODO: Error handling
+    }
+    (
+      Some(Bool),
+      build(checkExpr(e1, IsOrderable)._2, checkExpr(e2, IsOrderable)._2)
+    )
+
+  /** Checks an equality expression and returns a typed equality expression.
+   *
+   * @param e1 The first expression
+   * @param e2 The second expression
+   * @param c The constraint on the return type
+   * @param build The function to build the typed equality expression
+   * @return The typed equality expression
+   */
+  private def checkEquality(
+      e1: renamedast.Expr,
+      e2: renamedast.Expr,
+      c: Constraint
+  )(
+      build: (e1: TypedAST.Expr, e2: TypedAST.Expr) => TypedAST.Expr
+  ): (Option[SemType], TypedAST.Expr) =
+    Bool.satisfies(c).getOrElse {
+      // TODO: Error handling
+    }
+    (
+      Some(Bool),
+      build(checkExpr(e1, Unconstrained)._2, checkExpr(e2, Unconstrained)._2)
+    )
+
+  /** Checks a logical expression and returns a typed logical expression.
+   *
+   * @param e1 The first expression
+   * @param e2 The second expression
+   * @param c The constraint on the return type
+   * @param build The function to build the typed logical expression
+   * @return The typed logical expression
+   */
+  private def checkLogical(
+      e1: renamedast.Expr,
+      e2: renamedast.Expr,
+      c: Constraint
+  )(
+      build: (e1: TypedAST.Expr, e2: TypedAST.Expr) => TypedAST.Expr
+  ): (Option[SemType], TypedAST.Expr) =
+    Bool.satisfies(c).getOrElse {
+      // TODO: Error handling
+    }
+    (Some(Bool), build(checkExpr(e1, IsBool)._2, checkExpr(e2, IsBool)._2))
 
   private def checkLVal(
       lval: renamedast.LValue,
