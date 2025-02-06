@@ -1,3 +1,4 @@
+import wacc.ast.StmtErrorBridge
 package wacc:
   package ast {
 
@@ -19,18 +20,15 @@ case class ArrayType(t: Type)(val pos: (Int, Int)) extends Type, PairElemType
 case class ErasedPair()(val pos: (Int, Int)) extends PairElemType
 case class PairType(t1: PairElemType, t2: PairElemType)(val pos: (Int, Int)) extends Type
 
-object IntType extends ParserBridgePos0[IntType] {
+private sealed trait typeErrorBridge extends ErrorBridge {
     override def labels: List[String] = List("type")
+    override def reason: Option[String] = Some("Examples of types include int, bool, char, string, and arrays of these types")
 }
-object BoolType extends ParserBridgePos0[BoolType] {
-    override def labels: List[String] = List("type")
-}
-object CharType extends ParserBridgePos0[CharType] {
-    override def labels: List[String] = List("type")
-}
-object StringType extends ParserBridgePos0[StringType] {
-    override def labels: List[String] = List("type")
-}
+
+object IntType extends ParserBridgePos0[IntType], typeErrorBridge
+object BoolType extends ParserBridgePos0[BoolType], typeErrorBridge
+object CharType extends ParserBridgePos0[CharType], typeErrorBridge
+object StringType extends ParserBridgePos0[StringType], typeErrorBridge
 
 object ArrayType extends ParserBridgePos1[Type, ArrayType]
 object ErasedPair extends ParserBridgePos0[PairElemType]
@@ -116,10 +114,7 @@ object Call extends ParserBridgePos2[Ident, List[Expr], Call] {
     override def labels: List[String] = List("function call")
 }
 
-sealed trait Stmt extends ErrorBridge {
-    override def labels: List[String] = List("statement")
-    override def reason: Option[String] = Some("Examples of statements include assignments (int x = 2) or blocks (if x == 2 then x = 3 else x = 4 fi)")
-}
+sealed trait Stmt
 case class Skip()(val pos: (Int, Int)) extends Stmt
 case class Decl(t: Type, v: Ident, r: RValue)(val pos: (Int, Int)) extends Stmt
 case class Asgn(l: LValue, r: RValue)(val pos: (Int, Int)) extends Stmt
@@ -134,19 +129,24 @@ case class While(cond: Expr, body: Stmt)(val pos: (Int, Int)) extends Stmt
 case class Begin(body: Stmt)(val pos: (Int, Int)) extends Stmt
 case class Semi(s1: Stmt, s2: Stmt)(val pos: (Int, Int)) extends Stmt
 
-object Skip extends ParserBridgePos0[Skip], Stmt
-object Decl extends ParserBridgePos3[Type, Ident, RValue, Decl], Stmt
-object Asgn extends ParserBridgePos2[LValue, RValue, Asgn], Stmt
-object Read extends ParserBridgePos1[LValue, Read], Stmt
-object Free extends ParserBridgePos1[Expr, Free], Stmt
-object Return extends ParserBridgePos1[Expr, Return], Stmt
-object Exit extends ParserBridgePos1[Expr, Exit], Stmt
-object Print extends ParserBridgePos1[Expr, Print], Stmt
-object PrintLn extends ParserBridgePos1[Expr, PrintLn], Stmt
-object If extends ParserBridgePos3[Expr, Stmt, Stmt, If], Stmt
-object While extends ParserBridgePos2[Expr, Stmt, While], Stmt
-object Begin extends ParserBridgePos1[Stmt, Begin], Stmt
-object Semi extends ParserBridgePos2[Stmt, Stmt, Semi], Stmt
+sealed trait StmtErrorBridge extends ErrorBridge {
+    override def labels: List[String] = List("statement")
+    override def reason: Option[String] = Some("Examples of statements include assignments (int x = 2) or blocks (if x == 2 then x = 3 else x = 4 fi)")
+}
+
+object Skip extends ParserBridgePos0[Skip], StmtErrorBridge
+object Decl extends ParserBridgePos3[Type, Ident, RValue, Decl], StmtErrorBridge
+object Asgn extends ParserBridgePos2[LValue, RValue, Asgn], StmtErrorBridge
+object Read extends ParserBridgePos1[LValue, Read], StmtErrorBridge
+object Free extends ParserBridgePos1[Expr, Free], StmtErrorBridge
+object Return extends ParserBridgePos1[Expr, Return], StmtErrorBridge
+object Exit extends ParserBridgePos1[Expr, Exit], StmtErrorBridge
+object Print extends ParserBridgePos1[Expr, Print], StmtErrorBridge
+object PrintLn extends ParserBridgePos1[Expr, PrintLn], StmtErrorBridge
+object If extends ParserBridgePos3[Expr, Stmt, Stmt, If], StmtErrorBridge
+object While extends ParserBridgePos2[Expr, Stmt, While], StmtErrorBridge
+object Begin extends ParserBridgePos1[Stmt, Begin], StmtErrorBridge
+object Semi extends ParserBridgePos2[Stmt, Stmt, Semi], StmtErrorBridge
 
 case class Func(decl: FuncDecl, params: List[Param], body: Stmt)(val pos: (Int, Int))
 object Func extends ParserBridgePos3[FuncDecl, List[Param], Stmt, Func] {
