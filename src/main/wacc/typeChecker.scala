@@ -1,6 +1,6 @@
 package wacc
 
-import wacc.renamedast.{?, KnownType, SemType}
+import wacc.renamedast.{?, KnownType, LValue, SemType}
 import wacc.renamedast.KnownType.*
 
 enum Constraint {
@@ -22,6 +22,9 @@ object Constraint {
 }
 
 sealed class TypeChecker {
+  // Map from function UID to list of function parameters
+  private var funcTable: Map[Int, List[renamedast.Ident]] = Map.empty
+
   import Constraint.*
 
   /** Determines whether two types are equal, and if so, what the most specific of them is. */
@@ -302,32 +305,61 @@ sealed class TypeChecker {
   ): (Option[SemType], TypedAST.LValue) = lval match {
     case id @ renamedast.Ident(_)           => checkIdent(id, c)
     case arrEl @ renamedast.ArrayElem(_, _) => checkArrayElem(arrEl, c)
-    case renamedast.Fst(l) =>
-      val (ty, lTyped) = checkLVal(l, IsPair)
-      ty match {
-        case Some(Pair(ty1, _)) =>
-          ty1.satisfies(c).getOrElse {
-            // TODO: Error handling
-          }
-          (Some(ty1), TypedAST.Fst(lTyped, ty1))
-        case _ => (Some(?), TypedAST.Fst(lTyped, ?))
-      }
-    case renamedast.Snd(l) =>
-      val (ty, lTyped) = checkLVal(l, IsPair)
-      ty match {
-        case Some(Pair(_, ty2)) =>
-          ty2.satisfies(c).getOrElse {
-            // TODO: Error handling
-          }
-          (Some(ty2), TypedAST.Snd(lTyped, ty2))
-        case _ => (Some(?), TypedAST.Snd(lTyped, ?))
-      }
+    case fst @ renamedast.Fst(_)            => checkFst(fst, c)
+    case snd @ renamedast.Snd(_)            => checkSnd(snd, c)
   }
 
+  /** Checks an rvalue and returns a typed rvalue.
+   *
+   * @param rval The rvalue to check
+   * @param c The constraint on the return type
+   * @return The typed rvalue
+   */
   private def checkRVal(
       rval: renamedast.RValue,
       c: Constraint
-  ): (Option[SemType], TypedAST.RValue) = ???
+  ): (Option[SemType], TypedAST.RValue) = rval match {
+    case renamedast.ArrayLiter(es) =>
+      Array(?).satisfies(c) match {
+        case Some(Array(ty)) =>
+          val esTyped = es.map(checkExpr(_, Is(ty))._2)
+          (Some(Array(ty)), TypedAST.ArrayLiter(esTyped, Array(ty)))
+        case _ =>
+          (None, TypedAST.ArrayLiter(es.map(checkExpr(_, Unconstrained)._2), ?))
+      }
+    case renamedast.NewPair(e1, e2) =>
+      Pair(?, ?).satisfies(c) match {
+        case Some(Pair(ty1, ty2)) =>
+          val e1Typed = checkExpr(e1, Is(ty1))._2
+          val e2Typed = checkExpr(e2, Is(ty2))._2
+          (
+            Some(Pair(ty1, ty2)),
+            TypedAST.NewPair(e1Typed, e2Typed, Pair(ty1, ty2))
+          )
+        case _ =>
+          (
+            None,
+            TypedAST.NewPair(
+              checkExpr(e1, Unconstrained)._2,
+              checkExpr(e2, Unconstrained)._2,
+              ?
+            )
+          )
+      }
+    case fst @ renamedast.Fst(_)  => checkFst(fst, c)
+    case snd @ renamedast.Snd(_)  => checkSnd(snd, c)
+    case renamedast.Call(v, args) =>
+      /* Check that the return type of the function is the same as the
+       * constraint */
+      val (ty, vTyped) = checkIdent(v, c)
+      /* Check that the arguments are of the types expected by the function from
+       * funcTable */
+      val argsTyped = args.zip(funcTable(vTyped.id)).map { (arg, expected) =>
+        checkExpr(arg, Is(expected.v.declType))._2
+      }
+      (ty, TypedAST.Call(vTyped, argsTyped, ty.get))
+    case e: renamedast.Expr => checkExpr(e, c)
+  }
 
   private def checkIdent(
       ident: renamedast.Ident,
@@ -348,4 +380,46 @@ sealed class TypeChecker {
     }
     val esTyped = arrElem.es.map(checkExpr(_, IsInt)._2)
     (Some(elemTy), TypedAST.ArrayElem(vTyped, esTyped, elemTy))
+
+  /** Checks a Fst expression and returns a typed Fst expression.
+   *
+   * @param fst The Fst expression to check
+   * @param c The constraint on the return type
+   * @return The typed Fst expression
+   */
+  private def checkFst(
+      fst: renamedast.Fst,
+      c: Constraint
+  ): (Option[SemType], TypedAST.Fst) = {
+    val (ty, lTyped) = checkLVal(fst.l, IsPair)
+    ty match {
+      case Some(Pair(ty1, _)) =>
+        ty1.satisfies(c).getOrElse {
+          // TODO: Error handling
+        }
+        (Some(ty1), TypedAST.Fst(lTyped, ty1))
+      case _ => (Some(?), TypedAST.Fst(lTyped, ?))
+    }
+  }
+
+  /** Checks a Snd expression and returns a typed Snd expression.
+   *
+   * @param snd The Snd expression to check
+   * @param c The constraint on the return type
+   * @return The typed Snd expression
+   */
+  private def checkSnd(
+      snd: renamedast.Snd,
+      c: Constraint
+  ): (Option[SemType], TypedAST.Snd) = {
+    val (ty, lTyped) = checkLVal(snd.l, IsPair)
+    ty match {
+      case Some(Pair(_, ty2)) =>
+        ty2.satisfies(c).getOrElse {
+          // TODO: Error handling
+        }
+        (Some(ty2), TypedAST.Snd(lTyped, ty2))
+      case _ => (Some(?), TypedAST.Snd(lTyped, ?))
+    }
+  }
 }
