@@ -40,6 +40,7 @@ sealed class TypeChecker {
           newTy1 <- ty1 ~ refTy1
           newTy2 <- ty2 ~ refTy2
         } yield Pair(newTy1, newTy2)
+      case (Array(Char), String)      => Some(String)
       case (ty, refTy) if ty == refTy => Some(ty)
       case _                          => None
     }
@@ -47,6 +48,11 @@ sealed class TypeChecker {
   /** Determines whether a type satisfies a constraint. */
   extension (ty: SemType)
     private def satisfies(c: Constraint): Option[SemType] = (ty, c) match {
+      // Check invariant cases
+      case (Array(Array(Char)), Is(Array(String)))     => None
+      case (Pair(_, Array(Char)), Is(Pair(_, String))) => None
+      case (Pair(Array(Char), _), Is(Pair(String, _))) => None
+      // Check the rest of the cases
       case (ty, Is(refTy)) =>
         (ty ~ refTy).orElse {
           // TODO: Error handling?
