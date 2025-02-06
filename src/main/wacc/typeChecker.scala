@@ -70,7 +70,17 @@ sealed class TypeChecker {
 
   def checkProg(p: renamedast.Program): TypedAST.Program = ???
 
-  private def checkFunc(func: renamedast.Func): TypedAST.Func = ???
+  /** Checks a function and returns a typed function.
+   *
+   * @param func The function to check
+   * @return The typed function
+   */
+  private def checkFunc(func: renamedast.Func): TypedAST.Func = {
+    val id = checkIdent(func.v, Unconstrained)._2
+    val params = func.params.map(checkIdent(_, Unconstrained)._2)
+    val body = checkStmt(func.body, Is(id.getType))
+    TypedAST.Func(id, params, body)
+  }
 
   /** Checks a statement and returns a typed statement.
    *
