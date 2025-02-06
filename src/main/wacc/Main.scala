@@ -30,9 +30,8 @@ def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
               println(prettyPrint(x))
               println("------------------------------ /Pretty-Printed AST ------------------------------\n")
             val errs = new ListBuffer[WaccError]()
-            Renamer.rename(errs)(x)
+            Renamer().rename(errs)(x)
             val listifiedErrs = errs.toList
-            // println(listifiedErrs.map(e => setLines(format(e, Some(path), ErrType.Semantic), listifiedLines)).foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc)))
             if (listifiedErrs.nonEmpty)
               (200, Right(listifiedErrs.map(e => setLines(format(e, Some(path), ErrType.Semantic), listifiedLines))))
             else
