@@ -184,6 +184,24 @@ private def printLineInfo(
 // A concrete, lossless implementation of ErrorBuilder for WACC to replace the DefaultErrorBuilder
 class WaccErrorBuilder extends ErrorBuilder[WaccError] {
 
+  def constructSpecialised(errPos: (Int, Int), name: String, msg: String): WaccError = {
+    build(
+          pos = pos(errPos._1, errPos._2),
+          source = source(None),
+          lines = WaccErrorLines.SpecialisedError(
+            msgs = Set(message(msg)),
+            lineinfo = WaccLineInfo(
+              line = "",
+              linesBefore = Seq(),
+              linesAfter = Seq(),
+              lineNum = errPos._1,
+              errorPointsAt = errPos._2,
+              errorWidth = name.length,
+            )
+          )
+        )
+  }
+
   /** Adds source and error type to a WACC error
    *
    * @param wErr The WACC error to format
