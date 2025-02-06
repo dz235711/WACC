@@ -122,14 +122,14 @@ object parser {
   private lazy val lvalue: Parsley[LValue] = choice(
     arrayElem,
     Ident(ident),
-    pairElem
+    pairElem,
   )
   private lazy val rvalue: Parsley[RValue] = choice(
     expr,
     arrayLiter,
-    NewPair("newpair" ~> "(" ~> expr <~ ",", expr <~ ")"),
+    NewPair("newpair" ~> "(" ~> expr.label("first pair element expression") <~ ",", expr.label("second pair element expression") <~ ")"),
     pairElem,
-    Call("call" ~> Ident(ident) <~ "(", sepBy(expr, ",") <~ ")")
+    Call("call" ~> Ident(ident) <~ "(", sepBy(expr, ",").label("parameters") <~ ")")
   )
   private lazy val pairElem: Parsley[LValue & RValue] = choice(
     Fst("fst" ~> lvalue),

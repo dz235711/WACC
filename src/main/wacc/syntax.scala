@@ -1,4 +1,3 @@
-import wacc.ast.StmtErrorBridge
 package wacc:
   package ast {
 
