@@ -59,7 +59,7 @@ sealed class TypeChecker {
         // TODO: Error handling
         None
       case (kty @ (Array(_) | Pair(_, _)), IsFreeable) => Some(kty)
-      case (_, IsFreeable) =>
+      case (_, IsFreeable)                             =>
         // TODO: Error handling
         None
       case _ => None
@@ -75,27 +75,47 @@ sealed class TypeChecker {
    * @param retC The constraint on the return type of the statement
    * @return The typed statement
    */
-  private def checkStmt(stmt: renamedast.Stmt, retC: Constraint): TypedAST.Stmt = stmt match {
+  private def checkStmt(
+      stmt: renamedast.Stmt,
+      retC: Constraint
+  ): TypedAST.Stmt = stmt match {
     case renamedast.Skip => TypedAST.Skip
     case renamedast.Decl(v, r) =>
       val (ty, vTyped) = checkIdent(v, Unconstrained)
-      val (_, rTyped) = checkRVal(r, Is(ty.get)) // Identifier in declaration *will* have a type
+      val (_, rTyped) =
+        checkRVal(r, Is(ty.get)) // Identifier in declaration *will* have a type
       TypedAST.Decl(vTyped, rTyped)
     case renamedast.Asgn(l, r) =>
       val (ty, lTyped) = checkLVal(l, Unconstrained)
       val (_, rTyped) = checkRVal(r, Is(ty.getOrElse(?)))
-      
+
       // Make sure the assignment has a known type
       if (ty.isEmpty) {
         // TODO: Error handling
       }
-      
+
       TypedAST.Asgn(lTyped, rTyped)
-    case renamedast.Read(l) => TypedAST.Read(checkLVal(l, IsReadable)._2)
-    case renamedast.Free(e) => TypedAST.Free(checkExpr(e, IsFreeable)._2)
+    case renamedast.Read(l)   => TypedAST.Read(checkLVal(l, IsReadable)._2)
+    case renamedast.Free(e)   => TypedAST.Free(checkExpr(e, IsFreeable)._2)
     case renamedast.Return(e) => TypedAST.Return(checkExpr(e, retC)._2)
     case renamedast.Exit(e) => TypedAST.Exit(checkExpr(e, Is(KnownType.Int))._2)
     case renamedast.Print(e) => TypedAST.Print(checkExpr(e, Unconstrained)._2)
+    case renamedast.PrintLn(e) =>
+      TypedAST.PrintLn(checkExpr(e, Unconstrained)._2)
+    case renamedast.If(cond, s1, s2) =>
+      TypedAST.If(
+        checkExpr(cond, Is(KnownType.Bool))._2,
+        checkStmt(s1, retC),
+        checkStmt(s2, retC)
+      )
+    case renamedast.While(cond, body) =>
+      TypedAST.While(
+        checkExpr(cond, Is(KnownType.Bool))._2,
+        checkStmt(body, retC)
+      )
+    case renamedast.Begin(body) => TypedAST.Begin(checkStmt(body, retC))
+    case renamedast.Semi(s1, s2) =>
+      TypedAST.Semi(checkStmt(s1, retC), checkStmt(s2, retC))
   }
 
   private def checkExpr(
