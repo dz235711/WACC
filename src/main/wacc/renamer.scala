@@ -3,7 +3,7 @@ package wacc
 import wacc.renamedast.{KnownType, QualifiedName, ?}
 import scala.collection.mutable
 import WaccErrorBuilder.constructSpecialised
-import wacc.renamedast.Func
+import scala.collection.mutable.ListBuffer
 
 type Scope = Map[String, QualifiedName]
 
@@ -25,15 +25,10 @@ class renamer {
   /** Renames all functions and variables in the program.
    *
    * @param p The program to rename (ast)
-   * @param errs The list of semantic errors
-   * @return (The renamed program (renamedast), the expanded list of semantic errors)
+   * @return The renamed program (renamedast)
    */
-  def rename(
-      p: ast.Program,
-      errs: List[WaccError]
-  ): (renamedast.Program, List[WaccError]) = {
+  def rename(errs: ListBuffer[WaccError])(p: ast.Program): renamedast.Program = {
     // Generate unique identifiers for all functions
-    var moddedErrs = errs
     val fids = p.fs.map(f => {
       val (t, id) = f.decl
       val name = id.v
@@ -42,11 +37,11 @@ class renamer {
 
       // Check for redeclaration of function
       if (functionIds.contains(name)) {
-        moddedErrs = constructSpecialised(
-          f.pos,
+        errs += constructSpecialised(
+          id.pos,
           name,
           "Illegal function redeclaration"
-        ) :: moddedErrs
+        )
       } else {
         // Add the function to the functionIds map if it is not already declared
         functionIds += (name -> (fqn, f.params.length))
@@ -56,18 +51,11 @@ class renamer {
     })
 
     // Rename all functions and the body
-    var renamedFuncs: List[Func] = List()
-    for ((f, qfn) <- p.fs.zip(fids)) {
-      val (renamedFunc, retErrs) = renameFunc(f, qfn, moddedErrs)
-      moddedErrs = retErrs
-      renamedFuncs = renamedFuncs :+ renamedFunc
-    }
-    val (renamedBody, _, retErrs) =
-      renameStmt(p.body, Map(), Map(), false, moddedErrs)
-    moddedErrs = retErrs
+    val renamedFuncs = p.fs.zip(fids).map(renameFunc(errs))
+    val renamedBody = renameStmt(errs)(p.body, Map(), Map(), false)._1
 
     // Return the renamed program
-    (renamedast.Program(renamedFuncs, renamedBody), moddedErrs)
+    renamedast.Program(renamedFuncs, renamedBody)
   }
 
   /** Translates between a syntactic type and a semantic type.
@@ -93,24 +81,18 @@ class renamer {
    * @param qualifiedName The qualified name of the function
    * @return The renamed function
    */
-  private def renameFunc(
+  private def renameFunc(errs: ListBuffer[WaccError])(
       f: ast.Func,
       qualifiedName: QualifiedName,
-      errs: List[WaccError]
-  ): (renamedast.Func, List[WaccError]) = {
+  ): renamedast.Func = {
     // Construct a map of the parameters to use as a scope for the body
-    var moddedErrs = errs
-    val (funcScope, retErrs) = paramsToScope(f.params, moddedErrs)
-    val (renamedBody, _, retErrs1) =
-      renameStmt(f.body, funcScope, Map(), true, retErrs)
-    moddedErrs = retErrs1
-    (
-      renamedast.Func(
-        renamedast.Ident(qualifiedName),
-        funcScope.values.map(renamedast.Ident.apply).toList,
-        renamedBody
-      ),
-      moddedErrs
+    val funcScope: Scope = paramsToScope(errs)(f.params)
+    val renamedBody = renameStmt(errs)(f.body, funcScope, Map(), true)._1
+
+    renamedast.Func(
+      renamedast.Ident(qualifiedName),
+      funcScope.values.map(renamedast.Ident.apply).toList,
+      renamedBody
     )
   }
 
@@ -119,36 +101,27 @@ class renamer {
    * @param params The parameters of the function
    * @return The scope of the parameters
    */
-  private def paramsToScope(
-      params: List[ast.Param],
-      errs: List[WaccError]
-  ): (Scope, List[WaccError]) = 
-    params.foldLeft((Map(), errs)) { case ((params, accErrs), param) =>
+  private def paramsToScope(errs: ListBuffer[WaccError])(params: List[ast.Param]): Scope =
+    params.foldLeft(Map())((params, param) => {
       val (t, id) = param
 
       // Check for redeclaration of parameter
       if (params.contains(id.v)) {
-        (
-          params,
-          constructSpecialised(
-            id.pos,
-            id.v,
-            "Illegal parameter redeclaration"
-          ) :: accErrs
+        errs += constructSpecialised(
+          id.pos,
+          id.v,
+          "Illegal function redeclaration"
         )
+        params
       } else {
         // Add the parameter to the params map if it is not already declared
-        (
-          params + (id.v -> QualifiedName(
-            id.v,
-            generateUid(),
-            translateType(t)
-          )),
-          accErrs
-        )
+        params + (id.v -> QualifiedName(
+          id.v,
+          generateUid(),
+          translateType(t)
+        ))
       }
-    }
-  
+    })
 
   /** Rename a statement.
    *
@@ -157,132 +130,117 @@ class renamer {
    * @param isFunc      Whether the statement is in a function context
    * @return The renamed statement and the new scope
    */
-  private def renameStmt(
+  private def renameStmt(errs: ListBuffer[WaccError])(
       stmt: ast.Stmt,
       parentScope: Scope,
       currentScope: Scope,
       isFunc: Boolean,
-      errs: List[WaccError]
-  ): (renamedast.Stmt, Scope, List[WaccError]) = stmt match {
+  ): (renamedast.Stmt, Scope) = stmt match {
 
-    case ast.Skip() => (renamedast.Skip, currentScope, errs)
+    case ast.Skip() => (renamedast.Skip, currentScope)
 
     case ast.Decl(t, v, r) =>
       val name = QualifiedName(v.v, generateUid(), translateType(t))
-      val (renamedR, retErrs) = renameRValue(r, parentScope ++ currentScope, errs)
-      var moddedErrs = retErrs 
+      val renamedR = renameRValue(errs)(r, parentScope ++ currentScope)
       val renamedDecl =
         renamedast.Decl(renamedast.Ident(name), renamedR)
 
       // Check if the variable is already declared in the current scope
       if (currentScope.contains(v.v)) {
-        moddedErrs = constructSpecialised(
+        errs += constructSpecialised(
           v.pos,
           v.v,
-          "Illegal variable redeclaration"
-        ) :: moddedErrs
-        (renamedDecl, currentScope, moddedErrs)
+          "Illegal function redeclaration"
+        )
+        (renamedDecl, currentScope)
       } else {
         /* Only add the variable to the current scope if it is not already
          * declared */
-        (renamedDecl, currentScope + (v.v -> name), moddedErrs)
+        (renamedDecl, currentScope + (v.v -> name))
       }
 
     case ast.Asgn(l, r) =>
-      val (renamedR, retErrs) = renameRValue(r, parentScope ++ currentScope, errs)
-      val (renamedL, retErrs1) = renameLValue(l, parentScope ++ currentScope, retErrs)
       (
         renamedast.Asgn(
-          renamedL,
-          renamedR
+          renameLValue(errs)(l, parentScope ++ currentScope),
+          renameRValue(errs)(r, parentScope ++ currentScope)
         ),
-        currentScope,
-        retErrs1
+        currentScope
       )
 
     case ast.Read(l) =>
-      val (renamedL, retErrs) = renameLValue(l, parentScope ++ currentScope, errs)
       (
-      renamedast.Read(renamedL),
-      currentScope,
-      retErrs
+        renamedast.Read(renameLValue(errs)(l, parentScope ++ currentScope)),
+        currentScope
       )
 
     case ast.Free(e) =>
-      val (renamedExpr, retErrs) = renameExpr(e, parentScope ++ currentScope, errs)
       (
-      renamedast.Free(renamedExpr),
-      currentScope,
-      retErrs
+        renamedast.Free(renameExpr(errs)(e, parentScope ++ currentScope)),
+        currentScope
       )
 
     case ret@ast.Return(e) =>
-      var moddedErrs = errs
       if (!isFunc) {
-      moddedErrs = constructSpecialised(ret.pos, "return", "Return statement outside of function") :: moddedErrs
+        errs += constructSpecialised(
+          ret.pos,
+          "return",
+          "Return statement outside of function"
+        )
       }
-      val (renamedExpr, retErrs) = renameExpr(e, parentScope ++ currentScope, moddedErrs)
       (
-      renamedast.Return(renamedExpr),
-      currentScope,
-      retErrs
+        renamedast.Return(renameExpr(errs)(e, parentScope ++ currentScope)),
+        currentScope
       )
 
     case ast.Exit(e) =>
-      val (renamedExpr, retErrs) = renameExpr(e, parentScope ++ currentScope, errs)
       (
-      renamedast.Exit(renamedExpr),
-      currentScope,
-      retErrs
+        renamedast.Exit(renameExpr(errs)(e, parentScope ++ currentScope)),
+        currentScope
       )
 
     case ast.Print(e) =>
-      val (renamedExpr, retErrs) = renameExpr(e, parentScope ++ currentScope, errs)
       (
-      renamedast.Print(renamedExpr),
-      currentScope,
-      retErrs
+        renamedast.Print(renameExpr(errs)(e, parentScope ++ currentScope)),
+        currentScope
       )
 
     case ast.PrintLn(e) =>
-      val (renamedExpr, retErrs) = renameExpr(e, parentScope ++ currentScope, errs)
       (
-      renamedast.PrintLn(renamedExpr),
-      currentScope,
-      retErrs
+        renamedast.PrintLn(renameExpr(errs)(e, parentScope ++ currentScope)),
+        currentScope
       )
 
     case ast.If(cond, s1, s2) =>
-      val (renamedCond, retErrs) = renameExpr(cond, parentScope ++ currentScope, errs)
-      val (renamedThen, _, retErrs1) =
-        renameStmt(s1, parentScope ++ currentScope, Map(), isFunc, retErrs)
-      val (renamedElse, _, retErrs2) =
-        renameStmt(s2, parentScope ++ currentScope, Map(), isFunc, retErrs1)
-      (renamedast.If(renamedCond, renamedThen, renamedElse), currentScope, retErrs2)
+      val renamedCond = renameExpr(errs)(cond, parentScope ++ currentScope)
+      val renamedThen =
+        renameStmt(errs)(s1, parentScope ++ currentScope, Map(), isFunc)._1
+      val renamedElse =
+        renameStmt(errs)(s2, parentScope ++ currentScope, Map(), isFunc)._1
+      (renamedast.If(renamedCond, renamedThen, renamedElse), currentScope)
 
     case ast.While(cond, body) =>
-      val (renamedCond, retErrs) = renameExpr(cond, parentScope ++ currentScope, errs)
-      val (renamedBody, _, retErrs1) =
-        renameStmt(body, parentScope ++ currentScope, Map(), isFunc, retErrs)
-      (renamedast.While(renamedCond, renamedBody), currentScope, retErrs1)
+      val renamedCond = renameExpr(errs)(cond, parentScope ++ currentScope)
+      val renamedBody =
+        renameStmt(errs)(body, parentScope ++ currentScope, Map(), isFunc)._1
+      (renamedast.While(renamedCond, renamedBody), currentScope)
 
     case ast.Begin(body) =>
-      val (renamedBody, _, retErrs) = renameStmt(body, parentScope, currentScope, isFunc, errs)
       (
-        renamedBody,
-        currentScope,
-        retErrs
+        renamedast.Begin(
+          renameStmt(errs)(body, parentScope ++ currentScope, Map(), isFunc)._1
+        ),
+        currentScope
       )
 
     case ast.Semi(s1, s2) =>
-      val (renamedS1, currentScopeS1, retErrs) =
-        renameStmt(s1, parentScope, currentScope, isFunc, errs)
-      val (renamedS2, currentScopeS2, retErrs1) =
-        renameStmt(s2, parentScope, currentScopeS1, isFunc, retErrs)
+      val (renamedS1, currentScopeS1) =
+        renameStmt(errs)(s1, parentScope, currentScope, isFunc)
+      val (renamedS2, currentScopeS2) =
+        renameStmt(errs)(s2, parentScope, currentScopeS1, isFunc)
       (
         renamedast.Semi(renamedS1, renamedS2),
-        currentScopeS2,
-        retErrs1
+        currentScopeS2
       )
   }
 
@@ -292,89 +250,63 @@ class renamer {
    * @param scope The scope of the rvalue
    * @return The renamed rvalue
    */
-  private def renameRValue(
-      r: ast.RValue,
-      scope: Scope,
-      errs: List[WaccError]
-  ): (renamedast.RValue, List[WaccError]) =
+  private def renameRValue(errs: ListBuffer[WaccError])(r: ast.RValue, scope: Scope): renamedast.RValue =
     r match {
       case ast.ArrayLiter(es) =>
-        val (renamedEs, retErrs) = es.foldLeft((List.empty[renamedast.Expr], errs)) {
-          case ((acc, accErrs), e) =>
-            val (renamedE, newErrs) = renameExpr(e, scope, accErrs)
-            (acc :+ renamedE, newErrs)
-        }
-        (renamedast.ArrayLiter(renamedEs), retErrs)
+        renamedast.ArrayLiter(es.map(renameExpr(errs)(_, scope)))
       case ast.NewPair(e1, e2) =>
-        val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-        val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-        (renamedast.NewPair(renamedE1, renamedE2), retErrs2)
-      case ast.Fst(l) =>
-        val (renamedL, retErrs) = renameLValue(l, scope, errs)
-        (renamedast.Fst(renamedL), retErrs)
-      case ast.Snd(l) =>
-        val (renamedL, retErrs) = renameLValue(l, scope, errs)
-        (renamedast.Snd(renamedL), retErrs)
+        renamedast.NewPair(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
+      case ast.Fst(l) => renamedast.Fst(renameLValue(errs)(l, scope))
+      case ast.Snd(l) => renamedast.Snd(renameLValue(errs)(l, scope))
       case ast.Call(v, args) =>
-        val (renamedArgs, retErrs) = args.foldLeft((List.empty[renamedast.Expr], errs)) {
-          case ((acc, accErrs), arg) =>
-            val (renamedArg, newErrs) = renameExpr(arg, scope, accErrs)
-            (acc :+ renamedArg, newErrs)
-        }
-        var moddedErrs = retErrs
+        val renamedArgs = args.map(renameExpr(errs)(_, scope))
 
         // Check if the function is declared
         val renamedIdent = if (!functionIds.contains(v.v)) {
-          moddedErrs = constructSpecialised(
-        v.pos,
-        v.v,
-        "Attempted usage of undefined function"
-          ) :: moddedErrs
+          errs += constructSpecialised(
+            v.pos,
+            v.v,
+            "Attempted usage of undefined function"
+          )
           renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
         } else {
           val (fqn, argLen) = functionIds(v.v)
 
           // Check if the number of arguments is correct
           if (args.length != argLen) {
-        moddedErrs = constructSpecialised(
-          v.pos,
-          v.v,
-          "Incorrect number of argument passed into function"
-        ) :: moddedErrs
+            errs += constructSpecialised(
+              v.pos,
+              v.v,
+              "Incorrect number of arguments"
+            )
           }
           renamedast.Ident(fqn)
         }
 
-        (renamedast.Call(renamedIdent, renamedArgs), moddedErrs)
-      case e: ast.Expr => renameExpr(e, scope, errs)
+        renamedast.Call(renamedIdent, renamedArgs)
+      case e: ast.Expr => renameExpr(errs)(e, scope)
     }
 
-  private def renameIdent(v: ast.Ident, scope: Scope, errs: List[WaccError]): (renamedast.Ident, List[WaccError]) = {
+  private def renameIdent(errs: ListBuffer[WaccError])(v: ast.Ident, scope: Scope): renamedast.Ident = {
     if (!scope.contains(v.v)) {
-      // TODO: Error handling
-      (renamedast.Ident(QualifiedName(v.v, generateUid(), ?)), constructSpecialised(
+      errs += constructSpecialised(
         v.pos,
         v.v,
         "Attempted usage of undefined variable"
-      ) :: errs)
+      )
+      renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
     } else {
-      (renamedast.Ident(scope(v.v)), errs)
+      renamedast.Ident(scope(v.v))
     }
   }
 
-  private def renameArrayElem(
+  private def renameArrayElem(errs: ListBuffer[WaccError])(
       v: ast.Ident,
       es: List[ast.Expr],
       scope: Scope,
-      errs: List[WaccError]
-  ): (renamedast.ArrayElem, List[WaccError]) = {
-    val (renamedIdent, retErrs) = renameIdent(v, scope, errs)
-    val (renamedExprs, finalErrs) = es.foldLeft((List.empty[renamedast.Expr], retErrs)) {
-      case ((acc, accErrs), e) =>
-        val (renamedE, newErrs) = renameExpr(e, scope, accErrs)
-        (acc :+ renamedE, newErrs)
-    }
-    (renamedast.ArrayElem(renamedIdent, renamedExprs), finalErrs)
+  ): renamedast.ArrayElem = {
+    val renamedIdent = renameIdent(errs)(v, scope)
+    renamedast.ArrayElem(renamedIdent, es.map(renameExpr(errs)(_, scope)))
   }
 
   /** Rename an lvalue.
@@ -383,16 +315,12 @@ class renamer {
    * @param scope The scope of the lvalue
    * @return The renamed lvalue
    */
-  private def renameLValue(l: ast.LValue, scope: Scope, errs: List[WaccError]): (renamedast.LValue, List[WaccError]) =
+  private def renameLValue(errs: ListBuffer[WaccError])(l: ast.LValue, scope: Scope): renamedast.LValue =
     l match {
-      case ast.Fst(l)           => renameLValue(l, scope, errs) match {
-        case (renamedL, errs) => (renamedast.Fst(renamedL), errs)
-      }
-      case ast.Snd(l)           => renameLValue(l, scope, errs) match {
-        case (renamedL, errs) => (renamedast.Snd(renamedL), errs)
-      }
-      case id@ast.Ident(_)         => renameIdent(id, scope, errs)
-      case ast.ArrayElem(v, es) => renameArrayElem(v, es, scope, errs)
+      case ast.Fst(l)           => renamedast.Fst(renameLValue(errs)(l, scope))
+      case ast.Snd(l)           => renamedast.Snd(renameLValue(errs)(l, scope))
+      case id@ast.Ident(v)         => renameIdent(errs)(id, scope)
+      case ast.ArrayElem(v, es) => renameArrayElem(errs)(v, es, scope)
     }
 
   /** Rename an expression.
@@ -401,87 +329,44 @@ class renamer {
    * @param scope The scope of the expression
    * @return The renamed expression
    */
-  private def renameExpr(e: ast.Expr, scope: Scope, errs: List[WaccError]): (renamedast.Expr, List[WaccError]) = e match {
-    case ast.Not(e) =>
-      val (renamedE, retErrs) = renameExpr(e, scope, errs)
-      (renamedast.Not(renamedE), retErrs)
-    case ast.Negate(e) =>
-      val (renamedE, retErrs) = renameExpr(e, scope, errs)
-      (renamedast.Negate(renamedE), retErrs)
-    case ast.Len(e) =>
-      val (renamedE, retErrs) = renameExpr(e, scope, errs)
-      (renamedast.Len(renamedE), retErrs)
-    case ast.Ord(e) =>
-      val (renamedE, retErrs) = renameExpr(e, scope, errs)
-      (renamedast.Ord(renamedE), retErrs)
-    case ast.Chr(e) =>
-      val (renamedE, retErrs) = renameExpr(e, scope, errs)
-      (renamedast.Chr(renamedE), retErrs)
+  private def renameExpr(errs: ListBuffer[WaccError])(e: ast.Expr, scope: Scope): renamedast.Expr = e match {
+    case ast.Not(e)    => renamedast.Not(renameExpr(errs)(e, scope))
+    case ast.Negate(e) => renamedast.Negate(renameExpr(errs)(e, scope))
+    case ast.Len(e)    => renamedast.Len(renameExpr(errs)(e, scope))
+    case ast.Ord(e)    => renamedast.Ord(renameExpr(errs)(e, scope))
+    case ast.Chr(e)    => renamedast.Chr(renameExpr(errs)(e, scope))
     case ast.Mult(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.Mult(renamedE1, renamedE2), retErrs2)
+      renamedast.Mult(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
     case ast.Div(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.Div(renamedE1, renamedE2), retErrs2)
+      renamedast.Div(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
     case ast.Mod(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.Mod(renamedE1, renamedE2), retErrs2)
+      renamedast.Mod(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
     case ast.Add(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.Add(renamedE1, renamedE2), retErrs2)
+      renamedast.Add(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
     case ast.Sub(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.Sub(renamedE1, renamedE2), retErrs2)
+      renamedast.Sub(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
     case ast.Greater(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.Greater(renamedE1, renamedE2), retErrs2)
+      renamedast.Greater(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
     case ast.GreaterEq(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.GreaterEq(renamedE1, renamedE2), retErrs2)
+      renamedast.GreaterEq(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
     case ast.Smaller(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.Smaller(renamedE1, renamedE2), retErrs2)
+      renamedast.Smaller(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
     case ast.SmallerEq(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.SmallerEq(renamedE1, renamedE2), retErrs2)
+      renamedast.SmallerEq(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
     case ast.Equals(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.Equals(renamedE1, renamedE2), retErrs2)
+      renamedast.Equals(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
     case ast.NotEquals(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.NotEquals(renamedE1, renamedE2), retErrs2)
+      renamedast.NotEquals(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
     case ast.And(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.And(renamedE1, renamedE2), retErrs2)
+      renamedast.And(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
     case ast.Or(e1, e2) =>
-      val (renamedE1, retErrs1) = renameExpr(e1, scope, errs)
-      val (renamedE2, retErrs2) = renameExpr(e2, scope, retErrs1)
-      (renamedast.Or(renamedE1, renamedE2), retErrs2)
-    case ast.IntLiter(x) =>
-      (renamedast.IntLiter(x), errs)
-    case ast.BoolLiter(b) =>
-      (renamedast.BoolLiter(b), errs)
-    case ast.CharLiter(c) =>
-      (renamedast.CharLiter(c), errs)
-    case ast.StringLiter(s) =>
-      (renamedast.StringLiter(s), errs)
-    case ast.PairLiter() =>
-      (renamedast.PairLiter, errs)
-    case id@ast.Ident(_) =>
-      renameIdent(id, scope, errs)
-    case ast.ArrayElem(v, es) =>
-      renameArrayElem(v, es, scope, errs)
+      renamedast.Or(renameExpr(errs)(e1, scope), renameExpr(errs)(e2, scope))
+    case ast.IntLiter(x)      => renamedast.IntLiter(x)
+    case ast.BoolLiter(b)     => renamedast.BoolLiter(b)
+    case ast.CharLiter(c)     => renamedast.CharLiter(c)
+    case ast.StringLiter(s)   => renamedast.StringLiter(s)
+    case ast.PairLiter()      => renamedast.PairLiter
+    case id@ast.Ident(v)      => renameIdent(errs)(id, scope)
+    case ast.ArrayElem(v, es) => renameArrayElem(errs)(v, es, scope)
   }
 }
