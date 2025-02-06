@@ -5,6 +5,10 @@ import wacc.renamedast.KnownType.*
 
 enum Constraint {
   case Is(refTy: SemType)
+  case IsInt
+  case IsBool
+  case IsChar
+  case IsString
   case IsReadable
   case IsComparable
   case IsFreeable
@@ -25,16 +29,12 @@ sealed class TypeChecker {
     private def ~(refTy: SemType): Option[SemType] = (ty, refTy) match {
       case (?, refTy)                => Some(refTy)
       case (ty, ?)                   => Some(ty)
-      case (Array(ty), Array(refTy)) => ty ~ refTy
+      case (Array(ty), Array(refTy)) => (ty ~ refTy).map(Array.apply)
       case (Pair(ty1, ty2), Pair(refTy1, refTy2)) =>
-        ty1 ~ refTy1 match {
-          case Some(newTy1) =>
-            ty2 ~ refTy2 match {
-              case Some(newTy2) => Some(Pair(newTy1, newTy2))
-              case None         => None
-            }
-          case None => None
-        }
+        for {
+          newTy1 <- ty1 ~ refTy1
+          newTy2 <- ty2 ~ refTy2
+        } yield Pair(newTy1, newTy2)
       case (ty, refTy) if ty == refTy => Some(ty)
       case _                          => None
     }
@@ -44,7 +44,7 @@ sealed class TypeChecker {
     private def satisfies(c: Constraint): Option[SemType] = (ty, c) match {
       case (ty, Is(refTy)) =>
         (ty ~ refTy).orElse {
-          // TODO: Error handling
+          // TODO: Error handling?
           None
         }
       case (?, _) => Some(?) // Unconstrained types satisfy all constraints
@@ -82,35 +82,38 @@ sealed class TypeChecker {
     case renamedast.Skip => TypedAST.Skip
     case renamedast.Decl(v, r) =>
       val (ty, vTyped) = checkIdent(v, Unconstrained)
-      val (_, rTyped) =
-        checkRVal(r, Is(ty.get)) // Identifier in declaration *will* have a type
+      // Identifier in declaration *will* have a type
+      val (_, rTyped) = checkRVal(r, Is(ty.get))
       TypedAST.Decl(vTyped, rTyped)
     case renamedast.Asgn(l, r) =>
-      val (ty, lTyped) = checkLVal(l, Unconstrained)
-      val (_, rTyped) = checkRVal(r, Is(ty.getOrElse(?)))
+      val (lTy, lTyped) = checkLVal(l, Unconstrained)
+      val (rTy, rTyped) = checkRVal(r, Is(lTy.getOrElse(?)))
 
       // Make sure the assignment has a known type
-      if (ty.isEmpty) {
-        // TODO: Error handling
+      rTy match {
+        case Some(?) => {
+          // TODO: Error handling
+        }
+        case _ => ()
       }
 
       TypedAST.Asgn(lTyped, rTyped)
     case renamedast.Read(l)   => TypedAST.Read(checkLVal(l, IsReadable)._2)
     case renamedast.Free(e)   => TypedAST.Free(checkExpr(e, IsFreeable)._2)
     case renamedast.Return(e) => TypedAST.Return(checkExpr(e, retC)._2)
-    case renamedast.Exit(e) => TypedAST.Exit(checkExpr(e, Is(KnownType.Int))._2)
-    case renamedast.Print(e) => TypedAST.Print(checkExpr(e, Unconstrained)._2)
+    case renamedast.Exit(e)   => TypedAST.Exit(checkExpr(e, IsInt)._2)
+    case renamedast.Print(e)  => TypedAST.Print(checkExpr(e, Unconstrained)._2)
     case renamedast.PrintLn(e) =>
       TypedAST.PrintLn(checkExpr(e, Unconstrained)._2)
     case renamedast.If(cond, s1, s2) =>
       TypedAST.If(
-        checkExpr(cond, Is(KnownType.Bool))._2,
+        checkExpr(cond, IsBool)._2,
         checkStmt(s1, retC),
         checkStmt(s2, retC)
       )
     case renamedast.While(cond, body) =>
       TypedAST.While(
-        checkExpr(cond, Is(KnownType.Bool))._2,
+        checkExpr(cond, IsBool)._2,
         checkStmt(body, retC)
       )
     case renamedast.Begin(body) => TypedAST.Begin(checkStmt(body, retC))
