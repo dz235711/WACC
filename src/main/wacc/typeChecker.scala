@@ -1,15 +1,11 @@
 package wacc
 
-import wacc.renamedast.{?, KnownType, LValue, SemType}
+import wacc.renamedast.{?, KnownType, SemType}
 import wacc.renamedast.KnownType.*
 import scala.collection.mutable
 
 enum Constraint {
   case Is(refTy: SemType)
-  case IsInt
-  case IsBool
-  case IsChar
-  case IsString
   case IsReadable
   case IsOrderable
   case IsFreeable
@@ -18,8 +14,6 @@ object Constraint {
   val Unconstrained: Constraint = Is(?)
   val IsArray: Constraint = Is(Array(?))
   val IsPair: Constraint = Is(Pair(?, ?))
-  /* TODO: Add constraint for invariant types - e.g. the string in string[] is
-   * invariant so we can't weaken it to char[], similarly for pairs */
 }
 
 sealed class TypeChecker {
@@ -125,9 +119,8 @@ sealed class TypeChecker {
 
       // Make sure the assignment has a known type
       rTy match {
-        case Some(?) => {
-          // TODO: Error handling
-        }
+        case Some(?) =>
+        // TODO: Error handling
         case _ => ()
       }
 
@@ -135,19 +128,19 @@ sealed class TypeChecker {
     case renamedast.Read(l)   => TypedAST.Read(checkLVal(l, IsReadable)._2)
     case renamedast.Free(e)   => TypedAST.Free(checkExpr(e, IsFreeable)._2)
     case renamedast.Return(e) => TypedAST.Return(checkExpr(e, retC)._2)
-    case renamedast.Exit(e)   => TypedAST.Exit(checkExpr(e, IsInt)._2)
+    case renamedast.Exit(e)   => TypedAST.Exit(checkExpr(e, Is(Int))._2)
     case renamedast.Print(e)  => TypedAST.Print(checkExpr(e, Unconstrained)._2)
     case renamedast.PrintLn(e) =>
       TypedAST.PrintLn(checkExpr(e, Unconstrained)._2)
     case renamedast.If(cond, s1, s2) =>
       TypedAST.If(
-        checkExpr(cond, IsBool)._2,
+        checkExpr(cond, Is(Bool))._2,
         checkStmt(s1, retC),
         checkStmt(s2, retC)
       )
     case renamedast.While(cond, body) =>
       TypedAST.While(
-        checkExpr(cond, IsBool)._2,
+        checkExpr(cond, Is(Bool))._2,
         checkStmt(body, retC)
       )
     case renamedast.Begin(body) => TypedAST.Begin(checkStmt(body, retC))
@@ -163,12 +156,12 @@ sealed class TypeChecker {
       Bool.satisfies(c).getOrElse {
         // TODO: Error handling
       }
-      (Some(Bool), TypedAST.Not(checkExpr(e, IsBool)._2))
+      (Some(Bool), TypedAST.Not(checkExpr(e, Is(Bool))._2))
     case renamedast.Negate(e) =>
       Int.satisfies(c).getOrElse {
         // TODO: Error handling
       }
-      (Some(Int), TypedAST.Negate(checkExpr(e, IsInt)._2))
+      (Some(Int), TypedAST.Negate(checkExpr(e, Is(Int))._2))
     case renamedast.Len(e) =>
       Int.satisfies(c).getOrElse {
         // TODO: Error handling
@@ -178,12 +171,12 @@ sealed class TypeChecker {
       Int.satisfies(c).getOrElse {
         // TODO: Error handling
       }
-      (Some(Int), TypedAST.Ord(checkExpr(e, IsChar)._2))
+      (Some(Int), TypedAST.Ord(checkExpr(e, Is(Char))._2))
     case renamedast.Chr(e) =>
       Char.satisfies(c).getOrElse {
         // TODO: Error handling
       }
-      (Some(Char), TypedAST.Chr(checkExpr(e, IsInt)._2))
+      (Some(Char), TypedAST.Chr(checkExpr(e, Is(Int))._2))
     case renamedast.Mult(e1, e2) =>
       checkArithmetic(e1, e2, c)(TypedAST.Mult.apply)
     case renamedast.Div(e1, e2) =>
@@ -251,12 +244,12 @@ sealed class TypeChecker {
       e2: renamedast.Expr,
       c: Constraint
   )(
-      build: (e1: TypedAST.Expr, e2: TypedAST.Expr) => TypedAST.Expr
+      build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
   ): (Option[SemType], TypedAST.Expr) =
     Int.satisfies(c).getOrElse {
       // TODO: Error handling
     }
-    (Some(Int), build(checkExpr(e1, IsInt)._2, checkExpr(e2, IsInt)._2))
+    (Some(Int), build(checkExpr(e1, Is(Int))._2, checkExpr(e2, Is(Int))._2))
 
   /** Checks a comparison expression and returns a typed comparison expression.
    *
@@ -271,7 +264,7 @@ sealed class TypeChecker {
       e2: renamedast.Expr,
       c: Constraint
   )(
-      build: (e1: TypedAST.Expr, e2: TypedAST.Expr) => TypedAST.Expr
+      build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
   ): (Option[SemType], TypedAST.Expr) =
     Bool.satisfies(c).getOrElse {
       // TODO: Error handling
@@ -294,7 +287,7 @@ sealed class TypeChecker {
       e2: renamedast.Expr,
       c: Constraint
   )(
-      build: (e1: TypedAST.Expr, e2: TypedAST.Expr) => TypedAST.Expr
+      build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
   ): (Option[SemType], TypedAST.Expr) =
     Bool.satisfies(c).getOrElse {
       // TODO: Error handling
@@ -317,12 +310,12 @@ sealed class TypeChecker {
       e2: renamedast.Expr,
       c: Constraint
   )(
-      build: (e1: TypedAST.Expr, e2: TypedAST.Expr) => TypedAST.Expr
+      build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
   ): (Option[SemType], TypedAST.Expr) =
     Bool.satisfies(c).getOrElse {
       // TODO: Error handling
     }
-    (Some(Bool), build(checkExpr(e1, IsBool)._2, checkExpr(e2, IsBool)._2))
+    (Some(Bool), build(checkExpr(e1, Is(Bool))._2, checkExpr(e2, Is(Bool))._2))
 
   /** Checks an lvalue and returns a typed lvalue.
    *
@@ -409,6 +402,7 @@ sealed class TypeChecker {
     val uid = qName.UID
     val ty2 = ty.satisfies(c).getOrElse {
       // TODO: Error handling
+      println(s"Error: $qName does not satisfy $c")
       ?
     }
     (Some(ty), TypedAST.Ident(uid, ty2))
@@ -431,7 +425,7 @@ sealed class TypeChecker {
       // TODO: Error handling
       ?
     }
-    val esTyped = arrElem.es.map(checkExpr(_, IsInt)._2)
+    val esTyped = arrElem.es.map(checkExpr(_, Is(Int))._2)
     (Some(elemTy), TypedAST.ArrayElem(vTyped, esTyped, elemTy))
 
   /** Checks a Fst expression and returns a typed Fst expression.
