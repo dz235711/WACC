@@ -184,6 +184,13 @@ private def printLineInfo(
 // A concrete, lossless implementation of ErrorBuilder for WACC to replace the DefaultErrorBuilder
 class WaccErrorBuilder extends ErrorBuilder[WaccError] {
 
+  /** Shortcut to construct a specialised WACC error
+   *
+   * @param errPos The position of the error
+   * @param name The name of the error
+   * @param msg The message of the error
+   * @return The constructed WACC error
+   */
   def constructSpecialised(errPos: (Int, Int), name: String, msg: String): WaccError = {
     build(
           pos = pos(errPos._1, errPos._2),
@@ -195,7 +202,8 @@ class WaccErrorBuilder extends ErrorBuilder[WaccError] {
               linesBefore = Seq(),
               linesAfter = Seq(),
               lineNum = errPos._1,
-              errorPointsAt = errPos._2,
+              // Subtracting 1 to account for 0 indexing
+              errorPointsAt = errPos._2 - 1,
               errorWidth = name.length,
             )
           )
@@ -224,9 +232,10 @@ class WaccErrorBuilder extends ErrorBuilder[WaccError] {
   def setLines(wErr: WaccError, sourceCode: List[String]): WaccError = {
     val line = wErr.pos._1
     val lineinfo = getlineInfo(wErr)
-    lineinfo.line = sourceCode(line)
-    lineinfo.linesBefore = sourceCode.slice(line - numLinesBefore, line)
-    lineinfo.linesAfter = sourceCode.slice(line + 1, line + numLinesAfter + 1)
+    // Subtracting 1 to account for 0 indexing
+    lineinfo.line = sourceCode(line - 1)
+    lineinfo.linesBefore = sourceCode.slice(line - numLinesBefore - 1, line - 1)
+    lineinfo.linesAfter = sourceCode.slice(line, line + numLinesAfter)
     wErr
   }
 

@@ -7,7 +7,7 @@ import scala.collection.mutable.ListBuffer
 
 type Scope = Map[String, QualifiedName]
 
-class renamer {
+class Renamer {
   private var uid: Int = 0
   // Map of function names to their qualified names and number of parameters
   private val functionIds: mutable.Map[String, (QualifiedName, Int)] =
@@ -113,7 +113,7 @@ class renamer {
         errs += constructSpecialised(
           id.pos,
           id.v,
-          "Illegal function redeclaration"
+          "Illegal parameter redeclaration"
         )
         params
       } else {
@@ -154,7 +154,7 @@ class renamer {
         errs += constructSpecialised(
           v.pos,
           v.v,
-          "Illegal function redeclaration"
+          "Illegal variable redeclaration"
         )
         (renamedDecl, currentScope)
       } else {
@@ -376,3 +376,5 @@ class renamer {
     case ast.ArrayElem(v, es) => renameArrayElem(errs)(v, es, scope)
   }
 }
+
+object Renamer extends Renamer

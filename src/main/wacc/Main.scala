@@ -6,6 +6,7 @@ import java.io.FileNotFoundException
 import WaccErrorBuilder.{format, setLines}
 
 import parsley.errors.ErrorBuilder
+import scala.collection.mutable.ListBuffer
 
 def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
   val verbose = args.contains("--verbose") || args.contains("-v")
@@ -28,7 +29,13 @@ def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
               println("\n------------------------------ Pretty-Printed AST ------------------------------")
               println(prettyPrint(x))
               println("------------------------------ /Pretty-Printed AST ------------------------------\n")
-            (0, Left("Parsed successfully! 🎉"))
+            val errs = new ListBuffer[WaccError]()
+            Renamer.rename(errs)(x)
+            val listifiedErrs = errs.toList.reverse
+            if (listifiedErrs.nonEmpty)
+              (200, Right(listifiedErrs.map(e => setLines(format(e, Some(path), ErrType.Semantic), listifiedLines))))
+            else
+              (0, Left("Parsed successfully! 🎉"))
           case Failure(err) =>
             if (verbose)
               println("Failed to parse! 😢")
