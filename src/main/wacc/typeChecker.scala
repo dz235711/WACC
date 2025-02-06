@@ -2,6 +2,7 @@ package wacc
 
 import wacc.renamedast.{?, KnownType, LValue, SemType}
 import wacc.renamedast.KnownType.*
+import scala.collection.mutable
 
 enum Constraint {
   case Is(refTy: SemType)
@@ -23,7 +24,8 @@ object Constraint {
 
 sealed class TypeChecker {
   // Map from function UID to list of function parameters
-  private var funcTable: Map[Int, List[renamedast.Ident]] = Map.empty
+  private var funcTable: mutable.Map[Int, List[renamedast.Ident]] =
+    mutable.Map()
 
   import Constraint.*
 
@@ -68,7 +70,20 @@ sealed class TypeChecker {
       case _ => None
     }
 
-  def checkProg(p: renamedast.Program): TypedAST.Program = ???
+  /** Checks a program and returns a typed program.
+   * 
+   * @param p The renamed program to check
+   * @return The typed program
+   */
+  def checkProg(p: renamedast.Program): TypedAST.Program = {
+    // Populate funcTable
+    p.fs.foreach(f => funcTable += (f.v.v.UID -> f.params))
+
+    val funcs = p.fs.map(checkFunc)
+    val body = checkStmt(p.body, Unconstrained)
+
+    TypedAST.Program(funcs, body)
+  }
 
   /** Checks a function and returns a typed function.
    *
