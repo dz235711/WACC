@@ -31,11 +31,12 @@ def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
               println("------------------------------ /Pretty-Printed AST ------------------------------\n")
             val errs = new ListBuffer[WaccError]()
             Renamer.rename(errs)(x)
-            val listifiedErrs = errs.toList.reverse
-            // if (listifiedErrs.nonEmpty)
-            //   (200, Right(listifiedErrs.map(e => setLines(format(e, Some(path), ErrType.Semantic), listifiedLines))))
-            // else
-            (0, Left("Parsed successfully! 🎉"))
+            val listifiedErrs = errs.toList
+            // println(listifiedErrs.map(e => setLines(format(e, Some(path), ErrType.Semantic), listifiedLines)).foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc)))
+            if (listifiedErrs.nonEmpty)
+              (200, Right(listifiedErrs.map(e => setLines(format(e, Some(path), ErrType.Semantic), listifiedLines))))
+            else
+              (0, Left("Parsed successfully! 🎉"))
           case Failure(err) =>
             if (verbose)
               println("Failed to parse! 😢")
@@ -51,6 +52,7 @@ def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
 def main(args: Array[String]): Unit = {
   println("Hello, WACC! 👋😃👍")
   val (status, output) = runFrontend(args)
+
   output match {
     case Left(msg) => println(msg)
     case Right(err) => println(err.foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc)))
