@@ -211,7 +211,7 @@ sealed class TypeChecker {
    *
    * @param e1 The first expression
    * @param e2 The second expression
-   * @param c The constraint on the return type
+   * @param c The constraint on the arithmetic operation's type
    * @param build The function to build the typed arithmetic expression
    * @return The typed arithmetic expression
    */
@@ -231,7 +231,7 @@ sealed class TypeChecker {
    *
    * @param e1 The first expression
    * @param e2 The second expression
-   * @param c The constraint on the return type
+   * @param c The constraint on the ordering operation's type
    * @param build The function to build the typed comparison expression
    * @return The typed comparison expression
    */
@@ -254,7 +254,7 @@ sealed class TypeChecker {
    *
    * @param e1 The first expression
    * @param e2 The second expression
-   * @param c The constraint on the return type
+   * @param c The constraint on the equality operation's type
    * @param build The function to build the typed equality expression
    * @return The typed equality expression
    */
@@ -277,7 +277,7 @@ sealed class TypeChecker {
    *
    * @param e1 The first expression
    * @param e2 The second expression
-   * @param c The constraint on the return type
+   * @param c The constraint on the logical operation's type
    * @param build The function to build the typed logical expression
    * @return The typed logical expression
    */
@@ -296,7 +296,7 @@ sealed class TypeChecker {
   /** Checks an lvalue and returns a typed lvalue.
    *
    * @param lval The lvalue to check
-   * @param c The constraint on the return type
+   * @param c The constraint on the lvalue's type
    * @return The typed lvalue
    */
   private def checkLVal(
@@ -312,7 +312,7 @@ sealed class TypeChecker {
   /** Checks an rvalue and returns a typed rvalue.
    *
    * @param rval The rvalue to check
-   * @param c The constraint on the return type
+   * @param c The constraint on the rvalue's type
    * @return The typed rvalue
    */
   private def checkRVal(
@@ -361,11 +361,31 @@ sealed class TypeChecker {
     case e: renamedast.Expr => checkExpr(e, c)
   }
 
+  /** Checks an identifier and returns a typed identifier.
+   *
+   * @param ident The identifier to check
+   * @param c The constraint on the identifier's type
+   * @return The typed identifier
+   */
   private def checkIdent(
       ident: renamedast.Ident,
       c: Constraint
-  ): (Option[SemType], TypedAST.Ident) = ???
+  ): (Option[SemType], TypedAST.Ident) =
+    val qName = ident.v
+    val ty = qName.declType
+    val uid = qName.UID
+    val ty2 = ty.satisfies(c).getOrElse {
+      // TODO: Error handling
+      ?
+    }
+    (Some(ty), TypedAST.Ident(uid, ty2))
 
+  /** Checks an array element and returns a typed array element.
+   *
+   * @param arrElem The array element to check
+   * @param c The constraint on the array element's type
+   * @return The typed array element
+   */
   private def checkArrayElem(
       arrElem: renamedast.ArrayElem,
       c: Constraint
@@ -384,7 +404,7 @@ sealed class TypeChecker {
   /** Checks a Fst expression and returns a typed Fst expression.
    *
    * @param fst The Fst expression to check
-   * @param c The constraint on the return type
+   * @param c The constraint on the first element of the pair's type
    * @return The typed Fst expression
    */
   private def checkFst(
@@ -405,7 +425,7 @@ sealed class TypeChecker {
   /** Checks a Snd expression and returns a typed Snd expression.
    *
    * @param snd The Snd expression to check
-   * @param c The constraint on the return type
+   * @param c The constraint on the second element of the pair's type
    * @return The typed Snd expression
    */
   private def checkSnd(
