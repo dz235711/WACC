@@ -191,7 +191,7 @@ class WaccErrorBuilder extends ErrorBuilder[WaccError] {
    * @param msg The message of the error
    * @return The constructed WACC error
    */
-  def constructSpecialised(errPos: (Int, Int), name: String, msg: String): WaccError = {
+  def constructSpecialised(errPos: (Int, Int), width: Int, msg: String): WaccError = {
     build(
           pos = pos(errPos._1, errPos._2),
           source = source(None),
@@ -204,7 +204,7 @@ class WaccErrorBuilder extends ErrorBuilder[WaccError] {
               lineNum = errPos._1,
               // Subtracting 1 to account for 0 indexing
               errorPointsAt = errPos._2 - 1,
-              errorWidth = name.length,
+              errorWidth = width,
             )
           )
         )

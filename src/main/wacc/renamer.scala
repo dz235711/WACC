@@ -40,7 +40,7 @@ class Renamer {
       if (functionIds.contains(name)) {
         errs += constructSpecialised(
           id.pos,
-          name,
+          name.length,
           s"Illegal function redeclaration $name"
         )
       } else {
@@ -112,7 +112,7 @@ class Renamer {
       if (params.contains(id.v)) {
         errs += constructSpecialised(
           id.pos,
-          id.v,
+          id.v.length,
           s"Illegal parameter redeclaration ${id.v}"
         )
         params
@@ -153,7 +153,7 @@ class Renamer {
       if (currentScope.contains(v.v)) {
         errs += constructSpecialised(
           v.pos,
-          v.v,
+          v.v.length,
           s"Illegal variable redeclaration ${v.v}"
         )
         (renamedDecl, currentScope)
@@ -188,7 +188,7 @@ class Renamer {
       if (!isFunc) {
         errs += constructSpecialised(
           ret.pos,
-          "return",
+          6, // Length of "return"
           "Return statement outside of function"
         )
       }
@@ -270,7 +270,7 @@ class Renamer {
         val renamedIdent = if (!functionIds.contains(v.v)) {
           errs += constructSpecialised(
             v.pos,
-            v.v,
+            v.v.length,
             s"Attempted usage of undefined function ${v.v}"
           )
           renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
@@ -281,7 +281,7 @@ class Renamer {
           if (args.length != argLen) {
             errs += constructSpecialised(
               v.pos,
-              v.v,
+              v.v.length,
               s"Incorrect number of arguments for function ${v.v}"
             )
           }
@@ -296,7 +296,7 @@ class Renamer {
     if (!scope.contains(v.v)) {
       errs += constructSpecialised(
         v.pos,
-        v.v,
+        v.v.length,
         s"Attempted usage of undefined variable ${v.v}"
       )
       renamedast.Ident(QualifiedName(v.v, generateUid(), ?))

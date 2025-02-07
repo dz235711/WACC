@@ -1,8 +1,10 @@
 package wacc
 
-import wacc.renamedast.{?, KnownType, SemType}
-import wacc.renamedast.KnownType.*
+import renamedast.{?, KnownType, SemType}
+import renamedast.KnownType.*
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+import WaccErrorBuilder.constructSpecialised
 
 enum Constraint {
   case Is(refTy: SemType)
@@ -46,20 +48,18 @@ sealed class TypeChecker {
 
   /** Determines whether a type satisfies a constraint. */
   extension (ty: SemType)
-    private def satisfies(c: Constraint): Option[SemType] = (ty, c) match {
+    private def satisfies(errs: ListBuffer[WaccError], pos: (Int, Int), name: String)(c: Constraint): Option[SemType] = (ty, c) match {
       // Check the rest of the cases
       case (ty, Is(refTy)) =>
         (ty ~ refTy).orElse {
-          // TODO: Error handling - type mismatch
-          println("Type mismatch between " + ty + " and " + refTy)
-          None
+            errs += constructSpecialised((-1, -1), "placeholder", s"Type mismatch between $ty and $refTy")
+            None
         }
       case (kty: Array, IsArray)            => Some(kty)
       case (kty: Pair, IsPair)              => Some(kty)
       case (kty @ (Int | Char), IsReadable) => Some(kty)
       case (_, IsReadable)                  =>
-        // TODO: Error handling - tried to read a non-readable type
-        println("tried to read a non-readable type")
+        errs += constructSpecialised((-1, -1), "placeholder", s"tried to read a non-readable type")
         None
       case (kty @ (Int | Char), IsOrderable) => Some(kty)
       case (_, IsOrderable)                  =>
