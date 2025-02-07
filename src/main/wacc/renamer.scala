@@ -57,17 +57,19 @@ class renamer {
    * @param synType The syntactic type
    * @return The semantic type
    * */
-  private def translateType(synType: ast.Type | ast.PairElemType): KnownType =
-    synType match {
-      case ast.IntType()    => KnownType.Int
-      case ast.BoolType()   => KnownType.Bool
-      case ast.CharType()   => KnownType.Char
-      case ast.StringType() => KnownType.String
-      case ast.ArrayType(t) => KnownType.Array(translateType(t))
-      case ast.ErasedPair() => KnownType.Pair(?, ?)
+  private def translateType(synType: ast.Type | ast.PairElemType): KnownType = {
+    val knownType = synType match {
+      case ast.IntType()    => renamedast.IntType()
+      case ast.BoolType()   => renamedast.BoolType()
+      case ast.CharType()   => renamedast.CharType()
+      case ast.StringType() => renamedast.StringType()
+      case ast.ArrayType(t) => renamedast.ArrayType(translateType(t))
+      case ast.ErasedPair() => renamedast.PairType(?, ?)
       case ast.PairType(t1, t2) =>
-        KnownType.Pair(translateType(t1), translateType(t2))
+        renamedast.PairType(translateType(t1), translateType(t2))
     }
+    knownType(synType.pos)
+  }
 
   /** Rename a function.
    *
