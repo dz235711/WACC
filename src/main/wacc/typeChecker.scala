@@ -386,7 +386,10 @@ sealed class TypeChecker {
     val arrElemTy = esTyped.foldLeft(arrTy)((acc, _) =>
       acc match {
         case Some(Array(ty)) => Some(ty)
-        case _               => None
+        case _               =>
+          // TODO: Error handling - tried to index a non-array type
+          println("Tried to index a non-array type")
+          None
       }
     )
 
