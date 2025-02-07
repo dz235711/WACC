@@ -2,10 +2,11 @@ package wacc
 
 import wacc.renamedast.{KnownType, QualifiedName, ?}
 import scala.collection.mutable
+import WaccErrorBuilder.constructSpecialised
 
 type Scope = Map[String, QualifiedName]
 
-class renamer {
+class Renamer {
   private var uid: Int = 0
   // Map of function names to their qualified names and number of parameters
   private val functionIds: mutable.Map[String, (QualifiedName, Int)] =
@@ -25,7 +26,7 @@ class renamer {
    * @param p The program to rename (ast)
    * @return The renamed program (renamedast)
    */
-  def rename(p: ast.Program): renamedast.Program = {
+  def rename(p: ast.Program)(using ctx: ErrorContext): renamedast.Program = {
     // Generate unique identifiers for all functions
     val fids = p.fs.map(f => {
       val (t, id) = f.decl
@@ -35,7 +36,13 @@ class renamer {
 
       // Check for redeclaration of function
       if (functionIds.contains(name)) {
-        // TODO: Error handling
+        ctx.error(
+          constructSpecialised(
+            id.pos,
+            name.length,
+            s"Illegal function redeclaration $name"
+          )
+        )
       } else {
         // Add the function to the functionIds map if it is not already declared
         functionIds += (name -> (fqn, f.params.length))
@@ -77,7 +84,7 @@ class renamer {
   private def renameFunc(
       f: ast.Func,
       qualifiedName: QualifiedName
-  ): renamedast.Func = {
+  )(using ctx: ErrorContext): renamedast.Func = {
     // Construct a map of the parameters to use as a scope for the body
     val funcScope: Scope = paramsToScope(f.params)
     val renamedBody = renameStmt(f.body, funcScope, Map(), true)._1
@@ -94,13 +101,21 @@ class renamer {
    * @param params The parameters of the function
    * @return The scope of the parameters
    */
-  private def paramsToScope(params: List[ast.Param]): Scope =
+  private def paramsToScope(
+      params: List[ast.Param]
+  )(using ctx: ErrorContext): Scope =
     params.foldLeft(Map())((params, param) => {
       val (t, id) = param
 
       // Check for redeclaration of parameter
       if (params.contains(id.v)) {
-        // TODO: Error handling
+        ctx.error(
+          constructSpecialised(
+            id.pos,
+            id.v.length,
+            s"Illegal parameter redeclaration ${id.v}"
+          )
+        )
         params
       } else {
         // Add the parameter to the params map if it is not already declared
@@ -124,7 +139,7 @@ class renamer {
       parentScope: Scope,
       currentScope: Scope,
       isFunc: Boolean
-  ): (renamedast.Stmt, Scope) = stmt match {
+  )(using ctx: ErrorContext): (renamedast.Stmt, Scope) = stmt match {
 
     case ast.Skip() => (renamedast.Skip()(stmt.pos), currentScope)
 
@@ -136,7 +151,13 @@ class renamer {
 
       // Check if the variable is already declared in the current scope
       if (currentScope.contains(v.v)) {
-        // TODO: Error handling
+        ctx.error(
+          constructSpecialised(
+            v.pos,
+            v.v.length,
+            s"Illegal variable redeclaration ${v.v}"
+          )
+        )
         (renamedDecl, currentScope)
       } else {
         /* Only add the variable to the current scope if it is not already
@@ -167,7 +188,13 @@ class renamer {
 
     case ast.Return(e) =>
       if (!isFunc) {
-        // TODO: Error handling
+        ctx.error(
+          constructSpecialised(
+            stmt.pos,
+            6, // Length of "return"
+            "Return statement outside of function"
+          )
+        )
       }
       (
         renamedast.Return(renameExpr(e, parentScope ++ currentScope))(stmt.pos),
@@ -231,7 +258,9 @@ class renamer {
    * @param scope The scope of the rvalue
    * @return The renamed rvalue
    */
-  private def renameRValue(r: ast.RValue, scope: Scope): renamedast.RValue =
+  private def renameRValue(r: ast.RValue, scope: Scope)(using
+      ctx: ErrorContext
+  ): renamedast.RValue =
     r match {
       case ast.ArrayLiter(es) =>
         renamedast.ArrayLiter(es.map(renameExpr(_, scope)))(r.pos)
@@ -244,14 +273,26 @@ class renamer {
 
         // Check if the function is declared
         val renamedIdent = if (!functionIds.contains(v.v)) {
-          // TODO: Error handling
+          ctx.error(
+            constructSpecialised(
+              v.pos,
+              v.v.length,
+              s"Attempted usage of undefined function ${v.v}"
+            )
+          )
           renamedast.Ident(QualifiedName(v.v, generateUid(), ?))
         } else {
           val (fqn, argLen) = functionIds(v.v)
 
           // Check if the number of arguments is correct
           if (args.length != argLen) {
-            // TODO: Error handling
+            ctx.error(
+              constructSpecialised(
+                (v.pos._1, v.pos._2 + v.v.length),
+                1,
+                s"Incorrect number of arguments for function ${v.v}"
+              )
+            )
           }
           renamedast.Ident(fqn)
         }
@@ -260,9 +301,17 @@ class renamer {
       case e: ast.Expr => renameExpr(e, scope)
     }
 
-  private def renameIdent(v: ast.Ident, scope: Scope): renamedast.Ident = {
+  private def renameIdent(v: ast.Ident, scope: Scope)(using
+      ctx: ErrorContext
+  ): renamedast.Ident = {
     if (!scope.contains(v.v)) {
-      // TODO: Error handling
+      ctx.error(
+        constructSpecialised(
+          v.pos,
+          v.v.length,
+          s"Attempted usage of undefined variable ${v.v}"
+        )
+      )
       renamedast.Ident(QualifiedName(v.v, generateUid(), ?))(v.pos)
     } else {
       renamedast.Ident(scope(v.v))(v.pos)
@@ -272,7 +321,7 @@ class renamer {
   private def renameArrayElem(
       arrElem: ast.ArrayElem,
       scope: Scope
-  ): renamedast.ArrayElem = {
+  )(using ctx: ErrorContext): renamedast.ArrayElem = {
     val renamedIdent = renameIdent(arrElem.ident, scope)
     renamedast.ArrayElem(renamedIdent, arrElem.es.map(renameExpr(_, scope)))(arrElem.pos)
   }
@@ -283,7 +332,9 @@ class renamer {
    * @param scope The scope of the lvalue
    * @return The renamed lvalue
    */
-  private def renameLValue(l: ast.LValue, scope: Scope): renamedast.LValue =
+  private def renameLValue(l: ast.LValue, scope: Scope)(using
+      ctx: ErrorContext
+  ): renamedast.LValue =
     l match {
       case ast.Fst(lNested)       => renamedast.Fst(renameLValue(lNested, scope))(l.pos)
       case ast.Snd(lNested)       => renamedast.Snd(renameLValue(lNested, scope))(l.pos)
@@ -297,7 +348,7 @@ class renamer {
    * @param scope The scope of the expression
    * @return The renamed expression
    */
-  private def renameExpr(e: ast.Expr, scope: Scope): renamedast.Expr = e match {
+  private def renameExpr(e: ast.Expr, scope: Scope)(using ctx: ErrorContext): renamedast.Expr = e match {
     case ast.Not(eNested)    => renamedast.Not(renameExpr(eNested, scope))(e.pos)
     case ast.Negate(eNested) => renamedast.Negate(renameExpr(eNested, scope))(e.pos)
     case ast.Len(eNested)    => renamedast.Len(renameExpr(eNested, scope))(e.pos)
@@ -336,6 +387,7 @@ class renamer {
     case ast.PairLiter()    => renamedast.PairLiter()(e.pos)
     case e: ast.Ident       => renameIdent(e, scope)
     case e: ast.ArrayElem   => renameArrayElem(e, scope)
-    case ast.NestedExpr(eNested)  => renamedast.NestedExpr(renameExpr(eNested, scope))(e.pos)
   }
 }
+
+object Renamer extends Renamer

@@ -4,6 +4,7 @@
 .vscode/
 
 wacc-compiler
+test.wacc
 
 # Intellij
 .idea/
