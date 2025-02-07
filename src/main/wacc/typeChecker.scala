@@ -26,8 +26,12 @@ sealed class TypeChecker {
   /** Determines whether two types are equal, and if so, what the most specific of them is. */
   extension (ty: SemType)
     private infix def ~(refTy: SemType): Option[SemType] = (ty, refTy) match {
-      case (?, refTy)                => Some(refTy)
-      case (ty, ?)                   => Some(ty)
+      // Check invariant cases
+      case (Array(Array(Char)), Array(String))     => None
+      case (Pair(_, Array(Char)), Pair(_, String)) => None
+      case (Pair(Array(Char), _), Pair(String, _)) => None
+      case (?, refTy)                              => Some(refTy)
+      case (ty, ?)                                 => Some(ty)
       case (Array(ty), Array(refTy)) => (ty ~ refTy).map(Array.apply)
       case (Pair(ty1, ty2), Pair(refTy1, refTy2)) =>
         for {
@@ -42,20 +46,6 @@ sealed class TypeChecker {
   /** Determines whether a type satisfies a constraint. */
   extension (ty: SemType)
     private def satisfies(c: Constraint): Option[SemType] = (ty, c) match {
-      // Check invariant cases
-      case (Array(Array(Char)), Is(Array(String))) =>
-        // TODO: Error handling - invariant violated
-        println("Invariant violated")
-        None
-      case (Pair(_, Array(Char)), Is(Pair(_, String))) =>
-        // TODO: Error handling - invariant violated
-        println("Invariant violated")
-        None
-      case (Pair(Array(Char), _), Is(Pair(String, _))) =>
-        // TODO: Error handling - invariant violated
-        println("Invariant violated")
-        None
-
       // Check the rest of the cases
       case (ty, Is(refTy)) =>
         (ty ~ refTy).orElse {
