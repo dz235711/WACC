@@ -6,6 +6,10 @@ package wacc:
       declType: SemType
     )
 
+    sealed trait PositionalNode {
+      val pos: (Int, Int)
+    }
+
     sealed abstract class SemType
     case object ? extends SemType
 
@@ -18,7 +22,7 @@ package wacc:
       case PairType(t1: SemType, t2: SemType) extends KnownType
     }
 
-    sealed trait Expr extends RValue
+    sealed trait Expr extends RValue, PositionalNode
     case class Not(e: Expr)(val pos: (Int, Int)) extends Expr
     case class Negate(e: Expr)(val pos: (Int, Int)) extends Expr
     case class Len(e: Expr)(val pos: (Int, Int)) extends Expr
@@ -48,15 +52,15 @@ package wacc:
     case class ArrayElem(v: Ident, es: List[Expr])(val pos: (Int, Int)) extends Expr with LValue
     case class NestedExpr(e: Expr)(val pos: (Int, Int)) extends Expr
 
-    sealed trait LValue
-    sealed trait RValue
+    sealed trait LValue extends PositionalNode
+    sealed trait RValue extends PositionalNode
     case class ArrayLiter(es: List[Expr])(val pos: (Int, Int)) extends RValue
     case class NewPair(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
     case class Fst(l: LValue)(val pos: (Int, Int)) extends LValue, RValue
     case class Snd(l: LValue)(val pos: (Int, Int)) extends LValue, RValue
     case class Call(v: Ident, args: List[Expr])(val pos: (Int, Int)) extends RValue
 
-    sealed trait Stmt
+    sealed trait Stmt extends PositionalNode
     case class Skip()(val pos: (Int, Int)) extends Stmt
     case class Decl(v: Ident, r: RValue)(val pos: (Int, Int)) extends Stmt
     case class Asgn(l: LValue, r: RValue)(val pos: (Int, Int)) extends Stmt
