@@ -43,13 +43,20 @@ object lexer {
         "fst",
         "snd",
         "null",
+        "int",
+        "char",
+        "bool",
+        "string",
+        "pair",
+        "true",
+        "false",
+        "len",
+        "ord",
+        "chr"
       ),
       hardOperators = Set(
         "!",
         "-",
-        "len",
-        "ord",
-        "chr",
         "*",
         "/",
         "%",
@@ -105,7 +112,7 @@ object lexer {
       "false" -> Label("boolean"),
     )
     override def labelIntegerSignedNumber = Label("number")
-    override def labelCharAscii = Label("chararacter")
+    override def labelCharAscii = Label("character") 
     override def labelStringAscii(multi: Boolean, raw: Boolean) = Label("string")
   }
   private val lexer = Lexer(desc, errConfig)
