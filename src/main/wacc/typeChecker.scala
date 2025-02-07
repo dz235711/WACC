@@ -409,7 +409,8 @@ sealed class TypeChecker {
     val (ty, lTyped) = checkLVal(fst.l, IsPair)
     ty match {
       case Some(Pair(ty1, _)) =>
-        (ty1.satisfies(c), TypedAST.Fst(lTyped, ty1))
+        val ty1C = ty1.satisfies(c)
+        (ty1C, TypedAST.Fst(lTyped, ty1C.getOrElse(?)))
       case _ => (None, TypedAST.Fst(lTyped, ?))
     }
   }
@@ -417,7 +418,7 @@ sealed class TypeChecker {
   /** Checks a Snd expression and returns a typed Snd expression.
    *
    * @param snd The Snd expression to check
-   * @param c The constraint on the second element of the pair's type
+   * @param c   The constraint on the second element of the pair's type
    * @return The typed Snd expression
    */
   private def checkSnd(
@@ -427,7 +428,8 @@ sealed class TypeChecker {
     val (ty, lTyped) = checkLVal(snd.l, IsPair)
     ty match {
       case Some(Pair(_, ty2)) =>
-        (ty2.satisfies(c), TypedAST.Snd(lTyped, ty2))
+        val ty2C = ty2.satisfies(c)
+        (ty2C, TypedAST.Snd(lTyped, ty2C.getOrElse(?)))
       case _ => (None, TypedAST.Snd(lTyped, ?))
     }
   }
