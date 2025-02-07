@@ -389,12 +389,21 @@ sealed class TypeChecker {
       c: Constraint
   ): (Option[SemType], TypedAST.ArrayElem) =
     val (arrTy, vTyped) = checkIdent(arrElem.v, IsArray)
-    val elemTy = (for
-      case Array(elemTy) <- arrTy
-      ty <- elemTy.satisfies(c)
-    yield ty).getOrElse(?)
     val esTyped = arrElem.es.map(checkExpr(_, Is(Int))._2)
-    (Some(elemTy), TypedAST.ArrayElem(vTyped, esTyped, elemTy))
+
+    // Calculate the shape of the array based on how it is indexed
+    // e.g. y[][] -> Array(Array(?))
+    val indexedArrTy = arrElem.es.foldLeft[SemType](?)((acc, _) => Array(acc))
+
+    val result = for {
+      ty1 <- arrTy
+      // Check that the array type satisfies the constraint
+      ty2 <- ty1.satisfies(c)
+      // Check that the array type is indexed correctly
+      ty3 <- ty2.satisfies(Is(indexedArrTy))
+    } yield (Some(ty3), TypedAST.ArrayElem(vTyped, esTyped, ty3))
+
+    result.getOrElse(None, TypedAST.ArrayElem(vTyped, esTyped, ?))
 
   /** Checks a Fst expression and returns a typed Fst expression.
    *
