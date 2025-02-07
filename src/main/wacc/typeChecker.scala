@@ -17,11 +17,11 @@ object Constraint {
 }
 
 sealed class TypeChecker {
+  import Constraint.*
+
   // Map from function UID to list of function parameters
   private val funcTable: mutable.Map[Int, List[renamedast.Ident]] =
     mutable.Map()
-
-  import Constraint.*
 
   /** Determines whether two types are equal, and if so, what the most specific of them is. */
   extension (ty: SemType)
