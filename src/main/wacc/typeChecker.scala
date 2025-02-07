@@ -38,6 +38,7 @@ sealed class TypeChecker {
           newTy1 <- ty1 ~ refTy1
           newTy2 <- ty2 ~ refTy2
         } yield Pair(newTy1, newTy2)
+      case (Array(?), String)         => Some(Array(Char))
       case (Array(Char), String)      => Some(String)
       case (ty, refTy) if ty == refTy => Some(ty)
       case _                          => None
