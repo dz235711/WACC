@@ -85,7 +85,7 @@ class renamer {
 
     renamedast.Func(
       renamedast.Ident(qualifiedName),
-      funcScope.values.map(renamedast.Ident.apply).toList,
+      f.params.map(p => renamedast.Ident(funcScope(p._2.v))),
       renamedBody
     )
   }
