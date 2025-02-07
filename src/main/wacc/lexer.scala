@@ -112,7 +112,7 @@ object lexer {
       "false" -> Label("boolean"),
     )
     override def labelIntegerSignedNumber = Label("number")
-    override def labelCharAscii = Label("chararacter") // meow
+    override def labelCharAscii = Label("character") 
     override def labelStringAscii(multi: Boolean, raw: Boolean) = Label("string")
   }
   private val lexer = Lexer(desc, errConfig)
