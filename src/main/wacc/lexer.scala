@@ -43,6 +43,13 @@ object lexer {
         "fst",
         "snd",
         "null",
+        "int",
+        "char",
+        "bool",
+        "string",
+        "pair",
+        "true",
+        "false",
       ),
       hardOperators = Set(
         "!",

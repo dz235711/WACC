@@ -43,9 +43,9 @@ object parser {
       // Unary operators
       Ops(Prefix)(
         Not <# "!",
-        Len <# atomic(string("len") <~ " "),
-        Ord <# atomic(string("ord") <~ " "),
-        Chr <# atomic(string("chr") <~ " ")
+        Len <# string("len") <~ " ",
+        Ord <# string("ord") <~ " ",
+        Chr <# string("chr") <~ " "
       ),
       // Binary operators
       Ops(InfixL)(Mult <# "*", Mod <# "%", Div <# "/"),
