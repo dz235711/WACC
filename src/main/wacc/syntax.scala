@@ -3,9 +3,13 @@ package wacc:
 
     type Param = (Type, Ident)
     type FuncDecl = (Type, Ident)
+
+    sealed trait PositionalNode {
+        val pos: (Int, Int)
+    }
     
-    sealed trait Type
-    sealed trait PairElemType
+    sealed trait Type extends PositionalNode
+    sealed trait PairElemType extends PositionalNode
     sealed trait BaseType extends Type, PairElemType
     
     case class IntType()(val pos: (Int, Int)) extends BaseType
@@ -26,7 +30,7 @@ package wacc:
     object ErasedPair extends ParserBridgePos0[PairElemType]
     object PairType extends ParserBridgePos2[PairElemType, PairElemType, PairType]
     
-    sealed trait Expr extends RValue
+    sealed trait Expr extends RValue, PositionalNode
     case class Not(e: Expr)(val pos: (Int, Int)) extends Expr
     case class Negate(e: Expr)(val pos: (Int, Int)) extends Expr
     case class Len(e: Expr)(val pos: (Int, Int)) extends Expr
@@ -73,7 +77,7 @@ package wacc:
     case class StringLiter(s: String)(val pos: (Int, Int)) extends Expr
     case class PairLiter()(val pos: (Int, Int)) extends Expr
     case class Ident(v: String)(val pos: (Int, Int)) extends Expr with LValue
-    case class ArrayElem(v: Ident, es: List[Expr])(val pos: (Int, Int)) extends Expr with LValue
+    case class ArrayElem(ident: Ident, es: List[Expr])(val pos: (Int, Int)) extends Expr with LValue
     case class NestedExpr(e: Expr)(val pos: (Int, Int)) extends Expr
     
     object IntLiter extends ParserBridgePos1[Int, IntLiter]
@@ -85,14 +89,14 @@ package wacc:
     object ArrayElem extends ParserBridgePos2[Ident, List[Expr], ArrayElem]
     object NestedExpr extends ParserBridgePos1[Expr, NestedExpr]
     
-    sealed trait LValue
+    sealed trait LValue extends PositionalNode
     
-    sealed trait RValue
+    sealed trait RValue extends PositionalNode
     case class ArrayLiter(es: List[Expr])(val pos: (Int, Int)) extends RValue
     case class NewPair(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends RValue
     case class Fst(l: LValue)(val pos: (Int, Int)) extends LValue, RValue
     case class Snd(l: LValue)(val pos: (Int, Int)) extends LValue, RValue
-    case class Call(v: Ident, args: List[Expr])(val pos: (Int, Int)) extends RValue
+    case class Call(ident: Ident, args: List[Expr])(val pos: (Int, Int)) extends RValue
     
     object ArrayLiter extends ParserBridgePos1[List[Expr], ArrayLiter]
     object NewPair extends ParserBridgePos2[Expr, Expr, NewPair]
@@ -100,9 +104,9 @@ package wacc:
     object Snd extends ParserBridgePos1[LValue, Snd]
     object Call extends ParserBridgePos2[Ident, List[Expr], Call]
     
-    sealed trait Stmt
+    sealed trait Stmt extends PositionalNode
     case class Skip()(val pos: (Int, Int)) extends Stmt
-    case class Decl(t: Type, v: Ident, r: RValue)(val pos: (Int, Int)) extends Stmt
+    case class Decl(t: Type, ident: Ident, r: RValue)(val pos: (Int, Int)) extends Stmt
     case class Asgn(l: LValue, r: RValue)(val pos: (Int, Int)) extends Stmt
     case class Read(l: LValue)(val pos: (Int, Int)) extends Stmt
     case class Free(e: Expr)(val pos: (Int, Int)) extends Stmt
@@ -129,7 +133,7 @@ package wacc:
     object Begin extends ParserBridgePos1[Stmt, Begin]
     object Semi extends ParserBridgePos2[Stmt, Stmt, Semi]
     
-    case class Func(decl: FuncDecl, params: List[Param], body: Stmt)(val pos: (Int, Int))
+    case class Func(decl: FuncDecl, params: List[Param], body: Stmt)(val pos: (Int, Int)) extends PositionalNode
     object Func extends ParserBridgePos3[FuncDecl, List[Param], Stmt, Func] 
     
     case class Program(fs: List[Func], body: Stmt)(val pos: (Int, Int))
