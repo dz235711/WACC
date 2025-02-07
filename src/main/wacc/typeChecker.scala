@@ -50,7 +50,7 @@ sealed class TypeChecker {
       case (ty, Is(refTy)) =>
         (ty ~ refTy).orElse {
           // TODO: Error handling - type mismatch
-          println("Type mismatch")
+          println("Type mismatch between " + ty + " and " + refTy)
           None
         }
       case (?, _) => Some(?) // Unconstrained types satisfy all constraints
@@ -124,7 +124,8 @@ sealed class TypeChecker {
       // Make sure the assignment has a known type
       rTy match {
         case Some(?) =>
-        // TODO: Error handling
+          // TODO: Error handling
+          println("Assignment has unknown type")
         case _ => ()
       }
 
@@ -380,19 +381,18 @@ sealed class TypeChecker {
     val (arrTy, vTyped) = checkIdent(arrElem.v, IsArray)
     val esTyped = arrElem.es.map(checkExpr(_, Is(Int))._2)
 
-    // Calculate the shape of the array based on how it is indexed
-    // e.g. y[][] -> Array(Array(?))
-    val indexedArrTy = arrElem.es.foldLeft[SemType](?)((acc, _) => Array(acc))
+    // Unwrap the array type once for each index
+    val arrElemTy = esTyped.foldLeft(arrTy)((acc, _) =>
+      acc match {
+        case Some(Array(ty)) => Some(ty)
+        case _               => None
+      }
+    )
 
-    val result = for {
-      ty1 <- arrTy
-      // Check that the array type satisfies the constraint
-      ty2 <- ty1.satisfies(c)
-      // Check that the array type is indexed correctly
-      ty3 <- ty2.satisfies(Is(indexedArrTy))
-    } yield (Some(ty3), TypedAST.ArrayElem(vTyped, esTyped, ty3))
+    // Check that the array element type satisfies the constraint
+    val arrElemTyC = arrElemTy.flatMap(_.satisfies(c))
 
-    result.getOrElse(None, TypedAST.ArrayElem(vTyped, esTyped, ?))
+    (arrElemTyC, TypedAST.ArrayElem(vTyped, esTyped, arrElemTyC.getOrElse(?)))
 
   /** Checks a Fst expression and returns a typed Fst expression.
    *
