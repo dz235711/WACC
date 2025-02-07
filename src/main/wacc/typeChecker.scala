@@ -54,11 +54,10 @@ sealed class TypeChecker {
           println("Type mismatch between " + ty + " and " + refTy)
           None
         }
-      case (?, _) => Some(?) // Unconstrained types satisfy all constraints
-      case (kty: Array, IsArray)           => Some(kty)
-      case (kty: Pair, IsPair)             => Some(kty)
-      case (kty: (Int | Char), IsReadable) => Some(kty)
-      case (_, IsReadable)                 =>
+      case (kty: Array, IsArray)            => Some(kty)
+      case (kty: Pair, IsPair)              => Some(kty)
+      case (kty @ (Int | Char), IsReadable) => Some(kty)
+      case (_, IsReadable)                  =>
         // TODO: Error handling - tried to read a non-readable type
         println("tried to read a non-readable type")
         None
