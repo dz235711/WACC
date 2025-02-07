@@ -25,7 +25,7 @@ sealed class TypeChecker {
 
   /** Determines whether two types are equal, and if so, what the most specific of them is. */
   extension (ty: SemType)
-    private def ~(refTy: SemType): Option[SemType] = (ty, refTy) match {
+    private infix def ~(refTy: SemType): Option[SemType] = (ty, refTy) match {
       case (?, refTy)                => Some(refTy)
       case (ty, ?)                   => Some(ty)
       case (Array(ty), Array(refTy)) => (ty ~ refTy).map(Array.apply)
