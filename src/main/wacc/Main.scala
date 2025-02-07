@@ -6,9 +6,8 @@ import java.io.FileNotFoundException
 import WaccErrorBuilder.{format, setLines}
 
 import parsley.errors.ErrorBuilder
-import scala.collection.mutable.ListBuffer
 
-  /** Manages syntax parsing and semantic analysis of a WACC program
+/** Manages syntax parsing and semantic analysis of a WACC program
    *
    * @param args  Cmdline arguments
    * @return (Exit code, Either[Exit message, List of errors])
@@ -23,7 +22,7 @@ def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
       try {
         // Get file handle
         val source = io.Source.fromFile(path)
-        
+
         // Read first as list so we can later set the lines in errors by index
         val listifiedLines = source.getLines().toList
 
@@ -33,27 +32,46 @@ def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
 
         // Prase the file
         if (verbose)
-          println("\n------------------------------ Input File ------------------------------")
+          println(
+            "\n------------------------------ Input File ------------------------------"
+          )
           println(lines)
-          println("------------------------------ /Input File ------------------------------\n")
+          println(
+            "------------------------------ /Input File ------------------------------\n"
+          )
         given ErrorBuilder[WaccError] = new WaccErrorBuilder
+        given errCtx: ErrorContext = new ErrorContext
         parser.parse(lines) match {
           case Success(x) =>
             // Successfully parsed so we conitnue to semantic analysis
             if (verbose)
-              println("\n------------------------------ Pretty-Printed AST ------------------------------")
+              println(
+                "\n------------------------------ Pretty-Printed AST ------------------------------"
+              )
               println(prettyPrint(x))
-              println("------------------------------ /Pretty-Printed AST ------------------------------\n")
-            val errs = new ListBuffer[WaccError]()
+              println(
+                "------------------------------ /Pretty-Printed AST ------------------------------\n"
+              )
 
             // Semantic analysis
-            Renamer().rename(errs)(x)
+            Renamer().rename(x)
 
             // Convert list buffer to list to allow mapping
-            val listifiedErrs = errs.toList
+            val listifiedErrs = errCtx.get
             if (listifiedErrs.nonEmpty)
-              // Return correctly formatted errors with lines set if error list is nonempty
-              (200, Right(listifiedErrs.map(e => setLines(format(e, Some(path), ErrType.Semantic), listifiedLines))))
+              /* Return correctly formatted errors with lines set if error list
+               * is nonempty */
+              (
+                200,
+                Right(
+                  listifiedErrs.map(e =>
+                    setLines(
+                      format(e, Some(path), ErrType.Semantic),
+                      listifiedLines
+                    )
+                  )
+                )
+              )
             else
               // Otherwise semantic analysis passed
               (0, Left("Parsed successfully! 🎉"))
@@ -77,7 +95,10 @@ def main(args: Array[String]): Unit = {
   // Print output msg or errors to output stream
   output match {
     case Left(msg) => println(msg)
-    case Right(err) => println(err.foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc)))
+    case Right(err) =>
+      println(
+        err.foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc))
+      )
   }
 
   // Exit with status code
