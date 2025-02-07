@@ -59,7 +59,7 @@ object parser {
       Ops(InfixN)(Equals <# "==", NotEquals <# "!="),
       Ops(InfixR)(And <# "&&"),
       Ops(InfixR)(Or <# "||")
-    ).label("expression").explain("Expressions are phrases like \"1 + 2 * 3\" that evaluate to a final value")
+    ).label("expression").explain("Expressions are phrases like \"1 + 2 * 3\" or \"true || false\" that evaluate to a final value")
 
   // Types
   private lazy val typeParser: Parsley[Type] =
@@ -98,7 +98,7 @@ object parser {
       .guardAgainst {
         case Func(_, _, b) if !endsInReturn(b) =>
           Seq(
-            "Functions must either end directly with return or with a returning block"
+            "All function bodies must end with a 'return', an 'exit', or an 'if' statement with two returning blocks."
           )
       }
   }

@@ -4,6 +4,7 @@ import renamedast.{?, KnownType, SemType}
 import renamedast.KnownType.*
 import scala.collection.mutable
 import WaccErrorBuilder.constructSpecialised
+import renamedast.getTypeName
 
 enum Constraint {
   case Is(refTy: SemType)
@@ -58,7 +59,7 @@ sealed class TypeChecker {
             constructSpecialised(
               pos,
               1,
-              s"Type mismatch between $ty and $refTy"
+              s"Type mismatch between ${getTypeName(ty)} and ${getTypeName(refTy)}"
             )
           )
           None
@@ -345,7 +346,27 @@ sealed class TypeChecker {
       c: Constraint
   )(using ctx: ErrorContext): (Option[SemType], TypedAST.RValue) = rval match {
     case renamedast.ArrayLiter(es) =>
-      ArrayType(?).satisfies(rval.pos)(c) match {
+      // Try to unify the types of the array elements
+      val elTy = es
+        .foldLeft[Option[SemType]](Some(?)) { (ty, expr) =>
+          ty.flatMap { ty =>
+            val eTy = checkExpr(expr, Unconstrained)._1
+            // Try unifying either direction
+            eTy.flatMap(et => (ty ~ et).orElse(et ~ ty))
+          }
+        }
+        .getOrElse {
+          ctx.error(
+            constructSpecialised(
+              rval.pos,
+              1,
+              s"Literal contains mix of ${es.map(e => getTypeName(checkExpr(e, Unconstrained)._1.getOrElse(?))).mkString(", ")}"
+            )
+          )
+          ?
+        }
+
+      ArrayType(elTy).satisfies(rval.pos)(c) match {
         case Some(ArrayType(ty)) =>
           val esTyped = es.map(checkExpr(_, Is(ty))._2)
           (Some(ArrayType(ty)), TypedAST.ArrayLiter(esTyped, ArrayType(ty)))

@@ -2,8 +2,7 @@ package wacc
 
 import scala.collection.mutable.ListBuffer
 
-
-class ErrorContext(errs: ListBuffer[WaccError] = new ListBuffer[WaccError]) {
+class ErrorContext(errs: ListBuffer[WaccError] = new ListBuffer) {
 
   /** Adds an error to the error context
     *

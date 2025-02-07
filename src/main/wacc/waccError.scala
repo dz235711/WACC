@@ -29,6 +29,7 @@ case class WaccError(
     var errType: Option[ErrType],
 )
 
+// Stores the souce code lines before, at and after errs as well as error position information
 case class WaccLineInfo(
     var line: String,
     var linesBefore: Seq[String],
@@ -38,6 +39,7 @@ case class WaccLineInfo(
     errorWidth: Int
 )
 
+// Stores the different types of errors that can be encountered and their information
 enum WaccErrorLines {
   case VanillaError(
       unexpected: Option[WaccErrorItem],
@@ -48,6 +50,7 @@ enum WaccErrorLines {
   case SpecialisedError(msgs: Set[String], lineinfo: WaccLineInfo)
 }
 
+// Which type of item is encountered in the error
 enum WaccErrorItem {
   case WaccRaw(item: String)
   case WaccNamed(item: String)
@@ -193,7 +196,7 @@ class WaccErrorBuilder extends ErrorBuilder[WaccError] {
    */
   def constructSpecialised(errPos: Position, width: Int, msg: String): WaccError = {
     build(
-          pos = pos(errPos._1, errPos._2),
+          pos = errPos,
           source = source(None),
           lines = WaccErrorLines.SpecialisedError(
             msgs = Set(message(msg)),
@@ -292,7 +295,7 @@ class WaccErrorBuilder extends ErrorBuilder[WaccError] {
   override def unexpected(item: Option[Item]): UnexpectedLine = item
 
   type ExpectedLine = ExpectedItems
-  override def expected(alts: ExpectedItems): ExpectedLine = alts
+  override def expected(alts: ExpectedItems): ExpectedLine = alts.filter(_ != WaccNamed("whitespace"))
 
   type Message = String
   override def reason(reason: String): Message = reason

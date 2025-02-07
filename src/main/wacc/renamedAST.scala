@@ -22,6 +22,21 @@ package wacc:
       case PairType(t1: SemType, t2: SemType) extends KnownType
     }
 
+    /** Converts SemType to String
+      *
+      * @param ty the SemType
+      * @return the name of the type
+      */
+    def getTypeName(ty: SemType): String = ty match {
+      case KnownType.IntType => "int"
+      case KnownType.BoolType => "bool"
+      case KnownType.CharType => "char"
+      case KnownType.StringType => "string"
+      case KnownType.ArrayType(t) => s"${getTypeName(t)}[]"
+      case KnownType.PairType(t1, t2) => s"pair(${getTypeName(t1)}, ${getTypeName(t2)})"
+      case ? => "unknown"
+    }
+
     sealed trait Expr extends RValue, PositionalNode
     case class Not(e: Expr)(val pos: (Int, Int)) extends Expr
     case class Negate(e: Expr)(val pos: (Int, Int)) extends Expr
