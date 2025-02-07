@@ -54,8 +54,8 @@ sealed class TypeChecker {
           None
         }
       case (?, _) => Some(?) // Unconstrained types satisfy all constraints
-      case (kty @ Array(_), IsArray)        => Some(kty)
-      case (kty @ Pair(_, _), IsPair)       => Some(kty)
+      case (kty: Array, IsArray)            => Some(kty)
+      case (kty: Pair, IsPair)              => Some(kty)
       case (kty @ (Int | Char), IsReadable) => Some(kty)
       case (_, IsReadable)                  =>
         // TODO: Error handling - tried to read a non-readable type
@@ -66,8 +66,8 @@ sealed class TypeChecker {
         // TODO: Error handling - tried to order (e.g. >=) a non-orderable type
         println("Tried to order a non-orderable type")
         None
-      case (kty @ (Array(_) | Pair(_, _)), IsFreeable) => Some(kty)
-      case (_, IsFreeable)                             =>
+      case (kty: (Array | Pair), IsFreeable) => Some(kty)
+      case (_, IsFreeable)                   =>
         // TODO: Error handling - tried to free a non-freeable type
         println("Tried to free a non-freeable type")
         None
@@ -75,7 +75,7 @@ sealed class TypeChecker {
     }
 
   /** Checks a program and returns a typed program.
-   * 
+   *
    * @param p The renamed program to check
    * @return The typed program
    */
@@ -200,9 +200,9 @@ sealed class TypeChecker {
       (String.satisfies(c), TypedAST.StringLiter(s))
     case renamedast.PairLiter =>
       (Pair(?, ?).satisfies(c), TypedAST.PairLiter)
-    case id @ renamedast.Ident(_)           => checkIdent(id, c)
-    case arrEl @ renamedast.ArrayElem(_, _) => checkArrayElem(arrEl, c)
-    case renamedast.NestedExpr(e)           => checkExpr(e, c)
+    case id: renamedast.Ident        => checkIdent(id, c)
+    case arrEl: renamedast.ArrayElem => checkArrayElem(arrEl, c)
+    case renamedast.NestedExpr(e)    => checkExpr(e, c)
   }
 
   /** Checks an arithmetic expression and returns a typed arithmetic expression.
@@ -293,10 +293,10 @@ sealed class TypeChecker {
       lval: renamedast.LValue,
       c: Constraint
   ): (Option[SemType], TypedAST.LValue) = lval match {
-    case id @ renamedast.Ident(_)           => checkIdent(id, c)
-    case arrEl @ renamedast.ArrayElem(_, _) => checkArrayElem(arrEl, c)
-    case fst @ renamedast.Fst(_)            => checkFst(fst, c)
-    case snd @ renamedast.Snd(_)            => checkSnd(snd, c)
+    case id: renamedast.Ident        => checkIdent(id, c)
+    case arrEl: renamedast.ArrayElem => checkArrayElem(arrEl, c)
+    case fst: renamedast.Fst         => checkFst(fst, c)
+    case snd: renamedast.Snd         => checkSnd(snd, c)
   }
 
   /** Checks an rvalue and returns a typed rvalue.
@@ -336,8 +336,8 @@ sealed class TypeChecker {
             )
           )
       }
-    case fst @ renamedast.Fst(_)  => checkFst(fst, c)
-    case snd @ renamedast.Snd(_)  => checkSnd(snd, c)
+    case fst: renamedast.Fst      => checkFst(fst, c)
+    case snd: renamedast.Snd      => checkSnd(snd, c)
     case renamedast.Call(v, args) =>
       /* Check that the return type of the function is the same as the
        * constraint */
@@ -347,7 +347,7 @@ sealed class TypeChecker {
       val argsTyped = args.zip(funcTable(vTyped.id)).map { (arg, expected) =>
         checkExpr(arg, Is(expected.v.declType))._2
       }
-      (ty, TypedAST.Call(vTyped, argsTyped, ty.get))
+      (ty, TypedAST.Call(vTyped, argsTyped, ty.getOrElse(?)))
     case e: renamedast.Expr => checkExpr(e, c)
   }
 
