@@ -7,15 +7,15 @@ class InvalidSemanticerrWhileTests extends AnyFlatSpec {
   val dir = "src/test/examples/invalid/semanticErr/while/"
 
   it should "pass falsErr.wacc" in {
-    runFrontend(Array(dir+"falsErr.wacc"))._1 shouldBe 200
+    runFrontend(Array(dir + "falsErr.wacc"))._1 shouldBe 200
   }
 
   it should "pass truErr.wacc" in {
-    runFrontend(Array(dir+"truErr.wacc"))._1 shouldBe 200
+    runFrontend(Array(dir + "truErr.wacc"))._1 shouldBe 200
   }
 
   it should "pass whileIntCondition.wacc" in {
-    runFrontend(Array(dir+"whileIntCondition.wacc"))._1 shouldBe 200
+    runFrontend(Array(dir + "whileIntCondition.wacc"))._1 shouldBe 200
   }
 
 }

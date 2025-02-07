@@ -4,10 +4,9 @@ import wacc.ast.*
 
 val INDENTATION_SIZE = 2
 
-def prettyPrint(prog: Program): String = 
+def prettyPrint(prog: Program): String =
   "begin" + prog.fs.map(prettyPrintFunc(_)).mkString("\n\n").indent(INDENTATION_SIZE)
     + "\n" + prettyPrintStmt(prog.body).indent(INDENTATION_SIZE) + "end"
-
 
 def prettyPrintType(t: Type | PairElemType): String =
   t match
@@ -69,7 +68,7 @@ def prettyPrintStmt(s: Stmt): String =
   s match
     case Skip() => "skip"
     case Decl(t, v, r) =>
-      prettyPrintType(t) + " " + prettyPrintExpr(v) 
+      prettyPrintType(t) + " " + prettyPrintExpr(v)
         + " = " + prettyPrintLRValue(r)
     case Asgn(l, r) => prettyPrintLRValue(l) + " = " + prettyPrintLRValue(r)
     case Read(l)    => "read " + prettyPrintLRValue(l)
@@ -79,7 +78,7 @@ def prettyPrintStmt(s: Stmt): String =
     case Print(e)   => "print " + prettyPrintExpr(e)
     case PrintLn(e) => "println " + prettyPrintExpr(e)
     case If(cond, s1, s2) =>
-      "if " + prettyPrintExpr(cond) + " then\n" + prettyPrintStmt(s1).indent(INDENTATION_SIZE) 
+      "if " + prettyPrintExpr(cond) + " then\n" + prettyPrintStmt(s1).indent(INDENTATION_SIZE)
         + "else\n" + prettyPrintStmt(s2).indent(INDENTATION_SIZE) + "fi"
     case While(cond, body) =>
       "while " + prettyPrintExpr(cond) + " do\n" + prettyPrintStmt(body).indent(INDENTATION_SIZE) + "done"
@@ -89,8 +88,10 @@ def prettyPrintStmt(s: Stmt): String =
 
 def prettyPrintFunc(f: Func): String = {
   val Func((t, v), params, body) = f
-  prettyPrintType(t) + " " + prettyPrintExpr(v) + params.map(prettyPrintParam(_)).mkString("(", ", ", ")") + " is\n" + prettyPrintStmt(body).indent(INDENTATION_SIZE) + "end"
+  prettyPrintType(t) + " " + prettyPrintExpr(v) + params
+    .map(prettyPrintParam(_))
+    .mkString("(", ", ", ")") + " is\n" + prettyPrintStmt(body).indent(INDENTATION_SIZE) + "end"
 }
 
-def prettyPrintParam(param: Param): String = 
+def prettyPrintParam(param: Param): String =
   prettyPrintType(param._1) + " " + prettyPrintExpr(param._2)

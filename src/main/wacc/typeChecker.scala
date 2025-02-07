@@ -32,8 +32,8 @@ sealed class TypeChecker {
       case (ArrayType(ArrayType(CharType)), ArrayType(StringType))     => None
       case (PairType(_, ArrayType(CharType)), PairType(_, StringType)) => None
       case (PairType(ArrayType(CharType), _), PairType(StringType, _)) => None
-      case (?, refTy) => Some(refTy)
-      case (ty, ?)    => Some(ty)
+      case (?, refTy)                                                  => Some(refTy)
+      case (ty, ?)                                                     => Some(ty)
       case (ArrayType(ty), ArrayType(refTy)) =>
         (ty ~ refTy).map(ArrayType.apply)
       case (PairType(ty1, ty2), PairType(refTy1, refTy2)) =>
@@ -144,8 +144,7 @@ sealed class TypeChecker {
           ctx.error(
             constructSpecialised(
               r.pos,
-              1
-              ,
+              1,
               "Assignment has unknown type"
             )
           )
@@ -395,14 +394,11 @@ sealed class TypeChecker {
     case renamedast.Fst(l)        => checkPairElem(l, c, true)
     case renamedast.Snd(l)        => checkPairElem(l, c, false)
     case renamedast.Call(v, args) =>
-      /* Check that the return type of the function is the same as the
-       * constraint */
+      /* Check that the return type of the function is the same as the constraint */
       val (ty, vTyped) = checkIdent(v, c)
-      /* Check that the arguments are of the types expected by the function from
-       * funcTable */
-      val argsTyped = args.zip(funcTable.getOrElse(vTyped.id, List())).map {
-        (arg, expected) =>
-          checkExpr(arg, Is(expected.v.declType))._2
+      /* Check that the arguments are of the types expected by the function from funcTable */
+      val argsTyped = args.zip(funcTable.getOrElse(vTyped.id, List())).map { (arg, expected) =>
+        checkExpr(arg, Is(expected.v.declType))._2
       }
       (ty, TypedAST.Call(vTyped, argsTyped, ty.getOrElse(?)))
     case e: renamedast.Expr => checkExpr(e, c)

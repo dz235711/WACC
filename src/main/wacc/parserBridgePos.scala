@@ -53,10 +53,10 @@ trait ParserBridgePos4[-A, -B, -C, -D, +E] extends ParserSingletonBridgePos[(A, 
     this.apply(_, _, _, _)(pos)
 
   def apply(
-    p1: Parsley[A],
-    p2: => Parsley[B],
-    p3: => Parsley[C],
-    p4: => Parsley[D]
+      p1: Parsley[A],
+      p2: => Parsley[B],
+      p3: => Parsley[C],
+      p4: => Parsley[D]
   ): Parsley[E] =
     error(ap4(pos.map(applyPos), p1, p2, p3, p4))
 }

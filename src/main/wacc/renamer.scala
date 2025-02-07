@@ -65,15 +65,15 @@ class Renamer private () {
    * @return The semantic type
    * */
   private def translateType(synType: ast.Type | ast.PairElemType): KnownType = synType match {
-      case ast.IntType()    => KnownType.IntType
-      case ast.BoolType()   => KnownType.BoolType
-      case ast.CharType()   => KnownType.CharType
-      case ast.StringType() => KnownType.StringType
-      case ast.ArrayType(t) => KnownType.ArrayType(translateType(t))
-      case ast.ErasedPair() => KnownType.PairType(?, ?)
-      case ast.PairType(t1, t2) =>
-        KnownType.PairType(translateType(t1), translateType(t2))
-    }
+    case ast.IntType()    => KnownType.IntType
+    case ast.BoolType()   => KnownType.BoolType
+    case ast.CharType()   => KnownType.CharType
+    case ast.StringType() => KnownType.StringType
+    case ast.ArrayType(t) => KnownType.ArrayType(translateType(t))
+    case ast.ErasedPair() => KnownType.PairType(?, ?)
+    case ast.PairType(t1, t2) =>
+      KnownType.PairType(translateType(t1), translateType(t2))
+  }
 
   /** Rename a function.
    *
@@ -160,8 +160,7 @@ class Renamer private () {
         )
         (renamedDecl, currentScope)
       } else {
-        /* Only add the variable to the current scope if it is not already
-         * declared */
+        /* Only add the variable to the current scope if it is not already declared */
         (renamedDecl, currentScope + (v.v -> name))
       }
 
@@ -336,8 +335,8 @@ class Renamer private () {
       ctx: ErrorContext
   ): renamedast.LValue =
     l match {
-      case ast.Fst(lNested)       => renamedast.Fst(renameLValue(lNested, scope))(l.pos)
-      case ast.Snd(lNested)       => renamedast.Snd(renameLValue(lNested, scope))(l.pos)
+      case ast.Fst(lNested) => renamedast.Fst(renameLValue(lNested, scope))(l.pos)
+      case ast.Snd(lNested) => renamedast.Snd(renameLValue(lNested, scope))(l.pos)
       case l: ast.Ident     => renameIdent(l, scope)
       case l: ast.ArrayElem => renameArrayElem(l, scope)
     }
@@ -391,7 +390,7 @@ class Renamer private () {
 }
 
 object Renamer extends Renamer {
-  def rename(p: ast.Program)(using ctx: ErrorContext): renamedast.Program = 
+  def rename(p: ast.Program)(using ctx: ErrorContext): renamedast.Program =
     val renamer = new Renamer()
     renamer.renameProgram(p)
 }

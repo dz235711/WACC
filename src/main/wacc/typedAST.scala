@@ -51,27 +51,16 @@ object TypedAST {
     def getType: SemType = PairType(?, ?)
   }
   case class Ident(id: Int, override val getType: SemType) extends Expr, LValue
-  case class ArrayElem(v: Ident, es: List[Expr], override val getType: SemType)
-      extends Expr,
-        LValue
-  case class NestedExpr(e: Expr, override val getType: SemType)
-      extends Expr,
-        Type
+  case class ArrayElem(v: Ident, es: List[Expr], override val getType: SemType) extends Expr, LValue
+  case class NestedExpr(e: Expr, override val getType: SemType) extends Expr, Type
 
   sealed trait LValue extends Type
   sealed trait RValue extends Type
-  case class ArrayLiter(es: List[Expr], override val getType: SemType)
-      extends RValue
-  case class NewPair(e1: Expr, e2: Expr, override val getType: SemType)
-      extends RValue
-  case class Fst(l: LValue, override val getType: SemType)
-      extends LValue,
-        RValue
-  case class Snd(l: LValue, override val getType: SemType)
-      extends LValue,
-        RValue
-  case class Call(v: Ident, args: List[Expr], override val getType: SemType)
-      extends RValue
+  case class ArrayLiter(es: List[Expr], override val getType: SemType) extends RValue
+  case class NewPair(e1: Expr, e2: Expr, override val getType: SemType) extends RValue
+  case class Fst(l: LValue, override val getType: SemType) extends LValue, RValue
+  case class Snd(l: LValue, override val getType: SemType) extends LValue, RValue
+  case class Call(v: Ident, args: List[Expr], override val getType: SemType) extends RValue
 
   sealed trait Stmt
   object Skip extends Stmt

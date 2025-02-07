@@ -1,9 +1,9 @@
 package wacc:
   package renamedast {
     case class QualifiedName(
-      originalName: String,
-      UID: Int,
-      declType: SemType
+        originalName: String,
+        UID: Int,
+        declType: SemType
     )
 
     sealed trait PositionalNode {
@@ -28,13 +28,13 @@ package wacc:
       * @return the name of the type
       */
     def getTypeName(ty: SemType): String = ty match {
-      case KnownType.IntType => "int"
-      case KnownType.BoolType => "bool"
-      case KnownType.CharType => "char"
-      case KnownType.StringType => "string"
-      case KnownType.ArrayType(t) => s"${getTypeName(t)}[]"
+      case KnownType.IntType          => "int"
+      case KnownType.BoolType         => "bool"
+      case KnownType.CharType         => "char"
+      case KnownType.StringType       => "string"
+      case KnownType.ArrayType(t)     => s"${getTypeName(t)}[]"
       case KnownType.PairType(t1, t2) => s"pair(${getTypeName(t1)}, ${getTypeName(t2)})"
-      case ? => "unknown"
+      case ?                          => "unknown"
     }
 
     sealed trait Expr extends RValue, PositionalNode

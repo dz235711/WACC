@@ -7,16 +7,16 @@ import WaccErrorItem.*
 
 import parsley.errors.tokenextractors.TillNextWhitespace
 
-// Constants to format builder 
+// Constants to format builder
 val DefaultLinesBefore = 2
 val DefaultLinesAfter = 1
 
-// Constants to format indentation in stringified errors 
+// Constants to format indentation in stringified errors
 val LinesIndent = 2
 val LinesInfoIndent = 2
 
 // Types of errors
-enum ErrType{
+enum ErrType {
   case Syntax
   case Semantic
 }
@@ -26,7 +26,7 @@ case class WaccError(
     pos: (Int, Int),
     var source: Option[String],
     lines: WaccErrorLines,
-    var errType: Option[ErrType],
+    var errType: Option[ErrType]
 )
 
 // Stores the souce code lines before, at and after errs as well as error position information
@@ -87,7 +87,8 @@ private def printLines(
     lines: WaccErrorLines,
     sBuilder: StringBuilder
 ): StringBuilder = lines match {
-  // Lines can either be vanilla or specialised error, we pattern match here and send them to their functions respectively
+  /* Lines can either be vanilla or specialised error, we pattern match here and send them to their functions
+   * respectively */
   case vErr @ VanillaError(_, _, _, _) => printVanillaError(vErr, sBuilder)
   case sErr @ SpecialisedError(msgs, lineinfo) =>
     printSpecialisedError(sErr, sBuilder)
@@ -115,7 +116,7 @@ private def printVanillaError(
   // If there are reasons given for the error, we append those too
   if (vErr.reasons.nonEmpty)
     sBuilder.append(vErr.reasons.mkString("\n").indent(LinesIndent))
-  
+
   // Recursive delegation of work to line info printer
   printLineInfo(vErr.lineinfo, sBuilder)
 }
@@ -130,7 +131,6 @@ private def extractWaccErrorItem(wErrItem: WaccErrorItem) = wErrItem match {
   case WaccNamed(item) => item
   case WaccEndOfInput  => "end of file"
 }
-
 
 /** Converts a SpecialisedError to a string
    *
@@ -149,7 +149,6 @@ private def printSpecialisedError(
   printLineInfo(sErr.lineinfo, sBuilder)
 }
 
-
 /** Converts a LineInfo to a string
    *
    * @param lineinfo The LineInfo to stringify
@@ -164,25 +163,27 @@ private def printLineInfo(
   if (lineinfo.linesBefore.nonEmpty) {
     // Calculate the starting line number of each line then iteratively printing them to sBuilder
     val start = lineinfo.lineNum - lineinfo.linesBefore.length
-    for (i <- 0 until lineinfo.linesBefore.length) 
+    for (i <- 0 until lineinfo.linesBefore.length)
       sBuilder.append(s"|${start + i}. ${lineinfo.linesBefore(i)}\n".indent(LinesInfoIndent))
   }
-  
-  // Printing the error line, we extract linePrefix here to allow for easier calculation of how the "^^^" error indication should be indented
+
+  /* Printing the error line, we extract linePrefix here to allow for easier calculation of how the "^^^" error
+   * indication should be indented */
   val linePrefix = f"|${lineinfo.lineNum}. "
   sBuilder.append(s"${linePrefix}${lineinfo.line}\n".indent(LinesInfoIndent))
 
   // Denotes the erroring token
   sBuilder
-    .append(s"${" " * (lineinfo.errorPointsAt + linePrefix.length())}${"^" * lineinfo.errorWidth}\n".indent(LinesInfoIndent))
+    .append(
+      s"${" " * (lineinfo.errorPointsAt + linePrefix.length())}${"^" * lineinfo.errorWidth}\n".indent(LinesInfoIndent)
+    )
 
   // Prints lines after the error in the same way we printed lines before
   if (lineinfo.linesAfter.nonEmpty)
-    for (i <- 0 until lineinfo.linesAfter.length) 
+    for (i <- 0 until lineinfo.linesAfter.length)
       sBuilder.append(s"|${lineinfo.lineNum + i + 1}. ${lineinfo.linesAfter(i)}\n".indent(LinesInfoIndent))
   sBuilder
 }
-
 
 // A concrete, lossless implementation of ErrorBuilder for WACC to replace the DefaultErrorBuilder
 class WaccErrorBuilder extends ErrorBuilder[WaccError] {
@@ -196,21 +197,21 @@ class WaccErrorBuilder extends ErrorBuilder[WaccError] {
    */
   def constructSpecialised(errPos: Position, width: Int, msg: String): WaccError = {
     build(
-          pos = errPos,
-          source = source(None),
-          lines = WaccErrorLines.SpecialisedError(
-            msgs = Set(message(msg)),
-            lineinfo = WaccLineInfo(
-              line = "",
-              linesBefore = Seq(),
-              linesAfter = Seq(),
-              lineNum = errPos._1,
-              // Subtracting 1 to account for 0 indexing
-              errorPointsAt = errPos._2 - 1,
-              errorWidth = width,
-            )
-          )
+      pos = errPos,
+      source = source(None),
+      lines = WaccErrorLines.SpecialisedError(
+        msgs = Set(message(msg)),
+        lineinfo = WaccLineInfo(
+          line = "",
+          linesBefore = Seq(),
+          linesAfter = Seq(),
+          lineNum = errPos._1,
+          // Subtracting 1 to account for 0 indexing
+          errorPointsAt = errPos._2 - 1,
+          errorWidth = width
         )
+      )
+    )
   }
 
   /** Adds source and error type to a WACC error
@@ -245,7 +246,7 @@ class WaccErrorBuilder extends ErrorBuilder[WaccError] {
   private def getlineInfo(wErr: WaccError): WaccLineInfo = {
     wErr.lines match {
       case VanillaError(_, _, _, lineinfo) => lineinfo
-      case SpecialisedError(_, lineinfo) => lineinfo
+      case SpecialisedError(_, lineinfo)   => lineinfo
     }
   }
 
@@ -333,7 +334,6 @@ class WaccErrorBuilder extends ErrorBuilder[WaccError] {
   type EndOfInput = WaccEndOfInput.type
   override val endOfInput: EndOfInput = WaccEndOfInput
 }
-
 
 // An object to allow for easy building of WaccErrors
 object WaccErrorBuilder extends WaccErrorBuilder
