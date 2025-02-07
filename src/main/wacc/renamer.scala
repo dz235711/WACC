@@ -6,7 +6,7 @@ import WaccErrorBuilder.constructSpecialised
 
 type Scope = Map[String, QualifiedName]
 
-class Renamer {
+class Renamer private () {
   private var uid: Int = 0
   // Map of function names to their qualified names and number of parameters
   private val functionIds: mutable.Map[String, (QualifiedName, Int)] =
@@ -26,7 +26,7 @@ class Renamer {
    * @param p The program to rename (ast)
    * @return The renamed program (renamedast)
    */
-  def rename(p: ast.Program)(using ctx: ErrorContext): renamedast.Program = {
+  def renameProgram(p: ast.Program)(using ctx: ErrorContext): renamedast.Program = {
     // Generate unique identifiers for all functions
     val fids = p.fs.map(f => {
       val (t, id) = f.decl
@@ -390,4 +390,8 @@ class Renamer {
   }
 }
 
-object Renamer extends Renamer
+object Renamer extends Renamer {
+  def rename(p: ast.Program)(using ctx: ErrorContext): renamedast.Program = 
+    val renamer = new Renamer()
+    renamer.renameProgram(p)
+}

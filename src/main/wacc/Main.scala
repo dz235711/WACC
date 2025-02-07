@@ -54,7 +54,7 @@ def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
               )
 
             // Semantic analysis
-            val typedAST = TypeChecker().checkProg(Renamer().rename(x))
+            val typedAST = TypeChecker().checkProg(Renamer.rename(x))
 
             if (verbose){
               println(
