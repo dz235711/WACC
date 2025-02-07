@@ -1,7 +1,7 @@
 package wacc
 
-import wacc.renamedast.{SemType, ?}
-import wacc.renamedast.KnownType.*
+import RenamedAST.{SemType, ?}
+import RenamedAST.KnownType.*
 
 sealed class TypedAST
 object TypedAST {

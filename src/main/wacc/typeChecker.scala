@@ -1,10 +1,10 @@
 package wacc
 
-import renamedast.{?, KnownType, SemType}
-import renamedast.KnownType.*
+import RenamedAST.{?, KnownType, SemType}
+import RenamedAST.KnownType.*
 import scala.collection.mutable
 import WaccErrorBuilder.constructSpecialised
-import renamedast.getTypeName
+import RenamedAST.getTypeName
 
 enum Constraint {
   case Is(refTy: SemType)
@@ -22,7 +22,7 @@ sealed class TypeChecker {
   import Constraint.*
 
   // Map from function UID to list of function parameters
-  private val funcTable: mutable.Map[Int, List[renamedast.Ident]] =
+  private val funcTable: mutable.Map[Int, List[RenamedAST.Ident]] =
     mutable.Map()
 
   /** Determines whether two types are equal, and if so, what the most specific of them is. */
@@ -93,7 +93,7 @@ sealed class TypeChecker {
    * @return The typed program
    */
   def checkProg(
-      p: renamedast.Program
+      p: RenamedAST.Program
   )(using ctx: ErrorContext): TypedAST.Program = {
     // Populate funcTable
     p.fs.foreach(f => funcTable += (f.v.v.UID -> f.params))
@@ -110,7 +110,7 @@ sealed class TypeChecker {
    * @return The typed function
    */
   private def checkFunc(
-      func: renamedast.Func
+      func: RenamedAST.Func
   )(using ctx: ErrorContext): TypedAST.Func = {
     val id = checkIdent(func.v, Unconstrained)._2
     val params = func.params.map(checkIdent(_, Unconstrained)._2)
@@ -125,16 +125,16 @@ sealed class TypeChecker {
    * @return The typed statement
    */
   private def checkStmt(
-      stmt: renamedast.Stmt,
+      stmt: RenamedAST.Stmt,
       retC: Constraint
   )(using ctx: ErrorContext): TypedAST.Stmt = stmt match {
-    case renamedast.Skip() => TypedAST.Skip
-    case renamedast.Decl(v, r) =>
+    case RenamedAST.Skip() => TypedAST.Skip
+    case RenamedAST.Decl(v, r) =>
       val (ty, vTyped) = checkIdent(v, Unconstrained)
       // Identifier in declaration *will* have a type
       val (_, rTyped) = checkRVal(r, Is(ty.get))
       TypedAST.Decl(vTyped, rTyped)
-    case renamedast.Asgn(l, r) =>
+    case RenamedAST.Asgn(l, r) =>
       val (lTy, lTyped) = checkLVal(l, Unconstrained)
       val (rTy, rTyped) = checkRVal(r, Is(lTy.getOrElse(?)))
 
@@ -152,92 +152,92 @@ sealed class TypeChecker {
       }
 
       TypedAST.Asgn(lTyped, rTyped)
-    case renamedast.Read(l)   => TypedAST.Read(checkLVal(l, IsReadable)._2)
-    case renamedast.Free(e)   => TypedAST.Free(checkExpr(e, IsFreeable)._2)
-    case renamedast.Return(e) => TypedAST.Return(checkExpr(e, retC)._2)
-    case renamedast.Exit(e)   => TypedAST.Exit(checkExpr(e, Is(IntType))._2)
-    case renamedast.Print(e)  => TypedAST.Print(checkExpr(e, Unconstrained)._2)
-    case renamedast.PrintLn(e) =>
+    case RenamedAST.Read(l)   => TypedAST.Read(checkLVal(l, IsReadable)._2)
+    case RenamedAST.Free(e)   => TypedAST.Free(checkExpr(e, IsFreeable)._2)
+    case RenamedAST.Return(e) => TypedAST.Return(checkExpr(e, retC)._2)
+    case RenamedAST.Exit(e)   => TypedAST.Exit(checkExpr(e, Is(IntType))._2)
+    case RenamedAST.Print(e)  => TypedAST.Print(checkExpr(e, Unconstrained)._2)
+    case RenamedAST.PrintLn(e) =>
       TypedAST.PrintLn(checkExpr(e, Unconstrained)._2)
-    case renamedast.If(cond, s1, s2) =>
+    case RenamedAST.If(cond, s1, s2) =>
       TypedAST.If(
         checkExpr(cond, Is(BoolType))._2,
         checkStmt(s1, retC),
         checkStmt(s2, retC)
       )
-    case renamedast.While(cond, body) =>
+    case RenamedAST.While(cond, body) =>
       TypedAST.While(
         checkExpr(cond, Is(BoolType))._2,
         checkStmt(body, retC)
       )
-    case renamedast.Begin(body) => TypedAST.Begin(checkStmt(body, retC))
-    case renamedast.Semi(s1, s2) =>
+    case RenamedAST.Begin(body) => TypedAST.Begin(checkStmt(body, retC))
+    case RenamedAST.Semi(s1, s2) =>
       TypedAST.Semi(checkStmt(s1, retC), checkStmt(s2, retC))
   }
 
   private def checkExpr(
-      expr: renamedast.Expr,
+      expr: RenamedAST.Expr,
       c: Constraint
   )(using ctx: ErrorContext): (Option[SemType], TypedAST.Expr) = expr match {
-    case renamedast.Not(e) =>
+    case RenamedAST.Not(e) =>
       (
         BoolType.satisfies(e.pos)(c),
         TypedAST.Not(checkExpr(e, Is(BoolType))._2)
       )
-    case renamedast.Negate(e) =>
+    case RenamedAST.Negate(e) =>
       (
         IntType.satisfies(e.pos)(c),
         TypedAST.Negate(checkExpr(e, Is(IntType))._2)
       )
-    case renamedast.Len(e) =>
+    case RenamedAST.Len(e) =>
       (IntType.satisfies(e.pos)(c), TypedAST.Len(checkExpr(e, IsArray)._2))
-    case renamedast.Ord(e) =>
+    case RenamedAST.Ord(e) =>
       (
         IntType.satisfies(e.pos)(c),
         TypedAST.Ord(checkExpr(e, Is(CharType))._2)
       )
-    case renamedast.Chr(e) =>
+    case RenamedAST.Chr(e) =>
       (
         CharType.satisfies(e.pos)(c),
         TypedAST.Chr(checkExpr(e, Is(IntType))._2)
       )
-    case renamedast.Mult(e1, e2) =>
+    case RenamedAST.Mult(e1, e2) =>
       checkArithmetic(e1, e2, c)(TypedAST.Mult.apply)
-    case renamedast.Div(e1, e2) =>
+    case RenamedAST.Div(e1, e2) =>
       checkArithmetic(e1, e2, c)(TypedAST.Div.apply)
-    case renamedast.Mod(e1, e2) =>
+    case RenamedAST.Mod(e1, e2) =>
       checkArithmetic(e1, e2, c)(TypedAST.Mod.apply)
-    case renamedast.Add(e1, e2) =>
+    case RenamedAST.Add(e1, e2) =>
       checkArithmetic(e1, e2, c)(TypedAST.Add.apply)
-    case renamedast.Sub(e1, e2) =>
+    case RenamedAST.Sub(e1, e2) =>
       checkArithmetic(e1, e2, c)(TypedAST.Sub.apply)
-    case renamedast.Greater(e1, e2) =>
+    case RenamedAST.Greater(e1, e2) =>
       checkOrdering(e1, e2, c)(TypedAST.Greater.apply)
-    case renamedast.GreaterEq(e1, e2) =>
+    case RenamedAST.GreaterEq(e1, e2) =>
       checkOrdering(e1, e2, c)(TypedAST.GreaterEq.apply)
-    case renamedast.Smaller(e1, e2) =>
+    case RenamedAST.Smaller(e1, e2) =>
       checkOrdering(e1, e2, c)(TypedAST.Smaller.apply)
-    case renamedast.SmallerEq(e1, e2) =>
+    case RenamedAST.SmallerEq(e1, e2) =>
       checkOrdering(e1, e2, c)(TypedAST.SmallerEq.apply)
-    case renamedast.Equals(e1, e2) =>
+    case RenamedAST.Equals(e1, e2) =>
       checkEquality(e1, e2, c)(TypedAST.Equals.apply)
-    case renamedast.NotEquals(e1, e2) =>
+    case RenamedAST.NotEquals(e1, e2) =>
       checkEquality(e1, e2, c)(TypedAST.NotEquals.apply)
-    case renamedast.And(e1, e2) => checkLogical(e1, e2, c)(TypedAST.And.apply)
-    case renamedast.Or(e1, e2)  => checkLogical(e1, e2, c)(TypedAST.Or.apply)
-    case renamedast.IntLiter(x) =>
+    case RenamedAST.And(e1, e2) => checkLogical(e1, e2, c)(TypedAST.And.apply)
+    case RenamedAST.Or(e1, e2)  => checkLogical(e1, e2, c)(TypedAST.Or.apply)
+    case RenamedAST.IntLiter(x) =>
       (IntType.satisfies(expr.pos)(c), TypedAST.IntLiter(x))
-    case renamedast.BoolLiter(b) =>
+    case RenamedAST.BoolLiter(b) =>
       (BoolType.satisfies(expr.pos)(c), TypedAST.BoolLiter(b))
-    case renamedast.CharLiter(ch) =>
+    case RenamedAST.CharLiter(ch) =>
       (CharType.satisfies(expr.pos)(c), TypedAST.CharLiter(ch))
-    case renamedast.StringLiter(s) =>
+    case RenamedAST.StringLiter(s) =>
       (StringType.satisfies(expr.pos)(c), TypedAST.StringLiter(s))
-    case renamedast.PairLiter() =>
+    case RenamedAST.PairLiter() =>
       (PairType(?, ?).satisfies(expr.pos)(c), TypedAST.PairLiter)
-    case id: renamedast.Ident        => checkIdent(id, c)
-    case arrEl: renamedast.ArrayElem => checkArrayElem(arrEl, c)
-    case renamedast.NestedExpr(e)    => checkExpr(e, c)
+    case id: RenamedAST.Ident        => checkIdent(id, c)
+    case arrEl: RenamedAST.ArrayElem => checkArrayElem(arrEl, c)
+    case RenamedAST.NestedExpr(e)    => checkExpr(e, c)
   }
 
   /** Checks an arithmetic expression and returns a typed arithmetic expression.
@@ -249,8 +249,8 @@ sealed class TypeChecker {
    * @return The typed arithmetic expression
    */
   private def checkArithmetic(
-      e1: renamedast.Expr,
-      e2: renamedast.Expr,
+      e1: RenamedAST.Expr,
+      e2: RenamedAST.Expr,
       c: Constraint
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
@@ -269,8 +269,8 @@ sealed class TypeChecker {
    * @return The typed comparison expression
    */
   private def checkOrdering(
-      e1: renamedast.Expr,
-      e2: renamedast.Expr,
+      e1: RenamedAST.Expr,
+      e2: RenamedAST.Expr,
       c: Constraint
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
@@ -288,8 +288,8 @@ sealed class TypeChecker {
    * @return The typed equality expression
    */
   private def checkEquality(
-      e1: renamedast.Expr,
-      e2: renamedast.Expr,
+      e1: RenamedAST.Expr,
+      e2: RenamedAST.Expr,
       c: Constraint
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
@@ -307,8 +307,8 @@ sealed class TypeChecker {
    * @return The typed logical expression
    */
   private def checkLogical(
-      e1: renamedast.Expr,
-      e2: renamedast.Expr,
+      e1: RenamedAST.Expr,
+      e2: RenamedAST.Expr,
       c: Constraint
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
@@ -325,13 +325,13 @@ sealed class TypeChecker {
    * @return The typed lvalue
    */
   private def checkLVal(
-      lval: renamedast.LValue,
+      lval: RenamedAST.LValue,
       c: Constraint
   )(using ctx: ErrorContext): (Option[SemType], TypedAST.LValue) = lval match {
-    case id: renamedast.Ident        => checkIdent(id, c)
-    case arrEl: renamedast.ArrayElem => checkArrayElem(arrEl, c)
-    case renamedast.Fst(l)           => checkPairElem(l, c, true)
-    case renamedast.Snd(l)           => checkPairElem(l, c, false)
+    case id: RenamedAST.Ident        => checkIdent(id, c)
+    case arrEl: RenamedAST.ArrayElem => checkArrayElem(arrEl, c)
+    case RenamedAST.Fst(l)           => checkPairElem(l, c, true)
+    case RenamedAST.Snd(l)           => checkPairElem(l, c, false)
   }
 
   /** Checks an rvalue and returns a typed rvalue.
@@ -341,10 +341,10 @@ sealed class TypeChecker {
    * @return The typed rvalue
    */
   private def checkRVal(
-      rval: renamedast.RValue,
+      rval: RenamedAST.RValue,
       c: Constraint
   )(using ctx: ErrorContext): (Option[SemType], TypedAST.RValue) = rval match {
-    case renamedast.ArrayLiter(es) =>
+    case RenamedAST.ArrayLiter(es) =>
       // Try to unify the types of the array elements
       val elTy = es
         .foldLeft[Option[SemType]](Some(?)) { (ty, expr) =>
@@ -372,7 +372,7 @@ sealed class TypeChecker {
         case _ =>
           (None, TypedAST.ArrayLiter(es.map(checkExpr(_, Unconstrained)._2), ?))
       }
-    case renamedast.NewPair(e1, e2) =>
+    case RenamedAST.NewPair(e1, e2) =>
       PairType(?, ?).satisfies(rval.pos)(c) match {
         case Some(PairType(ty1, ty2)) =>
           val e1Typed = checkExpr(e1, Is(ty1))._2
@@ -391,9 +391,9 @@ sealed class TypeChecker {
             )
           )
       }
-    case renamedast.Fst(l)        => checkPairElem(l, c, true)
-    case renamedast.Snd(l)        => checkPairElem(l, c, false)
-    case renamedast.Call(v, args) =>
+    case RenamedAST.Fst(l)        => checkPairElem(l, c, true)
+    case RenamedAST.Snd(l)        => checkPairElem(l, c, false)
+    case RenamedAST.Call(v, args) =>
       /* Check that the return type of the function is the same as the constraint */
       val (ty, vTyped) = checkIdent(v, c)
       /* Check that the arguments are of the types expected by the function from funcTable */
@@ -401,7 +401,7 @@ sealed class TypeChecker {
         checkExpr(arg, Is(expected.v.declType))._2
       }
       (ty, TypedAST.Call(vTyped, argsTyped, ty.getOrElse(?)))
-    case e: renamedast.Expr => checkExpr(e, c)
+    case e: RenamedAST.Expr => checkExpr(e, c)
   }
 
   /** Checks an identifier and returns a typed identifier.
@@ -411,7 +411,7 @@ sealed class TypeChecker {
    * @return The typed identifier
    */
   private def checkIdent(
-      ident: renamedast.Ident,
+      ident: RenamedAST.Ident,
       c: Constraint
   )(using ctx: ErrorContext): (Option[SemType], TypedAST.Ident) =
     val qName = ident.v
@@ -427,7 +427,7 @@ sealed class TypeChecker {
    * @return The typed array element
    */
   private def checkArrayElem(
-      arrElem: renamedast.ArrayElem,
+      arrElem: RenamedAST.ArrayElem,
       c: Constraint
   )(using ctx: ErrorContext): (Option[SemType], TypedAST.ArrayElem) =
     val (arrTy, vTyped) = checkIdent(arrElem.v, IsArray)
@@ -462,7 +462,7 @@ sealed class TypeChecker {
    * @return The typed pair element
    */
   private def checkPairElem(
-      l: renamedast.LValue,
+      l: RenamedAST.LValue,
       c: Constraint,
       isFirst: Boolean
   )(using ctx: ErrorContext): (Option[SemType], TypedAST.Fst | TypedAST.Snd) = {

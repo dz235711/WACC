@@ -1,6 +1,6 @@
 package wacc
 
-import wacc.ast.*
+import wacc.SyntaxAST.*
 
 val INDENTATION_SIZE = 2
 

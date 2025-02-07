@@ -6,7 +6,7 @@ import parsley.{Parsley, Result}
 import parsley.errors.combinator.*
 import wacc.lexer.implicits.implicitSymbol
 import wacc.lexer.{char, *}
-import wacc.ast.*
+import SyntaxAST.*
 import parsley.errors.ErrorBuilder
 
 object parser {
