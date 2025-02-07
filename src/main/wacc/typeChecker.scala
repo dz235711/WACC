@@ -381,7 +381,7 @@ sealed class TypeChecker {
       val (ty, vTyped) = checkIdent(v, c)
       /* Check that the arguments are of the types expected by the function from
        * funcTable */
-      val argsTyped = args.zip(funcTable(vTyped.id)).map { (arg, expected) =>
+      val argsTyped = args.zip(funcTable.getOrElse(vTyped.id, List())).map { (arg, expected) =>
         checkExpr(arg, Is(expected.v.declType))._2
       }
       (ty, TypedAST.Call(vTyped, argsTyped, ty.getOrElse(?)))

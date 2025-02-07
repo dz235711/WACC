@@ -6,9 +6,9 @@ import org.scalatest.matchers.should.Matchers.*
 class InvalidSemanticerrFunctionTests extends AnyFlatSpec {
   val dir = "src/test/examples/invalid/semanticErr/function/"
 
-  it should "pass callUndefFunction.wacc" in pending /* {
+  it should "pass callUndefFunction.wacc" in {
     runFrontend(Array(dir+"callUndefFunction.wacc"))._1 shouldBe 200
-  } */
+  }
 
   it should "pass doubleArgDef.wacc" in {
     runFrontend(Array(dir+"doubleArgDef.wacc"))._1 shouldBe 200
