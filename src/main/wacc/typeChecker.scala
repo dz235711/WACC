@@ -18,7 +18,7 @@ object Constraint {
 }
 
 // TODO: replace with renamedast pos
-val PosPlaceHolder = (-1, -1)
+val PosPlaceHolder = (0, 0)
 
 sealed class TypeChecker {
   import Constraint.*
@@ -468,3 +468,5 @@ sealed class TypeChecker {
     }
   }
 }
+
+object TypeChecker extends TypeChecker

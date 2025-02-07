@@ -54,7 +54,7 @@ def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
               )
 
             // Semantic analysis
-            Renamer().rename(x)
+            TypeChecker().checkProg(Renamer().rename(x))
 
             // Convert list buffer to list to allow mapping
             val listifiedErrs = errCtx.get
