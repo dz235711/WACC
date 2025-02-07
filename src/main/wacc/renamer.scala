@@ -82,24 +82,23 @@ class renamer {
       qualifiedName: QualifiedName
   ): renamedast.Func = {
     // Construct a map of the parameters to use as a scope for the body
-    val (funcScope, renamedParams) = paramsToScope(f.params)
+    val funcScope: Scope = paramsToScope(f.params)
     val renamedBody = renameStmt(f.body, funcScope, Map(), true)._1
 
     renamedast.Func(
-      renamedast.Ident(qualifiedName)(f.decl._2.pos),
-      renamedParams,
+      renamedast.Ident(qualifiedName),
+      f.params.map(p => renamedast.Ident(funcScope(p._2.v))),
       renamedBody
     )(f.pos)
   }
 
-  /** Convert a function's parameters to a scope and renames them simultaneously.
+  /** Convert a function's parameters to a scope.
    *
    * @param params The parameters of the function
-   * @return A tuple of the scope of parameters and a list of the renamed parameters.
+   * @return The scope of the parameters
    */
-  private def paramsToScope(params: List[ast.Param]): (Scope, List[renamedast.Ident]) = {
-    val renamedParams = List.newBuilder[renamedast.Ident]
-    val scope: Scope = params.foldLeft(Map())((params, param) => {
+  private def paramsToScope(params: List[ast.Param]): Scope =
+    params.foldLeft(Map())((params, param) => {
       val (t, id) = param
 
       // Check for redeclaration of parameter
@@ -107,20 +106,14 @@ class renamer {
         // TODO: Error handling
         params
       } else {
-        val qName = QualifiedName(
+        // Add the parameter to the params map if it is not already declared
+        params + (id.v -> QualifiedName(
           id.v,
           generateUid(),
           translateType(t)
-        )
-        // Add parameters to the list of renamed parameters
-        renamedParams.addOne(renamedast.Ident(qName)(id.pos))
-        // Add the parameter to the params map if it is not already declared
-        params + (id.v -> qName)
+        ))
       }
     })
-
-    (scope, renamedParams.result())
-  }
 
   /** Rename a statement.
    *
