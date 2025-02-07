@@ -3,7 +3,6 @@ package wacc
 import renamedast.{?, KnownType, SemType}
 import renamedast.KnownType.*
 import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 import WaccErrorBuilder.constructSpecialised
 
 enum Constraint {
@@ -17,6 +16,9 @@ object Constraint {
   val IsArray: Constraint = Is(Array(?))
   val IsPair: Constraint = Is(Pair(?, ?))
 }
+
+// TODO: replace with renamedast pos
+val PosPlaceHolder = (1, 1)
 
 sealed class TypeChecker {
   import Constraint.*
@@ -48,28 +50,40 @@ sealed class TypeChecker {
 
   /** Determines whether a type satisfies a constraint. */
   extension (ty: SemType)
-    private def satisfies(errs: ListBuffer[WaccError], pos: (Int, Int), name: String)(c: Constraint): Option[SemType] = (ty, c) match {
+    private def satisfies(
+        pos: (Int, Int)
+    )(c: Constraint)(using ctx: ErrorContext): Option[SemType] = (ty, c) match {
       // Check the rest of the cases
       case (ty, Is(refTy)) =>
         (ty ~ refTy).orElse {
-            errs += constructSpecialised((-1, -1), "placeholder", s"Type mismatch between $ty and $refTy")
-            None
+          ctx.error(
+            constructSpecialised(
+              pos,
+              1,
+              s"Type mismatch between $ty and $refTy"
+            )
+          )
+          None
         }
       case (kty: Array, IsArray)            => Some(kty)
       case (kty: Pair, IsPair)              => Some(kty)
       case (kty @ (Int | Char), IsReadable) => Some(kty)
-      case (_, IsReadable)                  =>
-        errs += constructSpecialised((-1, -1), "placeholder", s"tried to read a non-readable type")
+      case (_, IsReadable) =>
+        ctx.error(
+          constructSpecialised(pos, 1, "Tried to read a non-readable type")
+        )
         None
       case (kty @ (Int | Char), IsOrderable) => Some(kty)
-      case (_, IsOrderable)                  =>
-        // TODO: Error handling - tried to order (e.g. >=) a non-orderable type
-        println("Tried to order a non-orderable type")
+      case (_, IsOrderable) =>
+        ctx.error(
+          constructSpecialised(pos, 1, "Tried to order a non-orderable type")
+        )
         None
       case (kty: (Array | Pair), IsFreeable) => Some(kty)
-      case (_, IsFreeable)                   =>
-        // TODO: Error handling - tried to free a non-freeable type
-        println("Tried to free a non-freeable type")
+      case (_, IsFreeable) =>
+        ctx.error(
+          constructSpecialised(pos, 1, "Tried to free a non-freeable type")
+        )
         None
       case _ => None
     }
@@ -79,7 +93,9 @@ sealed class TypeChecker {
    * @param p The renamed program to check
    * @return The typed program
    */
-  def checkProg(p: renamedast.Program): TypedAST.Program = {
+  def checkProg(
+      p: renamedast.Program
+  )(using ctx: ErrorContext): TypedAST.Program = {
     // Populate funcTable
     p.fs.foreach(f => funcTable += (f.v.v.UID -> f.params))
 
@@ -94,7 +110,9 @@ sealed class TypeChecker {
    * @param func The function to check
    * @return The typed function
    */
-  private def checkFunc(func: renamedast.Func): TypedAST.Func = {
+  private def checkFunc(
+      func: renamedast.Func
+  )(using ctx: ErrorContext): TypedAST.Func = {
     val id = checkIdent(func.v, Unconstrained)._2
     val params = func.params.map(checkIdent(_, Unconstrained)._2)
     val body = checkStmt(func.body, Is(id.getType))
@@ -110,7 +128,7 @@ sealed class TypeChecker {
   private def checkStmt(
       stmt: renamedast.Stmt,
       retC: Constraint
-  ): TypedAST.Stmt = stmt match {
+  )(using ctx: ErrorContext): TypedAST.Stmt = stmt match {
     case renamedast.Skip => TypedAST.Skip
     case renamedast.Decl(v, r) =>
       val (ty, vTyped) = checkIdent(v, Unconstrained)
@@ -124,8 +142,14 @@ sealed class TypeChecker {
       // Make sure the assignment has a known type
       rTy match {
         case Some(?) =>
-          // TODO: Error handling
-          println("Assignment has unknown type")
+          ctx.error(
+            constructSpecialised(
+              PosPlaceHolder,
+              1 // Length of '=' operator
+              ,
+              "Assignment has unknown type"
+            )
+          )
         case _ => ()
       }
 
@@ -156,17 +180,29 @@ sealed class TypeChecker {
   private def checkExpr(
       expr: renamedast.Expr,
       c: Constraint
-  ): (Option[SemType], TypedAST.Expr) = expr match {
+  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Expr) = expr match {
     case renamedast.Not(e) =>
-      (Bool.satisfies(c), TypedAST.Not(checkExpr(e, Is(Bool))._2))
+      (
+        Bool.satisfies(PosPlaceHolder)(c),
+        TypedAST.Not(checkExpr(e, Is(Bool))._2)
+      )
     case renamedast.Negate(e) =>
-      (Int.satisfies(c), TypedAST.Negate(checkExpr(e, Is(Int))._2))
+      (
+        Int.satisfies(PosPlaceHolder)(c),
+        TypedAST.Negate(checkExpr(e, Is(Int))._2)
+      )
     case renamedast.Len(e) =>
-      (Int.satisfies(c), TypedAST.Len(checkExpr(e, IsArray)._2))
+      (Int.satisfies(PosPlaceHolder)(c), TypedAST.Len(checkExpr(e, IsArray)._2))
     case renamedast.Ord(e) =>
-      (Int.satisfies(c), TypedAST.Ord(checkExpr(e, Is(Char))._2))
+      (
+        Int.satisfies(PosPlaceHolder)(c),
+        TypedAST.Ord(checkExpr(e, Is(Char))._2)
+      )
     case renamedast.Chr(e) =>
-      (Char.satisfies(c), TypedAST.Chr(checkExpr(e, Is(Int))._2))
+      (
+        Char.satisfies(PosPlaceHolder)(c),
+        TypedAST.Chr(checkExpr(e, Is(Int))._2)
+      )
     case renamedast.Mult(e1, e2) =>
       checkArithmetic(e1, e2, c)(TypedAST.Mult.apply)
     case renamedast.Div(e1, e2) =>
@@ -192,15 +228,15 @@ sealed class TypeChecker {
     case renamedast.And(e1, e2) => checkLogical(e1, e2, c)(TypedAST.And.apply)
     case renamedast.Or(e1, e2)  => checkLogical(e1, e2, c)(TypedAST.Or.apply)
     case renamedast.IntLiter(x) =>
-      (Int.satisfies(c), TypedAST.IntLiter(x))
+      (Int.satisfies(PosPlaceHolder)(c), TypedAST.IntLiter(x))
     case renamedast.BoolLiter(b) =>
-      (Bool.satisfies(c), TypedAST.BoolLiter(b))
+      (Bool.satisfies(PosPlaceHolder)(c), TypedAST.BoolLiter(b))
     case renamedast.CharLiter(ch) =>
-      (Char.satisfies(c), TypedAST.CharLiter(ch))
+      (Char.satisfies(PosPlaceHolder)(c), TypedAST.CharLiter(ch))
     case renamedast.StringLiter(s) =>
-      (String.satisfies(c), TypedAST.StringLiter(s))
+      (String.satisfies(PosPlaceHolder)(c), TypedAST.StringLiter(s))
     case renamedast.PairLiter =>
-      (Pair(?, ?).satisfies(c), TypedAST.PairLiter)
+      (Pair(?, ?).satisfies(PosPlaceHolder)(c), TypedAST.PairLiter)
     case id: renamedast.Ident        => checkIdent(id, c)
     case arrEl: renamedast.ArrayElem => checkArrayElem(arrEl, c)
     case renamedast.NestedExpr(e)    => checkExpr(e, c)
@@ -220,9 +256,9 @@ sealed class TypeChecker {
       c: Constraint
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
-  ): (Option[SemType], TypedAST.Expr) =
+  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Expr) =
     (
-      Int.satisfies(c),
+      Int.satisfies(PosPlaceHolder)(c),
       build(checkExpr(e1, Is(Int))._2, checkExpr(e2, Is(Int))._2)
     )
 
@@ -240,10 +276,10 @@ sealed class TypeChecker {
       c: Constraint
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
-  ): (Option[SemType], TypedAST.Expr) =
+  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Expr) =
     val (lTy, lTyped) = checkExpr(e1, IsOrderable)
     val (_, rTyped) = checkExpr(e2, lTy.map(Is(_)).getOrElse(IsOrderable))
-    (Bool.satisfies(c), build(lTyped, rTyped))
+    (Bool.satisfies(PosPlaceHolder)(c), build(lTyped, rTyped))
 
   /** Checks an equality expression and returns a typed equality expression.
    *
@@ -259,10 +295,10 @@ sealed class TypeChecker {
       c: Constraint
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
-  ): (Option[SemType], TypedAST.Expr) =
+  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Expr) =
     val (lTy, lTyped) = checkExpr(e1, Unconstrained)
     val (_, rTyped) = checkExpr(e2, lTy.map(Is(_)).getOrElse(Unconstrained))
-    (Bool.satisfies(c), build(lTyped, rTyped))
+    (Bool.satisfies(PosPlaceHolder)(c), build(lTyped, rTyped))
 
   /** Checks a logical expression and returns a typed logical expression.
    *
@@ -278,9 +314,9 @@ sealed class TypeChecker {
       c: Constraint
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
-  ): (Option[SemType], TypedAST.Expr) =
+  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Expr) =
     (
-      Bool.satisfies(c),
+      Bool.satisfies(PosPlaceHolder)(c),
       build(checkExpr(e1, Is(Bool))._2, checkExpr(e2, Is(Bool))._2)
     )
 
@@ -293,7 +329,7 @@ sealed class TypeChecker {
   private def checkLVal(
       lval: renamedast.LValue,
       c: Constraint
-  ): (Option[SemType], TypedAST.LValue) = lval match {
+  )(using ctx: ErrorContext): (Option[SemType], TypedAST.LValue) = lval match {
     case id: renamedast.Ident        => checkIdent(id, c)
     case arrEl: renamedast.ArrayElem => checkArrayElem(arrEl, c)
     case renamedast.Fst(l)           => checkPairElem(l, c, true)
@@ -309,9 +345,9 @@ sealed class TypeChecker {
   private def checkRVal(
       rval: renamedast.RValue,
       c: Constraint
-  ): (Option[SemType], TypedAST.RValue) = rval match {
+  )(using ctx: ErrorContext): (Option[SemType], TypedAST.RValue) = rval match {
     case renamedast.ArrayLiter(es) =>
-      Array(?).satisfies(c) match {
+      Array(?).satisfies(PosPlaceHolder)(c) match {
         case Some(Array(ty)) =>
           val esTyped = es.map(checkExpr(_, Is(ty))._2)
           (Some(Array(ty)), TypedAST.ArrayLiter(esTyped, Array(ty)))
@@ -319,7 +355,7 @@ sealed class TypeChecker {
           (None, TypedAST.ArrayLiter(es.map(checkExpr(_, Unconstrained)._2), ?))
       }
     case renamedast.NewPair(e1, e2) =>
-      Pair(?, ?).satisfies(c) match {
+      Pair(?, ?).satisfies(PosPlaceHolder)(c) match {
         case Some(Pair(ty1, ty2)) =>
           val e1Typed = checkExpr(e1, Is(ty1))._2
           val e2Typed = checkExpr(e2, Is(ty2))._2
@@ -361,11 +397,11 @@ sealed class TypeChecker {
   private def checkIdent(
       ident: renamedast.Ident,
       c: Constraint
-  ): (Option[SemType], TypedAST.Ident) =
+  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Ident) =
     val qName = ident.v
     val ty = qName.declType
     val uid = qName.UID
-    val ty2 = ty.satisfies(c)
+    val ty2 = ty.satisfies(PosPlaceHolder)(c)
     (ty2, TypedAST.Ident(uid, ty2.getOrElse(?)))
 
   /** Checks an array element and returns a typed array element.
@@ -377,7 +413,7 @@ sealed class TypeChecker {
   private def checkArrayElem(
       arrElem: renamedast.ArrayElem,
       c: Constraint
-  ): (Option[SemType], TypedAST.ArrayElem) =
+  )(using ctx: ErrorContext): (Option[SemType], TypedAST.ArrayElem) =
     val (arrTy, vTyped) = checkIdent(arrElem.v, IsArray)
     val esTyped = arrElem.es.map(checkExpr(_, Is(Int))._2)
 
@@ -385,15 +421,20 @@ sealed class TypeChecker {
     val arrElemTy = esTyped.foldLeft(arrTy)((acc, _) =>
       acc match {
         case Some(Array(ty)) => Some(ty)
-        case _               =>
-          // TODO: Error handling - tried to index a non-array type
-          println("Tried to index a non-array type")
+        case _ =>
+          ctx.error(
+            constructSpecialised(
+              PosPlaceHolder,
+              1,
+              "Tried to index a non-array type"
+            )
+          )
           None
       }
     )
 
     // Check that the array element type satisfies the constraint
-    val arrElemTyC = arrElemTy.flatMap(_.satisfies(c))
+    val arrElemTyC = arrElemTy.flatMap(_.satisfies(PosPlaceHolder)(c))
 
     (arrElemTyC, TypedAST.ArrayElem(vTyped, esTyped, arrElemTyC.getOrElse(?)))
 
@@ -408,12 +449,12 @@ sealed class TypeChecker {
       l: renamedast.LValue,
       c: Constraint,
       isFirst: Boolean
-  ): (Option[SemType], TypedAST.Fst | TypedAST.Snd) = {
+  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Fst | TypedAST.Snd) = {
     val (ty, lTyped) = checkLVal(l, IsPair)
     ty match {
       case Some(Pair(ty1, ty2)) =>
         val elemTy = if (isFirst) ty1 else ty2
-        val elemTyC = elemTy.satisfies(c)
+        val elemTyC = elemTy.satisfies(PosPlaceHolder)(c)
         (
           elemTyC,
           if (isFirst) TypedAST.Fst(lTyped, elemTyC.getOrElse(?))
@@ -427,3 +468,5 @@ sealed class TypeChecker {
     }
   }
 }
+
+object TypeChecker extends TypeChecker
