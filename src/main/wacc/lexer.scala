@@ -14,10 +14,10 @@ object lexer {
   private val desc = LexicalDesc.plain.copy(
     nameDesc = NameDesc.plain.copy(
       identifierStart = Basic(c => c.isLetter || c == '_'),
-      identifierLetter = Basic(c => c.isLetterOrDigit || c == '_'),
+      identifierLetter = Basic(c => c.isLetterOrDigit || c == '_')
     ),
     spaceDesc = SpaceDesc.plain.copy(
-      lineCommentStart = "#",
+      lineCommentStart = "#"
     ),
     symbolDesc = SymbolDesc.plain.copy(
       hardKeywords = Set(
@@ -68,52 +68,52 @@ object lexer {
         "==",
         "!=",
         "&&",
-        "||",
-      ),
+        "||"
+      )
     ),
     textDesc = TextDesc.plain.copy(
       graphicCharacter = Basic(c =>
         MIN_GRAPHIC_CHAR <= c.toInt && c.toInt <= MAX_GRAPHIC_CHAR && !Set(
           '\\',
           '\'',
-          '"',
+          '"'
         ).contains(c),
       ),
       escapeSequences = EscapeDesc.plain.copy(
-        literals = Set('0', 'b', 't', 'n', 'f', 'r', '"', '\'', '\\'),
+        literals = Set('0', 'b', 't', 'n', 'f', 'r', '"', '\'', '\\')
       )
     ),
     numericDesc = NumericDesc.plain.copy(
       integerNumbersCanBeHexadecimal = false,
-      integerNumbersCanBeOctal = false,
+      integerNumbersCanBeOctal = false
     )
   )
 
-  private val errConfig = new ErrorConfig {
-    override def labelSymbol = Map(
-      "+"   -> Label("binary operator"),
-      "*"   -> Label("binary operator"),
-      "/"   -> Label("binary operator"),
-      "%"   -> Label("binary operator"),
-      "-"   -> Label("binary operator"),
-      ">"   -> Label("binary operator"),
-      ">="  -> Label("binary operator"),
-      "<"   -> Label("binary operator"),
-      "<="  -> Label("binary operator"),
-      "=="  -> Label("binary operator"),
-      "!="  -> Label("binary operator"),
-      "&&"  -> Label("binary operator"), 
-      "||"  -> Label("binary operator"),
+  private val errConfig: ErrorConfig = new ErrorConfig {
+    override def labelSymbol: Map[String, LabelConfig] = Map(
+      "+" -> Label("binary operator"),
+      "*" -> Label("binary operator"),
+      "/" -> Label("binary operator"),
+      "%" -> Label("binary operator"),
+      "-" -> Label("binary operator"),
+      ">" -> Label("binary operator"),
+      ">=" -> Label("binary operator"),
+      "<" -> Label("binary operator"),
+      "<=" -> Label("binary operator"),
+      "==" -> Label("binary operator"),
+      "!=" -> Label("binary operator"),
+      "&&" -> Label("binary operator"),
+      "||" -> Label("binary operator"),
       "chr" -> Label("unary operator"),
-      "!"   -> Label("unary operator"),
+      "!" -> Label("unary operator"),
       "len" -> Label("unary operator"),
       "ord" -> Label("unary operator"),
       "true" -> Label("boolean"),
-      "false" -> Label("boolean"),
+      "false" -> Label("boolean")
     )
-    override def labelIntegerSignedNumber = Label("number")
-    override def labelCharAscii = Label("character") 
-    override def labelStringAscii(multi: Boolean, raw: Boolean) = Label("string")
+    override def labelIntegerSignedNumber: LabelConfig = Label("number")
+    override def labelCharAscii: LabelConfig = Label("character")
+    override def labelStringAscii(multi: Boolean, raw: Boolean): LabelConfig = Label("string")
   }
   private val lexer = Lexer(desc, errConfig)
 

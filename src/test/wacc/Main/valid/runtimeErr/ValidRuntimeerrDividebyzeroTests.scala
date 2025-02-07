@@ -7,15 +7,15 @@ class ValidRuntimeerrDividebyzeroTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/runtimeErr/divideByZero/"
 
   it should "pass divZero.wacc" in {
-    runFrontend(Array(dir+"divZero.wacc"))._1 shouldBe 0
+    runFrontend(Array(dir + "divZero.wacc"))._1 shouldBe 0
   }
 
   it should "pass divideByZero.wacc" in {
-    runFrontend(Array(dir+"divideByZero.wacc"))._1 shouldBe 0
+    runFrontend(Array(dir + "divideByZero.wacc"))._1 shouldBe 0
   }
 
   it should "pass modByZero.wacc" in {
-    runFrontend(Array(dir+"modByZero.wacc"))._1 shouldBe 0
+    runFrontend(Array(dir + "modByZero.wacc"))._1 shouldBe 0
   }
 
 }

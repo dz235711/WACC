@@ -6,7 +6,7 @@ import parsley.{Parsley, Result}
 import parsley.errors.combinator.*
 import wacc.lexer.implicits.implicitSymbol
 import wacc.lexer.{char, *}
-import wacc.ast.*
+import SyntaxAST.*
 import parsley.errors.ErrorBuilder
 
 object parser {
@@ -59,7 +59,8 @@ object parser {
       Ops(InfixN)(Equals <# "==", NotEquals <# "!="),
       Ops(InfixR)(And <# "&&"),
       Ops(InfixR)(Or <# "||")
-    ).label("expression").explain("Expressions are phrases like \"1 + 2 * 3\" or \"true || false\" that evaluate to a final value")
+    ).label("expression")
+      .explain("Expressions are phrases like \"1 + 2 * 3\" or \"true || false\" that evaluate to a final value")
 
   // Types
   private lazy val typeParser: Parsley[Type] =
@@ -122,12 +123,15 @@ object parser {
   private lazy val lvalue: Parsley[LValue] = choice(
     arrayElem,
     Ident(ident),
-    pairElem,
+    pairElem
   )
   private lazy val rvalue: Parsley[RValue] = choice(
     expr,
     arrayLiter,
-    NewPair("newpair" ~> "(" ~> expr.label("first pair element expression") <~ ",", expr.label("second pair element expression") <~ ")"),
+    NewPair(
+      "newpair" ~> "(" ~> expr.label("first pair element expression") <~ ",",
+      expr.label("second pair element expression") <~ ")"
+    ),
     pairElem,
     Call("call" ~> Ident(ident) <~ "(", sepBy(expr, ",").label("parameters") <~ ")")
   )

@@ -7,7 +7,7 @@ class InvalidSyntaxerrArrayTests extends AnyFlatSpec {
   val dir = "src/test/examples/invalid/syntaxErr/array/"
 
   it should "pass arrayExpr.wacc" in {
-    runFrontend(Array(dir+"arrayExpr.wacc"))._1 shouldBe 100
+    runFrontend(Array(dir + "arrayExpr.wacc"))._1 shouldBe 100
   }
 
 }

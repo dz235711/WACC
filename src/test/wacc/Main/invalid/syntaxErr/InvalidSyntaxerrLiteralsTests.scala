@@ -7,15 +7,15 @@ class InvalidSyntaxerrLiteralsTests extends AnyFlatSpec {
   val dir = "src/test/examples/invalid/syntaxErr/literals/"
 
   it should "pass charLiteralSingle.wacc" in {
-    runFrontend(Array(dir+"charLiteralSingle.wacc"))._1 shouldBe 100
+    runFrontend(Array(dir + "charLiteralSingle.wacc"))._1 shouldBe 100
   }
 
   it should "pass stringLiteralNoNewlines.wacc" in {
-    runFrontend(Array(dir+"stringLiteralNoNewlines.wacc"))._1 shouldBe 100
+    runFrontend(Array(dir + "stringLiteralNoNewlines.wacc"))._1 shouldBe 100
   }
 
   it should "pass stringLiteralOnlyAscii.wacc" in {
-    runFrontend(Array(dir+"stringLiteralOnlyAscii.wacc"))._1 shouldBe 100
+    runFrontend(Array(dir + "stringLiteralOnlyAscii.wacc"))._1 shouldBe 100
   }
 
 }

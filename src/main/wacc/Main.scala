@@ -54,9 +54,9 @@ def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
               )
 
             // Semantic analysis
-            val typedAST = TypeChecker().checkProg(Renamer().rename(x))
+            val typedAST = TypeChecker().checkProg(Renamer.rename(x))
 
-            if (verbose){
+            if (verbose) {
               println(
                 "\n------------------------------ Typed AST ------------------------------"
               )
@@ -69,8 +69,7 @@ def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
             // Convert list buffer to list to allow mapping
             val listifiedErrs = errCtx.get
             if (listifiedErrs.nonEmpty)
-              /* Return correctly formatted errors with lines set if error list
-               * is nonempty */
+              /* Return correctly formatted errors with lines set if error list is nonempty */
               (
                 200,
                 Right(
