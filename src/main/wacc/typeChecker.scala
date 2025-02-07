@@ -347,7 +347,25 @@ sealed class TypeChecker {
       c: Constraint
   )(using ctx: ErrorContext): (Option[SemType], TypedAST.RValue) = rval match {
     case renamedast.ArrayLiter(es) =>
-      ArrayType(?).satisfies(PosPlaceHolder)(c) match {
+      // Try to unify the types of the array elements
+      val elTy = es
+        .foldLeft[Option[SemType]](Some(?)) { (ty, expr) =>
+          ty.flatMap { ty =>
+            val eTy = checkExpr(expr, Unconstrained)._1
+            // Try unifying either direction
+            eTy.flatMap(et => (ty ~ et).orElse(et ~ ty))
+          }
+        }
+        .getOrElse {
+          // TODO: handle error
+          println(
+            "Literal contains mix of " + es
+              .map(e => checkExpr(e, Unconstrained)._1.getOrElse("?"))
+          )
+          ?
+        }
+
+      ArrayType(elTy).satisfies(PosPlaceHolder)(c) match {
         case Some(ArrayType(ty)) =>
           val esTyped = es.map(checkExpr(_, Is(ty))._2)
           (Some(ArrayType(ty)), TypedAST.ArrayLiter(esTyped, ArrayType(ty)))
