@@ -89,8 +89,8 @@ object lexer {
     )
   )
 
-  private val errConfig = new ErrorConfig {
-    override def labelSymbol = Map(
+  private val errConfig: ErrorConfig = new ErrorConfig {
+    override def labelSymbol: Map[String, LabelConfig] = Map(
       "+" -> Label("binary operator"),
       "*" -> Label("binary operator"),
       "/" -> Label("binary operator"),
@@ -111,9 +111,9 @@ object lexer {
       "true" -> Label("boolean"),
       "false" -> Label("boolean")
     )
-    override def labelIntegerSignedNumber = Label("number")
-    override def labelCharAscii = Label("character")
-    override def labelStringAscii(multi: Boolean, raw: Boolean) = Label("string")
+    override def labelIntegerSignedNumber: LabelConfig = Label("number")
+    override def labelCharAscii: LabelConfig = Label("character")
+    override def labelStringAscii(multi: Boolean, raw: Boolean): LabelConfig = Label("string")
   }
   private val lexer = Lexer(desc, errConfig)
 

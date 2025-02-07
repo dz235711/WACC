@@ -5,7 +5,7 @@ import wacc.ast.*
 val INDENTATION_SIZE = 2
 
 def prettyPrint(prog: Program): String =
-  "begin" + prog.fs.map(prettyPrintFunc(_)).mkString("\n\n").indent(INDENTATION_SIZE)
+  "begin" + prog.fs.map(prettyPrintFunc).mkString("\n\n").indent(INDENTATION_SIZE)
     + "\n" + prettyPrintStmt(prog.body).indent(INDENTATION_SIZE) + "end"
 
 def prettyPrintType(t: Type | PairElemType): String =
@@ -42,25 +42,25 @@ def prettyPrintExpr(e: Expr): String =
     case And(e1, e2)       => prettyPrintExpr(e1) + " && " + prettyPrintExpr(e2)
     case Or(e1, e2)        => prettyPrintExpr(e1) + " || " + prettyPrintExpr(e2)
 
-    case IntLiter(x)    => x.toString()
+    case IntLiter(x)    => x.toString
     case BoolLiter(b)   => if b then "true" else "false"
-    case CharLiter(c)   => "'" + c.toString() + "'"
+    case CharLiter(c)   => "'" + c.toString + "'"
     case StringLiter(s) => "\"" + s + "\""
     case PairLiter()    => "null"
     case Ident(v)       => v
     case ArrayElem(Ident(v), es) =>
-      v + es.map(prettyPrintExpr(_)).mkString("[", "][", "]")
+      v + es.map(prettyPrintExpr).mkString("[", "][", "]")
 
 def prettyPrintLRValue(r: RValue | LValue): String =
   r match
-    case ArrayLiter(es) => es.map(prettyPrintExpr(_)).mkString("[", ", ", "]")
+    case ArrayLiter(es) => es.map(prettyPrintExpr).mkString("[", ", ", "]")
     case NewPair(e1, e2) =>
       "newpair(" + prettyPrintExpr(e1) + ", " + prettyPrintExpr(e2) + ")"
     case Fst(l) => "fst " + prettyPrintLRValue(l)
     case Snd(l) => "snd " + prettyPrintLRValue(l)
     case Call(v, args) =>
       "call " + prettyPrintExpr(v) + args
-        .map(prettyPrintExpr(_))
+        .map(prettyPrintExpr)
         .mkString("(", ", ", ")")
     case e: Expr => prettyPrintExpr(e)
 
@@ -89,7 +89,7 @@ def prettyPrintStmt(s: Stmt): String =
 def prettyPrintFunc(f: Func): String = {
   val Func((t, v), params, body) = f
   prettyPrintType(t) + " " + prettyPrintExpr(v) + params
-    .map(prettyPrintParam(_))
+    .map(prettyPrintParam)
     .mkString("(", ", ", ")") + " is\n" + prettyPrintStmt(body).indent(INDENTATION_SIZE) + "end"
 }
 
