@@ -297,8 +297,8 @@ sealed class TypeChecker {
   ): (Option[SemType], TypedAST.LValue) = lval match {
     case id: renamedast.Ident        => checkIdent(id, c)
     case arrEl: renamedast.ArrayElem => checkArrayElem(arrEl, c)
-    case fst: renamedast.Fst         => checkFst(fst, c)
-    case snd: renamedast.Snd         => checkSnd(snd, c)
+    case renamedast.Fst(l)           => checkPairElem(l, c, true)
+    case renamedast.Snd(l)           => checkPairElem(l, c, false)
   }
 
   /** Checks an rvalue and returns a typed rvalue.
@@ -338,8 +338,8 @@ sealed class TypeChecker {
             )
           )
       }
-    case fst: renamedast.Fst      => checkFst(fst, c)
-    case snd: renamedast.Snd      => checkSnd(snd, c)
+    case renamedast.Fst(l)        => checkPairElem(l, c, true)
+    case renamedast.Snd(l)        => checkPairElem(l, c, false)
     case renamedast.Call(v, args) =>
       /* Check that the return type of the function is the same as the
        * constraint */
@@ -395,41 +395,33 @@ sealed class TypeChecker {
 
     (arrElemTyC, TypedAST.ArrayElem(vTyped, esTyped, arrElemTyC.getOrElse(?)))
 
-  /** Checks a Fst expression and returns a typed Fst expression.
+  /** Checks a pair element and returns a typed pair element.
    *
-   * @param fst The Fst expression to check
-   * @param c The constraint on the first element of the pair's type
-   * @return The typed Fst expression
+   * @param l The lvalue of the pair element
+   * @param c The constraint on the pair element's type
+   * @param isFirst Whether the element is the first element of the pair
+   * @return The typed pair element
    */
-  private def checkFst(
-      fst: renamedast.Fst,
-      c: Constraint
-  ): (Option[SemType], TypedAST.Fst) = {
-    val (ty, lTyped) = checkLVal(fst.l, IsPair)
+  private def checkPairElem(
+      l: renamedast.LValue,
+      c: Constraint,
+      isFirst: Boolean
+  ): (Option[SemType], TypedAST.Fst | TypedAST.Snd) = {
+    val (ty, lTyped) = checkLVal(l, IsPair)
     ty match {
-      case Some(Pair(ty1, _)) =>
-        val ty1C = ty1.satisfies(c)
-        (ty1C, TypedAST.Fst(lTyped, ty1C.getOrElse(?)))
-      case _ => (None, TypedAST.Fst(lTyped, ?))
-    }
-  }
-
-  /** Checks a Snd expression and returns a typed Snd expression.
-   *
-   * @param snd The Snd expression to check
-   * @param c   The constraint on the second element of the pair's type
-   * @return The typed Snd expression
-   */
-  private def checkSnd(
-      snd: renamedast.Snd,
-      c: Constraint
-  ): (Option[SemType], TypedAST.Snd) = {
-    val (ty, lTyped) = checkLVal(snd.l, IsPair)
-    ty match {
-      case Some(Pair(_, ty2)) =>
-        val ty2C = ty2.satisfies(c)
-        (ty2C, TypedAST.Snd(lTyped, ty2C.getOrElse(?)))
-      case _ => (None, TypedAST.Snd(lTyped, ?))
+      case Some(Pair(ty1, ty2)) =>
+        val elemTy = if (isFirst) ty1 else ty2
+        val elemTyC = elemTy.satisfies(c)
+        (
+          elemTyC,
+          if (isFirst) TypedAST.Fst(lTyped, elemTyC.getOrElse(?))
+          else TypedAST.Snd(lTyped, elemTyC.getOrElse(?))
+        )
+      case _ =>
+        (
+          None,
+          if (isFirst) TypedAST.Fst(lTyped, ?) else TypedAST.Snd(lTyped, ?)
+        )
     }
   }
 }
