@@ -259,10 +259,9 @@ sealed class TypeChecker {
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
   ): (Option[SemType], TypedAST.Expr) =
-    (
-      Bool.satisfies(c),
-      build(checkExpr(e1, Unconstrained)._2, checkExpr(e2, Unconstrained)._2)
-    )
+    val (lTy, lTyped) = checkExpr(e1, Unconstrained)
+    val (_, rTyped) = checkExpr(e2, lTy.map(Is(_)).getOrElse(Unconstrained))
+    (Bool.satisfies(c), build(lTyped, rTyped))
 
   /** Checks a logical expression and returns a typed logical expression.
    *
