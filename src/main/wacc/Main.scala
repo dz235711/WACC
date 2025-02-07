@@ -43,7 +43,7 @@ def runFrontend(args: Array[String]): (Int, Either[String, List[WaccError]]) = {
         given errCtx: ErrorContext = new ErrorContext
         parser.parse(lines) match {
           case Success(x) =>
-            // Successfully parsed so we conitnue to semantic analysis
+            // Successfully parsed so we continue to semantic analysis
             if (verbose)
               println(
                 "\n------------------------------ Pretty-Printed AST ------------------------------"

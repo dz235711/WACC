@@ -288,8 +288,8 @@ class Renamer {
           if (args.length != argLen) {
             ctx.error(
               constructSpecialised(
-                v.pos,
-                v.v.length,
+                (v.pos._1, v.pos._2 + v.v.length),
+                1,
                 s"Incorrect number of arguments for function ${v.v}"
               )
             )

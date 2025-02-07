@@ -4,6 +4,7 @@ import renamedast.{?, KnownType, SemType}
 import renamedast.KnownType.*
 import scala.collection.mutable
 import WaccErrorBuilder.constructSpecialised
+import renamedast.getTypeName
 
 enum Constraint {
   case Is(refTy: SemType)
@@ -60,7 +61,7 @@ sealed class TypeChecker {
             constructSpecialised(
               pos,
               1,
-              s"Type mismatch between $ty and $refTy"
+              s"Type mismatch between ${getTypeName(ty)} and ${getTypeName(refTy)}"
             )
           )
           None
@@ -357,10 +358,12 @@ sealed class TypeChecker {
           }
         }
         .getOrElse {
-          // TODO: handle error
-          println(
-            "Literal contains mix of " + es
-              .map(e => checkExpr(e, Unconstrained)._1.getOrElse("?"))
+          ctx.error(
+            constructSpecialised(
+              PosPlaceHolder,
+              1,
+              s"Literal contains mix of ${es.map(e => getTypeName(checkExpr(e, Unconstrained)._1.getOrElse(?))).mkString(", ")}"
+            )
           )
           ?
         }

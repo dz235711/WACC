@@ -5,7 +5,7 @@ import wacc.ast.*
 val INDENTATION_SIZE = 2
 
 def prettyPrint(prog: Program): String = 
-  "begin\n" + prog.fs.map(prettyPrintFunc(_)).mkString("\n\n").indent(INDENTATION_SIZE)
+  "begin" + prog.fs.map(prettyPrintFunc(_)).mkString("\n\n").indent(INDENTATION_SIZE)
     + "\n" + prettyPrintStmt(prog.body).indent(INDENTATION_SIZE) + "end"
 
 
