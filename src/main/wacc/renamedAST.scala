@@ -8,14 +8,15 @@ package wacc:
 
     sealed abstract class SemType
     case object ? extends SemType
-    sealed trait KnownType extends SemType 
 
-    case class IntType()(val pos: (Int, Int)) extends KnownType
-    case class BoolType()(val pos: (Int, Int)) extends KnownType
-    case class CharType()(val pos: (Int, Int)) extends KnownType
-    case class StringType()(val pos: (Int, Int)) extends KnownType
-    case class ArrayType(ty: SemType)(val pos: (Int, Int)) extends KnownType
-    case class PairType(t1: SemType, t2: SemType)(val pos: (Int, Int)) extends KnownType
+    enum KnownType extends SemType {
+      case IntType extends KnownType
+      case BoolType extends KnownType
+      case CharType extends KnownType
+      case StringType extends KnownType
+      case ArrayType(ty: SemType) extends KnownType
+      case PairType(t1: SemType, t2: SemType) extends KnownType
+    }
 
     sealed trait Expr extends RValue
     case class Not(e: Expr)(val pos: (Int, Int)) extends Expr

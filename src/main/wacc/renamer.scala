@@ -57,19 +57,16 @@ class renamer {
    * @param synType The syntactic type
    * @return The semantic type
    * */
-  private def translateType(synType: ast.Type | ast.PairElemType): KnownType = {
-    val knownType = synType match {
-      case ast.IntType()    => renamedast.IntType()
-      case ast.BoolType()   => renamedast.BoolType()
-      case ast.CharType()   => renamedast.CharType()
-      case ast.StringType() => renamedast.StringType()
-      case ast.ArrayType(t) => renamedast.ArrayType(translateType(t))
-      case ast.ErasedPair() => renamedast.PairType(?, ?)
+  private def translateType(synType: ast.Type | ast.PairElemType): KnownType = synType match {
+      case ast.IntType()    => KnownType.IntType
+      case ast.BoolType()   => KnownType.BoolType
+      case ast.CharType()   => KnownType.CharType
+      case ast.StringType() => KnownType.StringType
+      case ast.ArrayType(t) => KnownType.ArrayType(translateType(t))
+      case ast.ErasedPair() => KnownType.PairType(?, ?)
       case ast.PairType(t1, t2) =>
-        renamedast.PairType(translateType(t1), translateType(t2))
+        KnownType.PairType(translateType(t1), translateType(t2))
     }
-    knownType(synType.pos)
-  }
 
   /** Rename a function.
    *
@@ -86,8 +83,8 @@ class renamer {
     val renamedBody = renameStmt(f.body, funcScope, Map(), true)._1
 
     renamedast.Func(
-      renamedast.Ident(qualifiedName),
-      f.params.map(p => renamedast.Ident(funcScope(p._2.v))),
+      renamedast.Ident(qualifiedName)(f.decl._2.pos),
+      f.params.map(p => renamedast.Ident(funcScope(p._2.v))(p._2.pos)),
       renamedBody
     )(f.pos)
   }

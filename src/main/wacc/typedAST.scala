@@ -10,16 +10,16 @@ object TypedAST {
   }
 
   sealed trait IntType extends Type {
-    def getType: SemType = Int
+    def getType: SemType = IntType
   }
   sealed trait BoolType extends Type {
-    def getType: SemType = Bool
+    def getType: SemType = BoolType
   }
   sealed trait CharType extends Type {
-    def getType: SemType = Char
+    def getType: SemType = CharType
   }
   sealed trait StringType extends Type {
-    def getType: SemType = String
+    def getType: SemType = StringType
   }
 
   sealed trait Expr extends RValue
@@ -48,7 +48,7 @@ object TypedAST {
   case class CharLiter(c: Char) extends Expr, CharType
   case class StringLiter(s: String) extends Expr, StringType
   object PairLiter extends Expr, Type {
-    def getType: SemType = Pair(?, ?)
+    def getType: SemType = PairType(?, ?)
   }
   case class Ident(id: Int, override val getType: SemType) extends Expr, LValue
   case class ArrayElem(v: Ident, es: List[Expr], override val getType: SemType)
