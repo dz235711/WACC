@@ -1,5 +1,5 @@
 default:
-  image: gumjoe/wacc-ci-scala:slim
+  image: gumjoe/wacc-ci-scala:x86
 
 stages:
   - build
