@@ -7,14 +7,14 @@ object RenamedAST {
       UID: Int,
       declType: SemType
   )
-  
+
   sealed trait PositionalNode {
     val pos: (Int, Int)
   }
-  
+
   sealed abstract class SemType
   case object ? extends SemType
-  
+
   enum KnownType extends SemType {
     case IntType extends KnownType
     case BoolType extends KnownType
@@ -23,7 +23,7 @@ object RenamedAST {
     case ArrayType(ty: SemType) extends KnownType
     case PairType(t1: SemType, t2: SemType) extends KnownType
   }
-  
+
   /** Converts SemType to String
     *
     * @param ty the SemType
@@ -38,14 +38,14 @@ object RenamedAST {
     case KnownType.PairType(t1, t2) => s"pair(${getTypeName(t1)}, ${getTypeName(t2)})"
     case ?                          => "unknown"
   }
-  
+
   sealed trait Expr extends RValue, PositionalNode
   case class Not(e: Expr)(val pos: (Int, Int)) extends Expr
   case class Negate(e: Expr)(val pos: (Int, Int)) extends Expr
   case class Len(e: Expr)(val pos: (Int, Int)) extends Expr
   case class Ord(e: Expr)(val pos: (Int, Int)) extends Expr
   case class Chr(e: Expr)(val pos: (Int, Int)) extends Expr
-  
+
   case class Mult(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends Expr
   case class Div(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends Expr
   case class Mod(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends Expr
@@ -59,7 +59,7 @@ object RenamedAST {
   case class NotEquals(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends Expr
   case class And(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends Expr
   case class Or(e1: Expr, e2: Expr)(val pos: (Int, Int)) extends Expr
-  
+
   case class IntLiter(x: Int)(val pos: (Int, Int)) extends Expr
   case class BoolLiter(b: Boolean)(val pos: (Int, Int)) extends Expr
   case class CharLiter(c: Char)(val pos: (Int, Int)) extends Expr
@@ -68,7 +68,7 @@ object RenamedAST {
   case class Ident(v: QualifiedName)(val pos: (Int, Int)) extends Expr with LValue
   case class ArrayElem(v: Ident, es: List[Expr])(val pos: (Int, Int)) extends Expr with LValue
   case class NestedExpr(e: Expr)(val pos: (Int, Int)) extends Expr
-  
+
   sealed trait LValue extends PositionalNode
   sealed trait RValue extends PositionalNode
   case class ArrayLiter(es: List[Expr])(val pos: (Int, Int)) extends RValue
@@ -76,7 +76,7 @@ object RenamedAST {
   case class Fst(l: LValue)(val pos: (Int, Int)) extends LValue, RValue
   case class Snd(l: LValue)(val pos: (Int, Int)) extends LValue, RValue
   case class Call(v: Ident, args: List[Expr])(val pos: (Int, Int)) extends RValue
-  
+
   sealed trait Stmt extends PositionalNode
   case class Skip()(val pos: (Int, Int)) extends Stmt
   case class Decl(v: Ident, r: RValue)(val pos: (Int, Int)) extends Stmt
@@ -91,9 +91,9 @@ object RenamedAST {
   case class While(cond: Expr, body: Stmt)(val pos: (Int, Int)) extends Stmt
   case class Begin(body: Stmt)(val pos: (Int, Int)) extends Stmt
   case class Semi(s1: Stmt, s2: Stmt)(val pos: (Int, Int)) extends Stmt
-  
+
   case class Func(v: Ident, params: List[Ident], body: Stmt)(val pos: (Int, Int))
-  
+
   case class Program(fs: List[Func], body: Stmt)(val pos: (Int, Int))
 
 }
