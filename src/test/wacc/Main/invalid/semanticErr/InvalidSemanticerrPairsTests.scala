@@ -7,35 +7,35 @@ class InvalidSemanticerrPairsTests extends AnyFlatSpec {
   val dir = "src/test/examples/invalid/semanticErr/pairs/"
 
   it should "pass badPairAssign.wacc" in {
-    runFrontend(Array(dir + "badPairAssign.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "badPairAssign.wacc") shouldBe 200
   }
 
   it should "pass badPairExchange.wacc" in {
-    runFrontend(Array(dir + "badPairExchange.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "badPairExchange.wacc") shouldBe 200
   }
 
   it should "pass freeNonPair.wacc" in {
-    runFrontend(Array(dir + "freeNonPair.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "freeNonPair.wacc") shouldBe 200
   }
 
   it should "pass mismatchedPair.wacc" in {
-    runFrontend(Array(dir + "mismatchedPair.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "mismatchedPair.wacc") shouldBe 200
   }
 
   it should "pass noPairCovariance.wacc" in {
-    runFrontend(Array(dir + "noPairCovariance.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "noPairCovariance.wacc") shouldBe 200
   }
 
   it should "pass nonMatchingPairs.wacc" in {
-    runFrontend(Array(dir + "nonMatchingPairs.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "nonMatchingPairs.wacc") shouldBe 200
   }
 
   it should "pass readUnknown.wacc" in {
-    runFrontend(Array(dir + "readUnknown.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "readUnknown.wacc") shouldBe 200
   }
 
   it should "pass wrongTypeInParameterlessPair.wacc" in {
-    runFrontend(Array(dir + "wrongTypeInParameterlessPair.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "wrongTypeInParameterlessPair.wacc") shouldBe 200
   }
 
 }

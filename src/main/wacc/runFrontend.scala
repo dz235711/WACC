@@ -28,29 +28,13 @@ def printVerboseInfo(verbose: Boolean, title: String, msg: Any, colour: String):
   }
 }
 
-// TODO: Remove this function - it's only here for testing purposes
-def runFrontend(filePath: Array[String]): (Int, Unit) = {
-  val verbose = false
-  val file = readFile(filePath(0))
-  if (file.isEmpty) {
-    println(s"Error: File '${filePath(0)}' not found")
-    (1, ())
-  } else {
-    val lines = file.get
-    runFrontendPending(lines, verbose) match {
-      case Right(_)          => (0, ())
-      case Left((status, _)) => (status, ())
-    }
-  }
-}
-
 /** Runs the frontend of the compiler (parser, renamer, type checker)
  *
  * @param linesList List of lines from the input file
  * @param verbose Whether verbose mode is enabled
  * @return Either a tuple of the error status code and a list of errors or the typed AST
  */
-def runFrontendPending(linesList: List[String], verbose: Boolean): Either[(Int, List[WaccError]), TypedAST.Program] = {
+def runFrontend(linesList: List[String], verbose: Boolean): Either[(Int, List[WaccError]), TypedAST.Program] = {
   val lines = linesList.mkString("\n")
 
   given ErrorBuilder[WaccError] = new WaccErrorBuilder

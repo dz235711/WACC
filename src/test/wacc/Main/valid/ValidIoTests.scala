@@ -7,11 +7,11 @@ class ValidIoTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/IO/"
 
   it should "pass IOLoop.wacc" in {
-    runFrontend(Array(dir + "IOLoop.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "IOLoop.wacc") shouldBe 0
   }
 
   it should "pass IOSequence.wacc" in {
-    runFrontend(Array(dir + "IOSequence.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "IOSequence.wacc") shouldBe 0
   }
 
 }

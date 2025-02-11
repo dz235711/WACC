@@ -7,11 +7,11 @@ class ValidRuntimeerrBadcharTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/runtimeErr/badChar/"
 
   it should "pass negativeChr.wacc" in {
-    runFrontend(Array(dir + "negativeChr.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "negativeChr.wacc") shouldBe 0
   }
 
   it should "pass tooBigChr.wacc" in {
-    runFrontend(Array(dir + "tooBigChr.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "tooBigChr.wacc") shouldBe 0
   }
 
 }

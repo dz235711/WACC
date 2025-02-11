@@ -7,7 +7,7 @@ class InvalidSemanticerrIfTests extends AnyFlatSpec {
   val dir = "src/test/examples/invalid/semanticErr/if/"
 
   it should "pass ifIntCondition.wacc" in {
-    runFrontend(Array(dir + "ifIntCondition.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "ifIntCondition.wacc") shouldBe 200
   }
 
 }

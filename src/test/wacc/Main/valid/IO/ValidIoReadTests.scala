@@ -7,35 +7,35 @@ class ValidIoReadTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/IO/read/"
 
   it should "pass echoBigInt.wacc" in {
-    runFrontend(Array(dir + "echoBigInt.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "echoBigInt.wacc") shouldBe 0
   }
 
   it should "pass echoBigNegInt.wacc" in {
-    runFrontend(Array(dir + "echoBigNegInt.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "echoBigNegInt.wacc") shouldBe 0
   }
 
   it should "pass echoChar.wacc" in {
-    runFrontend(Array(dir + "echoChar.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "echoChar.wacc") shouldBe 0
   }
 
   it should "pass echoInt.wacc" in {
-    runFrontend(Array(dir + "echoInt.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "echoInt.wacc") shouldBe 0
   }
 
   it should "pass echoNegInt.wacc" in {
-    runFrontend(Array(dir + "echoNegInt.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "echoNegInt.wacc") shouldBe 0
   }
 
   it should "pass echoPuncChar.wacc" in {
-    runFrontend(Array(dir + "echoPuncChar.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "echoPuncChar.wacc") shouldBe 0
   }
 
   it should "pass read.wacc" in {
-    runFrontend(Array(dir + "read.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "read.wacc") shouldBe 0
   }
 
   it should "pass readAtEof.wacc" in {
-    runFrontend(Array(dir + "readAtEof.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "readAtEof.wacc") shouldBe 0
   }
 
 }

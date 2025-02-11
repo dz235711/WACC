@@ -2,15 +2,19 @@ package wacc
 
 import java.io.File
 import java.lang.ProcessBuilder
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.io.PrintWriter
+import java.io.FileNotFoundException
 
-def readFile(path: String): List[String] = {
-  val source = scala.io.Source.fromFile(path)
-  val lines = source.getLines.toList
-  source.close()
-  lines
+def frontendStatus(path: String): Int = {
+  readFile(path) match
+    case None =>
+      new FileNotFoundException()
+      -1
+    case Some(value) =>
+      runFrontend(value, false) match
+        case Left(status, _) => status
+        case Right(value)    => 0
+
 }
 
 def runProgram(prog: TypedAST.Program, input: String): String = {

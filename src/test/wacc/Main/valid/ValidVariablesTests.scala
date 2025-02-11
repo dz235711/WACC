@@ -7,63 +7,63 @@ class ValidVariablesTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/variables/"
 
   it should "pass _VarNames.wacc" in {
-    runFrontend(Array(dir + "_VarNames.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "_VarNames.wacc") shouldBe 0
   }
 
   it should "pass boolDeclaration.wacc" in {
-    runFrontend(Array(dir + "boolDeclaration.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "boolDeclaration.wacc") shouldBe 0
   }
 
   it should "pass boolDeclaration2.wacc" in {
-    runFrontend(Array(dir + "boolDeclaration2.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "boolDeclaration2.wacc") shouldBe 0
   }
 
   it should "pass capCharDeclaration.wacc" in {
-    runFrontend(Array(dir + "capCharDeclaration.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "capCharDeclaration.wacc") shouldBe 0
   }
 
   it should "pass charDeclaration.wacc" in {
-    runFrontend(Array(dir + "charDeclaration.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "charDeclaration.wacc") shouldBe 0
   }
 
   it should "pass charDeclaration2.wacc" in {
-    runFrontend(Array(dir + "charDeclaration2.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "charDeclaration2.wacc") shouldBe 0
   }
 
   it should "pass emptyStringDeclaration.wacc" in {
-    runFrontend(Array(dir + "emptyStringDeclaration.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "emptyStringDeclaration.wacc") shouldBe 0
   }
 
   it should "pass intDeclaration.wacc" in {
-    runFrontend(Array(dir + "intDeclaration.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "intDeclaration.wacc") shouldBe 0
   }
 
   it should "pass longVarNames.wacc" in {
-    runFrontend(Array(dir + "longVarNames.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "longVarNames.wacc") shouldBe 0
   }
 
   it should "pass manyVariables.wacc" in {
-    runFrontend(Array(dir + "manyVariables.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "manyVariables.wacc") shouldBe 0
   }
 
   it should "pass negIntDeclaration.wacc" in {
-    runFrontend(Array(dir + "negIntDeclaration.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "negIntDeclaration.wacc") shouldBe 0
   }
 
   it should "pass puncCharDeclaration.wacc" in {
-    runFrontend(Array(dir + "puncCharDeclaration.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "puncCharDeclaration.wacc") shouldBe 0
   }
 
   it should "pass stringCarriageReturn.wacc" in {
-    runFrontend(Array(dir + "stringCarriageReturn.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "stringCarriageReturn.wacc") shouldBe 0
   }
 
   it should "pass stringDeclaration.wacc" in {
-    runFrontend(Array(dir + "stringDeclaration.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "stringDeclaration.wacc") shouldBe 0
   }
 
   it should "pass zeroIntDeclaration.wacc" in {
-    runFrontend(Array(dir + "zeroIntDeclaration.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "zeroIntDeclaration.wacc") shouldBe 0
   }
 
 }

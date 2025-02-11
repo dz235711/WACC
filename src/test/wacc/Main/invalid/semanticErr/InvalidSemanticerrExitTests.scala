@@ -7,19 +7,19 @@ class InvalidSemanticerrExitTests extends AnyFlatSpec {
   val dir = "src/test/examples/invalid/semanticErr/exit/"
 
   it should "pass badCharExit.wacc" in {
-    runFrontend(Array(dir + "badCharExit.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "badCharExit.wacc") shouldBe 200
   }
 
   it should "pass exitNonInt.wacc" in {
-    runFrontend(Array(dir + "exitNonInt.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "exitNonInt.wacc") shouldBe 200
   }
 
   it should "pass globalReturn.wacc" in {
-    runFrontend(Array(dir + "globalReturn.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "globalReturn.wacc") shouldBe 200
   }
 
   it should "pass returnsInMain.wacc" in {
-    runFrontend(Array(dir + "returnsInMain.wacc"))._1 shouldBe 200
+    frontendStatus(dir + "returnsInMain.wacc") shouldBe 200
   }
 
 }

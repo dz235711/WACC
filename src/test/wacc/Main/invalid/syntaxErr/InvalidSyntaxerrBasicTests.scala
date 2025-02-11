@@ -7,39 +7,39 @@ class InvalidSyntaxerrBasicTests extends AnyFlatSpec {
   val dir = "src/test/examples/invalid/syntaxErr/basic/"
 
   it should "pass badComment.wacc" in {
-    runFrontend(Array(dir + "badComment.wacc"))._1 shouldBe 100
+    frontendStatus(dir + "badComment.wacc") shouldBe 100
   }
 
   it should "pass badComment2.wacc" in {
-    runFrontend(Array(dir + "badComment2.wacc"))._1 shouldBe 100
+    frontendStatus(dir + "badComment2.wacc") shouldBe 100
   }
 
   it should "pass badEscape.wacc" in {
-    runFrontend(Array(dir + "badEscape.wacc"))._1 shouldBe 100
+    frontendStatus(dir + "badEscape.wacc") shouldBe 100
   }
 
   it should "pass beginNoend.wacc" in {
-    runFrontend(Array(dir + "beginNoend.wacc"))._1 shouldBe 100
+    frontendStatus(dir + "beginNoend.wacc") shouldBe 100
   }
 
   it should "pass bgnErr.wacc" in {
-    runFrontend(Array(dir + "bgnErr.wacc"))._1 shouldBe 100
+    frontendStatus(dir + "bgnErr.wacc") shouldBe 100
   }
 
   it should "pass multipleBegins.wacc" in {
-    runFrontend(Array(dir + "multipleBegins.wacc"))._1 shouldBe 100
+    frontendStatus(dir + "multipleBegins.wacc") shouldBe 100
   }
 
   it should "pass noBody.wacc" in {
-    runFrontend(Array(dir + "noBody.wacc"))._1 shouldBe 100
+    frontendStatus(dir + "noBody.wacc") shouldBe 100
   }
 
   it should "pass skpErr.wacc" in {
-    runFrontend(Array(dir + "skpErr.wacc"))._1 shouldBe 100
+    frontendStatus(dir + "skpErr.wacc") shouldBe 100
   }
 
   it should "pass unescapedChar.wacc" in {
-    runFrontend(Array(dir + "unescapedChar.wacc"))._1 shouldBe 100
+    frontendStatus(dir + "unescapedChar.wacc") shouldBe 100
   }
 
 }

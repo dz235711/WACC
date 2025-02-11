@@ -7,87 +7,87 @@ class ValidFunctionSimple_functionsTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/function/simple_functions/"
 
   it should "pass argScopeCanBeShadowed.wacc" in {
-    runFrontend(Array(dir + "argScopeCanBeShadowed.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "argScopeCanBeShadowed.wacc") shouldBe 0
   }
 
   it should "pass asciiTable.wacc" in {
-    runFrontend(Array(dir + "asciiTable.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "asciiTable.wacc") shouldBe 0
   }
 
   it should "pass functionDeclaration.wacc" in {
-    runFrontend(Array(dir + "functionDeclaration.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "functionDeclaration.wacc") shouldBe 0
   }
 
   it should "pass functionDoubleReturn.wacc" in {
-    runFrontend(Array(dir + "functionDoubleReturn.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "functionDoubleReturn.wacc") shouldBe 0
   }
 
   it should "pass functionIfReturns.wacc" in {
-    runFrontend(Array(dir + "functionIfReturns.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "functionIfReturns.wacc") shouldBe 0
   }
 
   it should "pass functionManyArguments.wacc" in {
-    runFrontend(Array(dir + "functionManyArguments.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "functionManyArguments.wacc") shouldBe 0
   }
 
   it should "pass functionMultiReturns.wacc" in {
-    runFrontend(Array(dir + "functionMultiReturns.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "functionMultiReturns.wacc") shouldBe 0
   }
 
   it should "pass functionReturnPair.wacc" in {
-    runFrontend(Array(dir + "functionReturnPair.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "functionReturnPair.wacc") shouldBe 0
   }
 
   it should "pass functionSimple.wacc" in {
-    runFrontend(Array(dir + "functionSimple.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "functionSimple.wacc") shouldBe 0
   }
 
   it should "pass functionSimpleLoop.wacc" in {
-    runFrontend(Array(dir + "functionSimpleLoop.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "functionSimpleLoop.wacc") shouldBe 0
   }
 
   it should "pass functionUpdateParameter.wacc" in {
-    runFrontend(Array(dir + "functionUpdateParameter.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "functionUpdateParameter.wacc") shouldBe 0
   }
 
   it should "pass incFunction.wacc" in {
-    runFrontend(Array(dir + "incFunction.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "incFunction.wacc") shouldBe 0
   }
 
   it should "pass lotsOfLocals.wacc" in {
-    runFrontend(Array(dir + "lotsOfLocals.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "lotsOfLocals.wacc") shouldBe 0
   }
 
   it should "pass manyArgumentsChar.wacc" in {
-    runFrontend(Array(dir + "manyArgumentsChar.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "manyArgumentsChar.wacc") shouldBe 0
   }
 
   it should "pass manyArgumentsInt.wacc" in {
-    runFrontend(Array(dir + "manyArgumentsInt.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "manyArgumentsInt.wacc") shouldBe 0
   }
 
   it should "pass negFunction.wacc" in {
-    runFrontend(Array(dir + "negFunction.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "negFunction.wacc") shouldBe 0
   }
 
   it should "pass punning.wacc" in {
-    runFrontend(Array(dir + "punning.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "punning.wacc") shouldBe 0
   }
 
   it should "pass sameArgName.wacc" in {
-    runFrontend(Array(dir + "sameArgName.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "sameArgName.wacc") shouldBe 0
   }
 
   it should "pass sameArgName2.wacc" in {
-    runFrontend(Array(dir + "sameArgName2.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "sameArgName2.wacc") shouldBe 0
   }
 
   it should "pass sameNameAsVar.wacc" in {
-    runFrontend(Array(dir + "sameNameAsVar.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "sameNameAsVar.wacc") shouldBe 0
   }
 
   it should "pass usesArgumentWhilstMakingArgument.wacc" in {
-    runFrontend(Array(dir + "usesArgumentWhilstMakingArgument.wacc"))._1 shouldBe 0
+    frontendStatus(dir + "usesArgumentWhilstMakingArgument.wacc") shouldBe 0
   }
 
 }
