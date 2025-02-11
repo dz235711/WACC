@@ -13,16 +13,19 @@ def readFile(path: String): List[String] = {
   lines
 }
 
-def runProgram(prog: TypedAST.Program): String = {
+def runProgram(prog: TypedAST.Program, input: String): String = {
   val source = new File("test.s")
   source.createNewFile()
   val writer = new PrintWriter(source)
-  writer.write(runBackend(prog))
+  writer.write(runBackend(prog, false))
   writer.flush()
   writer.close()
   val pBuilder = new ProcessBuilder()
   pBuilder.command("gcc", "-o", "test", "-z", "noexecstack", "test.s").start().waitFor()
   val process = pBuilder.command("./test").start()
+  val iStream = process.getOutputStream()
+  iStream.write(input.getBytes())
+  iStream.flush()
   val output = process.getInputStream().readAllBytes().mkString
   process.waitFor()
   source.delete()
