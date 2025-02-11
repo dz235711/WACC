@@ -20,16 +20,17 @@ def readFile(path: String): Option[List[String]] = {
 }
 
 def main(args: Array[String]): Unit = {
-  println("Hello, WACC! 👋😃👍")
+  println("Hello, WACC! 👋😃👍\n")
   val verbose = args.contains("--verbose") || args.contains("-v")
 
   val path = args.headOption
 
   // If no file path is provided, print usage message
-  if (path.isEmpty) {
+  if (path.isEmpty || args.contains("--help") || args.contains("-h")) {
     println("Usage: wacc <file> [options]")
     println("Options:")
     println("  --verbose, -v  Print verbose output")
+    println("  --help, -h     Print this message")
     exit(1)
   }
 
