@@ -40,14 +40,17 @@ private def runProgram(prog: TypedAST.Program, input: String): String = {
   writer.close()
   val pBuilder = new ProcessBuilder()
   pBuilder.command("gcc", "-o", "test", "-z", "noexecstack", "test.s").start().waitFor()
-  val process = pBuilder.command("./test").start()
+  val process = pBuilder.command("timeout", "1s", "./test").start()
   val iStream = process.getOutputStream()
-  iStream.write(input.getBytes())
-  iStream.flush()
-  val output = process.getInputStream().readAllBytes().mkString
   process.waitFor()
-  source.delete()
-  val asmFile = new File("test")
-  asmFile.delete()
-  output
+  if process.exitValue() == 124 then "!!!process timed out!!!"
+  else
+    iStream.write(input.getBytes())
+    iStream.flush()
+    val output = process.getInputStream().readAllBytes().mkString
+    process.waitFor()
+    source.delete()
+    val asmFile = new File("test")
+    asmFile.delete()
+    output
 }
