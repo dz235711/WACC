@@ -16,4 +16,10 @@ test:
   dependencies:
     - build
   script:
-    - scala test . 
+    - scala test . -- -u reports
+  artifacts:
+    when: always
+    paths:
+      - reports/
+    reports:
+      junit: reports/*.xml
