@@ -11,12 +11,25 @@ build:
     - scala compile .
 
 
-test:
+frontend-test:
   stage: test
   dependencies:
     - build
   script:
-    - scala test . -- -u reports
+    - scala test . -- -u reports -n wacc.Frontend
+  artifacts:
+    when: always
+    paths:
+      - reports/
+    reports:
+      junit: reports/*.xml
+
+backend-test:
+  stage: test
+  dependencies:
+    - build
+  script:
+    - scala test . -- -u reports -n wacc.Backend
   artifacts:
     when: always
     paths:

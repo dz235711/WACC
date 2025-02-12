@@ -4,9 +4,13 @@ import java.io.File
 import java.lang.ProcessBuilder
 import java.io.PrintWriter
 import java.io.FileNotFoundException
+import org.scalatest.Tag
 
-val addrRegex = "0x[0-9a-fA-F]+".r
-val errRegex = "fatal error:.+".r
+object Frontend extends Tag("wacc.Frontend")
+object Backend extends Tag("wacc.Backend")
+
+private val addrRegex = "0x[0-9a-fA-F]+".r
+private val errRegex = "fatal error:.+".r
 
 def frontendStatus(path: String): Int = partiallyCompile(path, _ => 0, status => status)
 
