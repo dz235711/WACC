@@ -37,7 +37,7 @@ object parser {
       StringLiter(str),
       PairLiter <# pair,
       arrayElem,
-      chain.prefix(Ident(ident))(Negate <# "-"),
+      Ident(ident),
       "(" ~> expr <~ ")"
     )(
       // Unary operators
@@ -45,7 +45,8 @@ object parser {
         Not <# "!",
         Len <# "len",
         Ord <# "ord",
-        Chr <# "chr"
+        Chr <# "chr",
+        Negate <# atomic(string("-") <~ notFollowedBy(digit)) <~ many(whitespace)
       ),
       // Binary operators
       Ops(InfixL)(Mult <# "*", Mod <# "%", Div <# "/"),
