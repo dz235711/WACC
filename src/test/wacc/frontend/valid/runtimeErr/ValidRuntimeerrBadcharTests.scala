@@ -6,11 +6,11 @@ import org.scalatest.matchers.should.Matchers.*
 class ValidRuntimeerrBadcharTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/runtimeErr/badChar/"
 
-  it should "pass negativeChr.wacc" in {
+  it should "frontend analyse negativeChr.wacc" in {
     frontendStatus(dir + "negativeChr.wacc") shouldBe 0
   }
 
-  it should "pass tooBigChr.wacc" in {
+  it should "frontend analyse tooBigChr.wacc" in {
     frontendStatus(dir + "tooBigChr.wacc") shouldBe 0
   }
 

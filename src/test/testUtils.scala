@@ -11,7 +11,11 @@ val errRegex = "fatal error:.+".r
 def frontendStatus(path: String): Int = partiallyCompile(path, _ => 0, status => status)
 
 def fullExec(path: String, input: String): Option[String] =
-  partiallyCompile(path, prog => Some(errRegex.replaceAllIn(addrRegex.replaceAllIn(runProgram(prog, input), "#addrs#"), "#runtime_error#")), _ => None)
+  partiallyCompile(
+    path,
+    prog => Some(errRegex.replaceAllIn(addrRegex.replaceAllIn(runProgram(prog, input), "#addrs#"), "#runtime_error#")),
+    _ => None
+  )
 
 private def partiallyCompile[T](path: String, transformer: TypedAST.Program => T, statuser: Int => T): T =
   readFile(path) match

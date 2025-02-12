@@ -6,27 +6,27 @@ import org.scalatest.matchers.should.Matchers.*
 class InvalidSemanticerrMultipleTests extends AnyFlatSpec {
   val dir = "src/test/examples/invalid/semanticErr/multiple/"
 
-  it should "pass funcMess.wacc" in {
+  it should "frontend analyse funcMess.wacc" in {
     frontendStatus(dir + "funcMess.wacc") shouldBe 200
   }
 
-  it should "pass ifAndWhileErrs.wacc" in {
+  it should "frontend analyse ifAndWhileErrs.wacc" in {
     frontendStatus(dir + "ifAndWhileErrs.wacc") shouldBe 200
   }
 
-  it should "pass messyExpr.wacc" in {
+  it should "frontend analyse messyExpr.wacc" in {
     frontendStatus(dir + "messyExpr.wacc") shouldBe 200
   }
 
-  it should "pass multiCaseSensitivity.wacc" in {
+  it should "frontend analyse multiCaseSensitivity.wacc" in {
     frontendStatus(dir + "multiCaseSensitivity.wacc") shouldBe 200
   }
 
-  it should "pass multiTypeErrs.wacc" in {
+  it should "frontend analyse multiTypeErrs.wacc" in {
     frontendStatus(dir + "multiTypeErrs.wacc") shouldBe 200
   }
 
-  it should "pass obfuscatingReturnsWithWhile.wacc" in {
+  it should "frontend analyse obfuscatingReturnsWithWhile.wacc" in {
     frontendStatus(dir + "obfuscatingReturnsWithWhile.wacc") shouldBe 200
   }
 
