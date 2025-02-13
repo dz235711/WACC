@@ -7,11 +7,11 @@ class BackendValidIoTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/IO/"
 
   it should "execute IOLoop.wacc" taggedAs (Backend) in pending /*{
-    fullExec(dir + "IOLoop.wacc", "") shouldBe Some("Please input an integer: echo input: 1\nDo you want to continue entering input?\n(enter Y for 'yes' and N for 'no')\nPlease input an integer: echo input: 2\nDo you want to continue entering input?\n(enter Y for 'yes' and N for 'no')\nPlease input an integer: echo input: 3\nDo you want to continue entering input?\n(enter Y for 'yes' and N for 'no')\nPlease input an integer: echo input: 4\nDo you want to continue entering input?\n(enter Y for 'yes' and N for 'no')\nPlease input an integer: echo input: 5\nDo you want to continue entering input?\n(enter Y for 'yes' and N for 'no')\nPlease input an integer: echo input: 142\nDo you want to continue entering input?\n(enter Y for 'yes' and N for 'no')\n")
+    fullExec(dir + "IOLoop.wacc", "1 Y 2 Y 3 Y 4 Y 5 Y 142 N") shouldBe Some("Please input an integer: echo input: 1\nDo you want to continue entering input?\n(enter Y for 'yes' and N for 'no')\nPlease input an integer: echo input: 2\nDo you want to continue entering input?\n(enter Y for 'yes' and N for 'no')\nPlease input an integer: echo input: 3\nDo you want to continue entering input?\n(enter Y for 'yes' and N for 'no')\nPlease input an integer: echo input: 4\nDo you want to continue entering input?\n(enter Y for 'yes' and N for 'no')\nPlease input an integer: echo input: 5\nDo you want to continue entering input?\n(enter Y for 'yes' and N for 'no')\nPlease input an integer: echo input: 142\nDo you want to continue entering input?\n(enter Y for 'yes' and N for 'no')\n")
   }*/
 
   it should "execute IOSequence.wacc" taggedAs (Backend) in pending /*{
-    fullExec(dir + "IOSequence.wacc", "") shouldBe Some("Please input an integer: You input: 37\n")
+    fullExec(dir + "IOSequence.wacc", "37") shouldBe Some("Please input an integer: You input: 37\n")
   }*/
 
 }
