@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Run scalafmt on the whole repository
+scalafmt --test --quiet .
+
+# Capture the exit code
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -ne 0 ]; then
+    echo "Error: Scala code is not formatted correctly."
+    echo "Please run 'scalafmt' and fix formatting issues before committing."
+    exit 1
+fi
+
+exit 0
