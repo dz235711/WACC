@@ -7,15 +7,15 @@ class BackendValidRuntimeerrArrayoutofboundsTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/runtimeErr/arrayOutOfBounds/"
 
   it should "execute arrayNegBounds.wacc" taggedAs (Backend) in pending /*{
-    fullExec(dir + arrayNegBounds.wacc, "") shouldBe Some("#runtime_error#")
+    fullExec(dir + "arrayNegBounds.wacc", "") shouldBe Some("#runtime_error#")
   }*/
 
   it should "execute arrayOutOfBounds.wacc" taggedAs (Backend) in pending /*{
-    fullExec(dir + arrayOutOfBounds.wacc, "") shouldBe Some("#runtime_error#")
+    fullExec(dir + "arrayOutOfBounds.wacc", "") shouldBe Some("#runtime_error#")
   }*/
 
   it should "execute arrayOutOfBoundsWrite.wacc" taggedAs (Backend) in pending /*{
-    fullExec(dir + arrayOutOfBoundsWrite.wacc, "") shouldBe Some("#runtime_error#")
+    fullExec(dir + "arrayOutOfBoundsWrite.wacc", "") shouldBe Some("#runtime_error#")
   }*/
 
 }
