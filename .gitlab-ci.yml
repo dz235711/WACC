@@ -3,6 +3,7 @@ default:
 
 stages:
   - build
+  - style
   - test
 
 build:
@@ -10,6 +11,13 @@ build:
   script:
     - scala compile .
 
+style:
+  stage: style
+  dependencies:
+    - build
+  script:
+    - scalafmt --test .
+  allow_failure: true
 
 frontend-test:
   stage: test

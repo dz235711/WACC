@@ -48,7 +48,7 @@ private def runProgram(prog: TypedAST.Program, input: String): String = {
   val pBuilder = new ProcessBuilder()
   pBuilder.command("gcc", "-o", "test", "-z", "noexecstack", "test.s").start().waitFor()
   val process = pBuilder.command("timeout", "1s", "./test").start()
-  
+
   // Feed input to the process
   val iStream = process.getOutputStream()
   iStream.write(input.getBytes())
