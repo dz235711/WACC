@@ -36,6 +36,17 @@ different alternatives you can try in the makefile. **Do not use the makefile as
 
 # Contribution guidelines
 
+## Git hooks
+We have a pre-commit hook and a commit-msg hook. To install them, run the following:
+```shell
+cp hooks/pre-commit .git/hooks/pre-commit
+cp hooks/commit-msg .git/hooks/commit-msg
+chmod +x .git/hooks/pre-commit
+chmod +x .git/hooks/commit-msg
+```
+
+## Commit messages
+
 Commit messages should be of the form `tag:description`. These tags could be any of the following:
 - `feat`
 - `chore`
@@ -59,3 +70,16 @@ Co-authors should be added to commits when pair-programming, in the format:
 
 Co-authored-by: [Name] <[Email]>
 ```
+
+## Compiling
+To compile WACC locally, run the following command:
+```shell
+scala --power package . -o wacc-compiler -f
+```
+
+## Running
+To run WACC locally, run the following command:
+```shell
+./compile [args]
+```
+(The `--help` flag will show you the available options)

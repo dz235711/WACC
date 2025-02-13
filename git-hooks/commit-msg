@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Define allowed tags
+ALLOWED_TAGS=("feat" "chore" "ci" "refactor" "perf" "fix" "doc" "test" "wip" "revert" "style")
+
+# Read the first line of the commit message
+FIRST_LINE=$(head -n 1 "$1")
+
+# Allow commits with messages starting with "Merge"
+if [[ "$FIRST_LINE" =~ ^Merge ]]; then
+    exit 0
+fi
+
+# Check if the format is correct (tag: message)
+if ! [[ "$FIRST_LINE" =~ ^([a-z]+):\ (.+)$ ]]; then
+    echo "Error: Commit message must be in the format 'tag: <message>'"
+    echo "Allowed tags: ${ALLOWED_TAGS[*]}"
+    exit 1
+fi
+
+# Extract tag and message
+TAG="${BASH_REMATCH[1]}"
+MESSAGE="${BASH_REMATCH[2]}"
+
+# Check if tag is in allowed list
+if [[ ! " ${ALLOWED_TAGS[@]} " =~ " $TAG " ]]; then
+    echo "Error: Invalid tag '$TAG'. Allowed tags: ${ALLOWED_TAGS[*]}"
+    exit 1
+fi
+
+# Check if message is empty
+if [[ -z "$MESSAGE" ]]; then
+    echo "Error: Commit message cannot be empty."
+    exit 1
+fi
+
+exit 0
