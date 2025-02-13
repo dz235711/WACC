@@ -11,9 +11,15 @@ object Backend extends Tag("wacc.Backend")
 
 private val TimeoutCode = 124
 
+// Regex to match addresses in the output of the compiled program
 private val addrRegex = "0x[0-9a-fA-F]+".r
 private val errRegex = "fatal error:.+".r
 
+/** Get the exit status of the frontend
+ *
+ * @param path Path to the file
+ * @return The exit status of the frontend
+ */
 def frontendStatus(path: String): Int = partiallyCompile(path, _ => 0, status => status)
 
 def fullExec(path: String, input: String): Option[String] =
@@ -23,6 +29,14 @@ def fullExec(path: String, input: String): Option[String] =
     _ => None
   )
 
+/** Runs the frontend of the compiler
+ *
+ * @param path Path to the file
+ * @param transformer Function to transform the typed AST
+ * @param statuser Function to transform the error status code
+ * @tparam T Return type of the transformer and statuser functions
+ * @return The result of the transformer or statuser function
+ */
 private def partiallyCompile[T](path: String, transformer: TypedAST.Program => T, statuser: Int => T): T =
   readFile(path) match
     case None =>
@@ -33,6 +47,12 @@ private def partiallyCompile[T](path: String, transformer: TypedAST.Program => T
         case Left(status, _) => statuser(status)
         case Right(prog)     => transformer(prog)
 
+/** Runs backend of the compiler
+ *
+ * @param prog Typed AST of the program
+ * @param input Input to the program
+ * @return Output of the program
+ */
 private def runProgram(prog: TypedAST.Program, input: String): String = {
   // Create temporary file to write compiled assembly into
   val source = new File("test.s")
