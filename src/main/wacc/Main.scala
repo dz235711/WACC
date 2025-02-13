@@ -43,7 +43,7 @@ def main(args: Array[String]): Unit = {
   val lines = file.get
 
   // Run the frontend
-  runFrontendPending(lines, verbose) match {
+  runFrontend(lines, verbose) match {
     case Right(program) =>
       // Run the backend
       val output = runBackend(program, verbose)
