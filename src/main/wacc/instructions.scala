@@ -50,3 +50,26 @@ case class ShiftLogicalLeft(dest: Register | Pointer, count: Immediate) extends 
 case class ShiftLogicalRight(dest: Register | Pointer, count: Immediate) extends Instruction
 case class Test(src1: Register | Pointer, src2: Immediate | Register) extends Instruction
 case class Compare(src1: Register | Pointer, src2: Immediate | Register | Pointer) extends Instruction
+
+// Jump instructions
+case class Jmp(label: String) extends Instruction
+case class JmpEqual(label: String) extends Instruction
+case class JmpNotEqual(label: String) extends Instruction
+case class JmpGreater(label: String) extends Instruction
+case class JmpGreaterEqual(label: String) extends Instruction
+case class JmpLess(label: String) extends Instruction
+case class JmpLessEqual(label: String) extends Instruction
+case class JmpZero(label: String) extends Instruction
+case class JmpNotZero(label: String) extends Instruction
+case class JumpCarry(label: String) extends Instruction
+case class JumpNotCarry(label: String) extends Instruction
+case class JumpOverflow(label: String) extends Instruction
+case class JumpNotOverflow(label: String) extends Instruction
+case class JumpSign(label: String) extends Instruction
+case class JumpNotSign(label: String) extends Instruction
+case class JumpParity(label: String) extends Instruction
+case class JumpNotParity(label: String) extends Instruction
+case class JumpAbove(label: String) extends Instruction
+case class JumpAboveEqual(label: String) extends Instruction
+case class JumpBelow(label: String) extends Instruction
+case class JumpBelowEqual(label: String) extends Instruction
