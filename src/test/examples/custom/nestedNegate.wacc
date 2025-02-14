@@ -1,0 +1,5 @@
+# Only the inner-most negation should used as part of the int literal
+
+begin
+  int x = -(- -5)
+end
