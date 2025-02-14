@@ -6,16 +6,28 @@ import org.scalatest.matchers.should.Matchers.*
 class BackendValidRuntimeerrDividebyzeroTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/runtimeErr/divideByZero/"
 
-  it should "execute divZero.wacc" taggedAs (Backend) in pending /*{
-    fullExec(dir + "divZero.wacc", "") shouldBe Some("#runtime_error#")
+  it should "execute divZero.wacc" taggedAs Backend in pending /*{
+    val programTester = new ProgramTester(dir + "divZero.wacc")
+    val (exitStatus, output) = programTester.run(programTester.testInput)
+
+    exitStatus shouldBe programTester.expectedExitStatus
+    output shouldBe programTester.expectedOutput
   }*/
 
-  it should "execute divideByZero.wacc" taggedAs (Backend) in pending /*{
-    fullExec(dir + "divideByZero.wacc", "") shouldBe Some("#runtime_error#")
+  it should "execute divideByZero.wacc" taggedAs Backend in pending /*{
+    val programTester = new ProgramTester(dir + "divideByZero.wacc")
+    val (exitStatus, output) = programTester.run(programTester.testInput)
+
+    exitStatus shouldBe programTester.expectedExitStatus
+    output shouldBe programTester.expectedOutput
   }*/
 
-  it should "execute modByZero.wacc" taggedAs (Backend) in pending /*{
-    fullExec(dir + "modByZero.wacc", "") shouldBe Some("#runtime_error#")
+  it should "execute modByZero.wacc" taggedAs Backend in pending /*{
+    val programTester = new ProgramTester(dir + "modByZero.wacc")
+    val (exitStatus, output) = programTester.run(programTester.testInput)
+
+    exitStatus shouldBe programTester.expectedExitStatus
+    output shouldBe programTester.expectedOutput
   }*/
 
 }
