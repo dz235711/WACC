@@ -6,11 +6,11 @@ import org.scalatest.matchers.should.Matchers.*
 class ValidIoTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/IO/"
 
-  it should "frontend analyse IOLoop.wacc" taggedAs (Frontend) in {
+  it should "frontend analyse IOLoop.wacc" taggedAs Frontend in {
     frontendStatus(dir + "IOLoop.wacc") shouldBe 0
   }
 
-  it should "frontend analyse IOSequence.wacc" taggedAs (Frontend) in {
+  it should "frontend analyse IOSequence.wacc" taggedAs Frontend in {
     frontendStatus(dir + "IOSequence.wacc") shouldBe 0
   }
 
