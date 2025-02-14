@@ -73,3 +73,16 @@ case class JumpAbove(label: String) extends Instruction
 case class JumpAboveEqual(label: String) extends Instruction
 case class JumpBelow(label: String) extends Instruction
 case class JumpBelowEqual(label: String) extends Instruction
+
+// Data transfer instructions
+case class Mov(dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction
+// TODO: CMovcc
+case class Push(src: Register | Pointer | Immediate) extends Instruction
+case class Pop(dest: Register | Pointer) extends Instruction
+case class Lea(dest: Register, src: Pointer) extends Instruction
+
+// Control transfer instructions
+case class Call(label: String) extends Instruction
+case class Ret(imm: Option[Immediate]) extends Instruction
+object Nop extends Instruction
+object Halt extends Instruction
