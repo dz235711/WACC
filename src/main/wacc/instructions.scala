@@ -1,5 +1,4 @@
-import wacc.Register
-import wacc.Size
+package wacc
 
 type Immediate = Int
 
@@ -36,7 +35,7 @@ case class Inc(dest: Register | Pointer) extends Instruction
 case class Div(src: Register | Pointer) extends Instruction
 case class SignedDiv(src: Register | Pointer) extends Instruction
 case class Mul(src: Register | Pointer) extends Instruction
-// TODO: IMUL with default values
+case class SignedMul(dest: Option[Register], src1: Register | Pointer, src2: Option[Immediate])
 case class Neg(dest: Register | Pointer) extends Instruction
 case class Not(dest: Register | Pointer) extends Instruction
 case class Sub(dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction
