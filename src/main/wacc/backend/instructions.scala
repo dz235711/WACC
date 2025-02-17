@@ -26,6 +26,8 @@ case class RegScaleRegImmPointer(reg1: Register, scale: Int, reg2: Register, imm
 case class ScaleRegImmPointer(scale: Int, reg: Register, imm: Immediate)(val size: Size) extends Pointer
 
 sealed trait Instruction
+
+/** Trait to define apply methods which prevent memory to memory instructions. */
 sealed trait RestrictedInstruction extends Instruction {
   def apply(dest: Register | Pointer, src: Immediate | Register): this.type = this(dest, src)
   def apply(dest: Register, src: Immediate | Register | Pointer): this.type = this(dest, src)
