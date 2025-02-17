@@ -8,7 +8,7 @@ package wacc
  */
 def runBackend(program: TypedAST.Program, verbose: Boolean): String = {
   val asmCode = Translator().translate(program)
-  printVerboseInfo(verbose, "ASM IR", asmCode, Console.CYAN)
+  printVerboseInfo(verbose, "ASM IR", asmCode.map(i => "\t" + i.toString).mkString("\n"), Console.CYAN)
   val output = Stringifier().stringify(asmCode)
   printVerboseInfo(verbose, "Output", output, Console.GREEN)
   output
