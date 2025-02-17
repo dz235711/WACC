@@ -26,16 +26,15 @@ case class RegScaleRegImmPointer(reg1: Register, scale: Int, reg2: Register, imm
 case class ScaleRegImmPointer(scale: Int, reg: Register, imm: Immediate)(val size: Size) extends Pointer
 
 sealed trait Instruction
+sealed trait RestrictedInstruction extends Instruction {
+  def apply(dest: Register | Pointer, src: Immediate | Register): this.type = this(dest, src)
+  def apply(dest: Register, src: Immediate | Register | Pointer): this.type = this(dest, src)
+}
 
 // Arithmetic instructions
-case class AddCarry private (dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction {
-  def apply(dest: Register | Pointer, src: Immediate | Register): AddCarry = this(dest, src)
-  def apply(dest: Register, src: Immediate | Register | Pointer): AddCarry = this(dest, src)
-}
-case class Add(dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction {
-  def apply(dest: Register | Pointer, src: Immediate | Register): Add = this(dest, src)
-  def apply(dest: Register, src: Immediate | Register | Pointer): Add = this(dest, src)
-}
+case class AddCarry private (dest: Register | Pointer, src: Immediate | Register | Pointer)
+    extends RestrictedInstruction
+case class Add(dest: Register | Pointer, src: Immediate | Register | Pointer) extends RestrictedInstruction
 case class Dec(dest: Register | Pointer) extends Instruction
 case class Inc(dest: Register | Pointer) extends Instruction
 case class Div(src: Register | Pointer) extends Instruction
@@ -44,33 +43,18 @@ case class Mul(src: Register | Pointer) extends Instruction
 case class SignedMul(dest: Option[Register], src1: Register | Pointer, src2: Option[Immediate])
 case class Neg(dest: Register | Pointer) extends Instruction
 case class Not(dest: Register | Pointer) extends Instruction
-case class Sub(dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction {
-  def apply(dest: Register | Pointer, src: Immediate | Register): Sub = this(dest, src)
-  def apply(dest: Register, src: Immediate | Register | Pointer): Sub = this(dest, src)
-}
+case class Sub(dest: Register | Pointer, src: Immediate | Register | Pointer) extends RestrictedInstruction
 
 // Logical and bitwise instrucitons
-case class And(dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction {
-  def apply(dest: Register | Pointer, src: Immediate | Register): And = this(dest, src)
-  def apply(dest: Register, src: Immediate | Register | Pointer): And = this(dest, src)
-}
-case class Or(dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction {
-  def apply(dest: Register | Pointer, src: Immediate | Register): Or = this(dest, src)
-  def apply(dest: Register, src: Immediate | Register | Pointer): Or = this(dest, src)
-}
-case class Xor(dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction {
-  def apply(dest: Register | Pointer, src: Immediate | Register): Xor = this(dest, src)
-  def apply(dest: Register, src: Immediate | Register | Pointer): Xor = this(dest, src)
-}
+case class And(dest: Register | Pointer, src: Immediate | Register | Pointer) extends RestrictedInstruction
+case class Or(dest: Register | Pointer, src: Immediate | Register | Pointer) extends RestrictedInstruction
+case class Xor(dest: Register | Pointer, src: Immediate | Register | Pointer) extends RestrictedInstruction
 case class ShiftArithLeft(dest: Register | Pointer, count: Immediate) extends Instruction
 case class ShiftArithRight(dest: Register | Pointer, count: Immediate) extends Instruction
 case class ShiftLogicalLeft(dest: Register | Pointer, count: Immediate) extends Instruction
 case class ShiftLogicalRight(dest: Register | Pointer, count: Immediate) extends Instruction
 case class Test(src1: Register | Pointer, src2: Immediate | Register) extends Instruction
-case class Compare(src1: Register | Pointer, src2: Immediate | Register | Pointer) extends Instruction {
-  def apply(dest: Register | Pointer, src: Immediate | Register): Compare = this(dest, src)
-  def apply(dest: Register, src: Immediate | Register | Pointer): Compare = this(dest, src)
-}
+case class Compare(src1: Register | Pointer, src2: Immediate | Register | Pointer) extends RestrictedInstruction
 
 // Jump instructions
 case class Jmp(label: String) extends Instruction
@@ -96,11 +80,7 @@ case class JumpBelow(label: String) extends Instruction
 case class JumpBelowEqual(label: String) extends Instruction
 
 // Data transfer instructions
-case class Mov private (dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction {
-  def apply(dest: Register | Pointer, src: Immediate | Register): Mov = this(dest, src)
-  def apply(dest: Register, src: Immediate | Register | Pointer): Mov = this(dest, src)
-}
-// TODO: CMovcc
+case class Mov private (dest: Register | Pointer, src: Immediate | Register | Pointer) extends RestrictedInstruction
 case class Push(src: Register | Pointer | Immediate) extends Instruction
 case class Pop(dest: Register | Pointer) extends Instruction
 case class Lea(dest: Register, src: Pointer) extends Instruction
