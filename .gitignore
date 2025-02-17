@@ -5,6 +5,7 @@
 
 wacc-compiler
 test.wacc
+reports/
 
 # Intellij
 .idea/

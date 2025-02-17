@@ -1,0 +1,5 @@
+# Parsing of negation unary operator followed by a space should succeed
+
+begin
+  print - 5
+end

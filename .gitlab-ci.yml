@@ -1,8 +1,9 @@
 default:
-  image: gumjoe/wacc-ci-scala:slim
+  image: gumjoe/wacc-ci-scala:x86
 
 stages:
   - build
+  - style
   - test
 
 build:
@@ -10,10 +11,36 @@ build:
   script:
     - scala compile .
 
+style:
+  stage: style
+  dependencies:
+    - build
+  script:
+    - scalafmt --test .
+  allow_failure: true
 
-test:
+frontend-test:
   stage: test
   dependencies:
     - build
   script:
-    - scala test . 
+    - scala test . -- -u reports -n wacc.Frontend
+  artifacts:
+    when: always
+    paths:
+      - reports/
+    reports:
+      junit: reports/*.xml
+
+backend-test:
+  stage: test
+  dependencies:
+    - build
+  script:
+    - scala test . -- -u reports -n wacc.Backend
+  artifacts:
+    when: always
+    paths:
+      - reports/
+    reports:
+      junit: reports/*.xml
