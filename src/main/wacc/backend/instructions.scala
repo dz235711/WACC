@@ -80,6 +80,7 @@ object Compare {
 }
 
 // Jump instructions
+case class DefineLabel(label: String) extends Instruction
 case class Jmp(label: String) extends Instruction
 case class JmpEqual(label: String) extends Instruction
 case class JmpNotEqual(label: String) extends Instruction
