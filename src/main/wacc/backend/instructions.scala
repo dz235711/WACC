@@ -90,3 +90,6 @@ case class Call(label: String) extends Instruction
 case class Ret(imm: Option[Immediate]) extends Instruction
 object Nop extends Instruction
 object Halt extends Instruction
+
+// Comment instruction
+case class Comment(comment: String) extends Instruction
