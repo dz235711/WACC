@@ -4,30 +4,6 @@ import parsley.{Failure, Success}
 import WaccErrorBuilder.{format, setLines}
 import parsley.errors.ErrorBuilder
 
-/** Prints a message with a title if verbose mode is enabled
- *
- * @param verbose Whether verbose mode is enabled
- * @param title Title of the message
- * @param msg Message to print
- */
-def printVerboseInfo(verbose: Boolean, title: String, msg: Any, colour: String): Unit = {
-  if (verbose) {
-    println(colour + Console.BOLD)
-
-    val dashes = "-" * ((80 - title.length) / 2)
-    println(dashes + title + dashes + "-" * ((80 - title.length) % 2))
-
-    println(Console.RESET + colour)
-    println(msg.toString)
-    println(Console.RESET + colour + Console.BOLD)
-
-    val dashes2 = "-" * ((80 - title.length - 1) / 2)
-    println(dashes2 + "/" + title + dashes2 + "-" * ((80 - title.length - 1) % 2))
-
-    println(Console.RESET)
-  }
-}
-
 /** Runs the frontend of the compiler (parser, renamer, type checker)
  *
  * @param linesList List of lines from the input file
