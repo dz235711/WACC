@@ -14,7 +14,7 @@ def runFrontend(linesList: List[String], verbose: Boolean): Either[(Int, List[Wa
   val lines = linesList.mkString("\n")
 
   given ErrorBuilder[WaccError] = new WaccErrorBuilder
-  given errCtx: ErrorContext = new ErrorContext
+  given errCtx: MutableContext[WaccError] = new MutableContext()
 
   // Print input
   printVerboseInfo(verbose, "Input", lines, Console.YELLOW)
