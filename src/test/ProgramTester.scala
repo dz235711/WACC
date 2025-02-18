@@ -5,6 +5,7 @@ import java.io.{File, FileNotFoundException, PrintWriter}
 // Regex to match addresses in the output of the compiled program
 private val AddrRegex = "0x[0-9a-fA-F]+".r
 private val ErrRegex = "fatal error:.+".r
+private val HeaderRegex = "# (.*?):.*$".r
 
 /** Class to test a program's execution
  * 
@@ -32,14 +33,15 @@ class ProgramTester(path: String) {
       val content = lines.slice(1, lines.length).map(l => l.slice(2, l.length)).mkString("\n")
 
       header match {
-        case "# Input:"  => input = content
-        case "# Output:" => output = content
-        case "# Exit:" =>
+        case HeaderRegex("Input")  => input = header.slice("# Input: ".length, header.length)
+        case HeaderRegex("Output") => output = content
+        case HeaderRegex("Exit") =>
           status = content.toIntOption match
             case Some(s) =>
               if (s == TimeoutCode) throw new Exception("Invalid exit status")
               s
             case None => throw new Exception("Invalid exit status")
+        case _ => ()
       }
     }
 
