@@ -6,4 +6,10 @@ package wacc
  * @param verbose Whether verbose mode is enabled
  * @return Output of the backend - ASM code as a string
  */
-def runBackend(program: TypedAST.Program, verbose: Boolean): String = ???
+def runBackend(program: TypedAST.Program, verbose: Boolean): String = {
+  val asmCode = Translator().translate(program)
+  printVerboseInfo(verbose, "ASM IR", asmCode.map(i => "\t" + i.toString).mkString("\n"), Console.CYAN)
+  val output = Stringifier().stringify(asmCode)
+  printVerboseInfo(verbose, "Output", output, Console.GREEN)
+  output
+}

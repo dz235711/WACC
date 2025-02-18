@@ -3,6 +3,34 @@ package wacc
 import java.io.FileNotFoundException
 import scala.sys.exit
 
+/** Prints a message with a title if verbose mode is enabled
+ *
+ * @param verbose Whether verbose mode is enabled
+ * @param title   Title of the message
+ * @param msg     Message to print
+ * @param colour  Colour of the message
+ */
+def printVerboseInfo(verbose: Boolean, title: String, msg: Any, colour: String): Unit = {
+  val HEADER_SIZE = 80
+  if (verbose) {
+    println(colour + Console.BOLD)
+
+    // Prints "---- title ----" with total length of HEADER_SIZE
+    val dashes = "-" * ((HEADER_SIZE - title.length) / 2)
+    println(dashes + title + dashes + "-" * ((HEADER_SIZE - title.length) % 2))
+
+    println(Console.RESET + colour)
+    println(msg.toString)
+    println(Console.RESET + colour + Console.BOLD)
+
+    // Prints "---- /title ----" with total length of HEADER_SIZE
+    val dashes2 = "-" * ((HEADER_SIZE - title.length - 1) / 2)
+    println(dashes2 + "/" + title + dashes2 + "-" * ((HEADER_SIZE - title.length - 1) % 2))
+
+    println(Console.RESET)
+  }
+}
+
 /** Reads a file and returns a list of lines
  *
  * @param path Path to the file

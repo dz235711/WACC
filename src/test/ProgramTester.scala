@@ -79,7 +79,13 @@ class ProgramTester(path: String) {
 
     // Create the processes to assemble and run the compiled assembly
     val pBuilder = new ProcessBuilder()
-    pBuilder.command("gcc", "-o", "test", "-z", "noexecstack", "test.s").start().waitFor()
+
+    // Assemble the file with GCC
+    val assembleProcess = pBuilder.command("gcc", "-o", "test", "-z", "noexecstack", "test.s").start()
+    assembleProcess.waitFor()
+    if (assembleProcess.exitValue() == 1)
+      throw new Exception("Failed to assemble with GCC")
+
     val process = pBuilder.command("timeout", "1s", "./test").start()
 
     // Feed input to the process
