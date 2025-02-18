@@ -52,7 +52,7 @@ object Sub {
   def apply(dest: Register, src: Immediate | Register | Pointer): Sub = new Sub(dest, src)
 }
 
-// Logical and bitwise instrucitons
+// Logical and bitwise instructions
 case class And private (dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction
 object And {
   def apply(dest: Pointer, src: Immediate | Register): And = new And(dest, src)

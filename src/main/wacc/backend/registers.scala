@@ -20,7 +20,7 @@ case class RBX(width: Size) extends Register
 /** The register for the 4th function argument, saved by caller. */
 case class RCX(width: Size) extends Register
 
-/** The register for the 3rd function argyment, saved by caller. */
+/** The register for the 3rd function argument, saved by caller. */
 case class RDX(width: Size) extends Register
 
 /** The register for the 2nd function argument, saved by caller. */
