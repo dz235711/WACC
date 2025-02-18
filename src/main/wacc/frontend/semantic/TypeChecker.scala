@@ -51,7 +51,7 @@ sealed class TypeChecker {
   extension (ty: SemType)
     private def satisfies(
         pos: (Int, Int)
-    )(c: Constraint)(using ctx: ErrorContext): Option[SemType] = (ty, c) match {
+    )(c: Constraint)(using ctx: MutableContext[WaccError]): Option[SemType] = (ty, c) match {
       // Check the rest of the cases
       case (ty, Is(refTy)) =>
         (ty ~ refTy).orElse {
@@ -94,7 +94,7 @@ sealed class TypeChecker {
    */
   def checkProg(
       p: RenamedAST.Program
-  )(using ctx: ErrorContext): TypedAST.Program = {
+  )(using ctx: MutableContext[WaccError]): TypedAST.Program = {
     // Populate funcTable
     p.fs.foreach(f => funcTable += (f.v.v.UID -> f.params))
 
@@ -111,7 +111,7 @@ sealed class TypeChecker {
    */
   private def checkFunc(
       func: RenamedAST.Func
-  )(using ctx: ErrorContext): TypedAST.Func = {
+  )(using ctx: MutableContext[WaccError]): TypedAST.Func = {
     val id = checkIdent(func.v, Unconstrained)._2
     val params = func.params.map(checkIdent(_, Unconstrained)._2)
     val body = checkStmt(func.body, Is(id.getType))
@@ -127,7 +127,7 @@ sealed class TypeChecker {
   private def checkStmt(
       stmt: RenamedAST.Stmt,
       retC: Constraint
-  )(using ctx: ErrorContext): TypedAST.Stmt = stmt match {
+  )(using ctx: MutableContext[WaccError]): TypedAST.Stmt = stmt match {
     case RenamedAST.Skip() => TypedAST.Skip
     case RenamedAST.Decl(v, r) =>
       val (ty, vTyped) = checkIdent(v, Unconstrained)
@@ -178,7 +178,7 @@ sealed class TypeChecker {
   private def checkExpr(
       expr: RenamedAST.Expr,
       c: Constraint
-  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Expr) = expr match {
+  )(using ctx: MutableContext[WaccError]): (Option[SemType], TypedAST.Expr) = expr match {
     case RenamedAST.Not(e) =>
       (
         BoolType.satisfies(e.pos)(c),
@@ -254,7 +254,7 @@ sealed class TypeChecker {
       c: Constraint
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
-  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Expr) =
+  )(using ctx: MutableContext[WaccError]): (Option[SemType], TypedAST.Expr) =
     (
       IntType.satisfies(e1.pos)(c),
       build(checkExpr(e1, Is(IntType))._2, checkExpr(e2, Is(IntType))._2)
@@ -274,7 +274,7 @@ sealed class TypeChecker {
       c: Constraint
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
-  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Expr) =
+  )(using ctx: MutableContext[WaccError]): (Option[SemType], TypedAST.Expr) =
     val (lTy, lTyped) = checkExpr(e1, IsOrderable)
     val (_, rTyped) = checkExpr(e2, lTy.map(Is(_)).getOrElse(IsOrderable))
     (BoolType.satisfies(e1.pos)(c), build(lTyped, rTyped))
@@ -293,7 +293,7 @@ sealed class TypeChecker {
       c: Constraint
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
-  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Expr) =
+  )(using ctx: MutableContext[WaccError]): (Option[SemType], TypedAST.Expr) =
     val (lTy, lTyped) = checkExpr(e1, Unconstrained)
     val (_, rTyped) = checkExpr(e2, lTy.map(Is(_)).getOrElse(Unconstrained))
     (BoolType.satisfies(e1.pos)(c), build(lTyped, rTyped))
@@ -312,7 +312,7 @@ sealed class TypeChecker {
       c: Constraint
   )(
       build: (TypedAST.Expr, TypedAST.Expr) => TypedAST.Expr
-  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Expr) =
+  )(using ctx: MutableContext[WaccError]): (Option[SemType], TypedAST.Expr) =
     (
       BoolType.satisfies(e1.pos)(c),
       build(checkExpr(e1, Is(BoolType))._2, checkExpr(e2, Is(BoolType))._2)
@@ -327,7 +327,7 @@ sealed class TypeChecker {
   private def checkLVal(
       lval: RenamedAST.LValue,
       c: Constraint
-  )(using ctx: ErrorContext): (Option[SemType], TypedAST.LValue) = lval match {
+  )(using ctx: MutableContext[WaccError]): (Option[SemType], TypedAST.LValue) = lval match {
     case id: RenamedAST.Ident        => checkIdent(id, c)
     case arrEl: RenamedAST.ArrayElem => checkArrayElem(arrEl, c)
     case RenamedAST.Fst(l)           => checkPairElem(l, c, true)
@@ -343,7 +343,7 @@ sealed class TypeChecker {
   private def checkRVal(
       rval: RenamedAST.RValue,
       c: Constraint
-  )(using ctx: ErrorContext): (Option[SemType], TypedAST.RValue) = rval match {
+  )(using ctx: MutableContext[WaccError]): (Option[SemType], TypedAST.RValue) = rval match {
     case RenamedAST.ArrayLiter(es) =>
       // Try to unify the types of the array elements
       val elTy = es
@@ -413,7 +413,7 @@ sealed class TypeChecker {
   private def checkIdent(
       ident: RenamedAST.Ident,
       c: Constraint
-  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Ident) =
+  )(using ctx: MutableContext[WaccError]): (Option[SemType], TypedAST.Ident) =
     val qName = ident.v
     val ty = qName.declType
     val uid = qName.UID
@@ -429,7 +429,7 @@ sealed class TypeChecker {
   private def checkArrayElem(
       arrElem: RenamedAST.ArrayElem,
       c: Constraint
-  )(using ctx: ErrorContext): (Option[SemType], TypedAST.ArrayElem) =
+  )(using ctx: MutableContext[WaccError]): (Option[SemType], TypedAST.ArrayElem) =
     val (arrTy, vTyped) = checkIdent(arrElem.v, IsArray)
     val esTyped = arrElem.es.map(checkExpr(_, Is(IntType))._2)
 
@@ -465,7 +465,7 @@ sealed class TypeChecker {
       l: RenamedAST.LValue,
       c: Constraint,
       isFirst: Boolean
-  )(using ctx: ErrorContext): (Option[SemType], TypedAST.Fst | TypedAST.Snd) = {
+  )(using ctx: MutableContext[WaccError]): (Option[SemType], TypedAST.Fst | TypedAST.Snd) = {
     val (ty, lTyped) = checkLVal(l, IsPair)
     ty match {
       case Some(PairType(ty1, ty2)) =>
