@@ -8,7 +8,10 @@ class MutableContext[T](xs: ListBuffer[T] = new ListBuffer[T]) {
     *
     * @param x The object to add
     */
-  def error(x: T) = xs += x
+  def add(x: T): MutableContext[T] = {
+    xs += x
+    this
+  }
 
   /** Returns the list of objects in the context
     */

@@ -4,37 +4,42 @@ import wacc.Size.*
 
 class Stringifier {
   def stringify(instructions: List[Instruction]): String = {
-    given stringCtx: StringifyContext = new StringifyContext
+    given stringCtx: MutableContext[String] = new MutableContext()
 
-    stringCtx.addInstr(".intel_syntax noprefix")
-    stringCtx.addInstr(".globl main")
-    stringCtx.addInstr(".section .rodata")
-    stringCtx.addInstr(".text")
-    stringCtx.addInstr("main:")
+    stringCtx.add(".intel_syntax noprefix")
+    stringCtx.add(".globl main")
+    stringCtx.add(".section .rodata")
+    stringCtx.add(".text")
+    stringCtx.add("main:")
 
     instructions.foreach(stringifyInstr)
 
-    stringCtx.addInstr("ret")
+    stringCtx.add("ret")
 
-    stringCtx.addInstr("_exit:")
-    stringCtx.addInstr("push rbp")
-    stringCtx.addInstr("mov rbp, rsp")
-    stringCtx.addInstr("and rsp, -16")
-    stringCtx.addInstr("call exit@plt")
-    stringCtx.addInstr("mov rsp, rbp")
-    stringCtx.addInstr("pop rbp")
-    stringCtx.addInstr("ret")
+    stringCtx.add("_exit:")
+    stringCtx.add("push rbp")
+    stringCtx.add("mov rbp, rsp")
+    stringCtx.add("and rsp, -16")
+    stringCtx.add("call exit@plt")
+    stringCtx.add("mov rsp, rbp")
+    stringCtx.add("pop rbp")
+    stringCtx.add("ret")
 
     stringCtx.get
+      .map(instr => {
+        if (instr.startsWith(".") || instr.endsWith(":")) instr
+        else " " * INDENTATION_SIZE + instr
+      })
+      .mkString("\n")
   }
 
-  private def stringifyInstr(instr: Instruction)(using ctx: StringifyContext): Unit = instr match {
+  private def stringifyInstr(instr: Instruction)(using ctx: MutableContext[String]): Unit = instr match {
     case Nop => ()
     case Mov(dest, src) =>
       val destStr = stringifyOperand(dest)
       val srcStr = stringifyOperand(src)
-      ctx.addInstr(s"mov $destStr, $srcStr")
-    case Call("exit@plt") => ctx.addInstr(s"call _exit")
+      ctx.add(s"mov $destStr, $srcStr")
+    case Call("exit@plt") => ctx.add(s"call _exit")
     case _                => ()
   }
 

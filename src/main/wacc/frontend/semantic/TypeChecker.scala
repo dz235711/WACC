@@ -55,7 +55,7 @@ sealed class TypeChecker {
       // Check the rest of the cases
       case (ty, Is(refTy)) =>
         (ty ~ refTy).orElse {
-          ctx.error(
+          ctx.add(
             constructSpecialised(
               pos,
               1,
@@ -68,19 +68,19 @@ sealed class TypeChecker {
       case (kty: PairType, IsPair)                  => Some(kty)
       case (kty @ (IntType | CharType), IsReadable) => Some(kty)
       case (_, IsReadable) =>
-        ctx.error(
+        ctx.add(
           constructSpecialised(pos, 1, "Tried to read a non-readable type")
         )
         None
       case (kty @ (IntType | CharType), IsOrderable) => Some(kty)
       case (_, IsOrderable) =>
-        ctx.error(
+        ctx.add(
           constructSpecialised(pos, 1, "Tried to order a non-orderable type")
         )
         None
       case (kty: (ArrayType | PairType), IsFreeable) => Some(kty)
       case (_, IsFreeable) =>
-        ctx.error(
+        ctx.add(
           constructSpecialised(pos, 1, "Tried to free a non-freeable type")
         )
         None
@@ -141,7 +141,7 @@ sealed class TypeChecker {
       // Make sure the assignment has a known type
       rTy match {
         case Some(?) =>
-          ctx.error(
+          ctx.add(
             constructSpecialised(
               r.pos,
               1,
@@ -355,7 +355,7 @@ sealed class TypeChecker {
           }
         }
         .getOrElse {
-          ctx.error(
+          ctx.add(
             constructSpecialised(
               rval.pos,
               1,
@@ -438,7 +438,7 @@ sealed class TypeChecker {
       acc match {
         case Some(ArrayType(ty)) => Some(ty)
         case _ =>
-          ctx.error(
+          ctx.add(
             constructSpecialised(
               arrElem.pos,
               1,

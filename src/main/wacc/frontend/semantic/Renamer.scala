@@ -36,7 +36,7 @@ class Renamer private {
 
       // Check for redeclaration of function
       if (functionIds.contains(name)) {
-        ctx.error(
+        ctx.add(
           constructSpecialised(
             id.pos,
             name.length,
@@ -109,7 +109,7 @@ class Renamer private {
 
       // Check for redeclaration of parameter
       if (params.contains(id.v)) {
-        ctx.error(
+        ctx.add(
           constructSpecialised(
             id.pos,
             id.v.length,
@@ -151,7 +151,7 @@ class Renamer private {
 
       // Check if the variable is already declared in the current scope
       if (currentScope.contains(v.v)) {
-        ctx.error(
+        ctx.add(
           constructSpecialised(
             v.pos,
             v.v.length,
@@ -187,7 +187,7 @@ class Renamer private {
 
     case SyntaxAST.Return(e) =>
       if (!isFunc) {
-        ctx.error(
+        ctx.add(
           constructSpecialised(
             stmt.pos,
             6, // Length of "return"
@@ -272,7 +272,7 @@ class Renamer private {
 
         // Check if the function is declared
         val renamedIdent = if (!functionIds.contains(v.v)) {
-          ctx.error(
+          ctx.add(
             constructSpecialised(
               v.pos,
               v.v.length,
@@ -285,7 +285,7 @@ class Renamer private {
 
           // Check if the number of arguments is correct
           if (args.length != argLen) {
-            ctx.error(
+            ctx.add(
               constructSpecialised(
                 (v.pos._1, v.pos._2 + v.v.length),
                 1,
@@ -304,7 +304,7 @@ class Renamer private {
       ctx: MutableContext[WaccError]
   ): RenamedAST.Ident = {
     if (!scope.contains(v.v)) {
-      ctx.error(
+      ctx.add(
         constructSpecialised(
           v.pos,
           v.v.length,
