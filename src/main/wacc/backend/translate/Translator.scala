@@ -18,6 +18,5 @@ class Translator {
   private def translateStmt(stmt: Stmt)(using ctx: TranslateContext): Unit = stmt match {
     case Skip              => ctx.addInstr(Nop)
     case Exit(IntLiter(n)) => ctx.addInstr(Mov(RDI(W32), n)).addInstr(Call("exit@plt"))
-    case _                 => ()
   }
 }
