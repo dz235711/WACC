@@ -40,7 +40,6 @@ class Stringifier {
       val srcStr = stringifyOperand(src)
       ctx.add(s"mov $destStr, $srcStr")
     case Call("exit@plt") => ctx.add(s"call _exit")
-    case _                => ()
   }
 
   private def stringifyOperand(operand: Register | Pointer | Immediate | String): String = operand match {
