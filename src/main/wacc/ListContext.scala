@@ -2,13 +2,13 @@ package wacc
 
 import scala.collection.mutable.ListBuffer
 
-class MutableContext[T](xs: ListBuffer[T] = new ListBuffer[T]) {
+class ListContext[T](xs: ListBuffer[T] = new ListBuffer[T]) {
 
   /** Adds an object to the context list
     *
     * @param x The object to add
     */
-  def add(x: T): MutableContext[T] = {
+  def add(x: T): ListContext[T] = {
     xs += x
     this
   }
