@@ -77,24 +77,41 @@ class ProgramTester(path: String) {
     writer.flush()
     writer.close()
 
-    // Create the processes to assemble and run the compiled assembly
     val pBuilder = new ProcessBuilder()
 
-    // Assemble the file with GCC
-    val assembleProcess = pBuilder.command("gcc", "-o", "test", "-z", "noexecstack", "test.s").start()
-    assembleProcess.waitFor()
-    if (assembleProcess.exitValue() == 1)
-      throw new Exception("Failed to assemble with GCC")
+    val command =
+      if sys.env.get("USE_DOCKER").contains("true") then
+        pBuilder.command(
+          "docker",
+          "run",
+          "--rm",
+          "-v",
+          s"${new java.io.File(".").getAbsolutePath}:/workspace",
+          "--platform",
+          "linux/amd64",
+          "assembly-container",
+          "gcc -o test -z noexecstack test.s && timeout 1s ./test"
+        )
+      else
+        val assembleProcess = pBuilder.command("gcc", "-o", "test", "-z", "noexecstack", "test.s").start()
+        assembleProcess.waitFor()
+        if (assembleProcess.exitValue() == 1)
+          throw new Exception("Failed to assemble with GCC")
+        pBuilder.command("timeout", "1s", "./test")
 
-    val process = pBuilder.command("timeout", "1s", "./test").start()
+    // Run the command
+    val process = command.start()
 
     // Feed input to the process
     val iStream = process.getOutputStream
     iStream.write(input.getBytes())
     iStream.flush()
+
+    // Read output
     val output = process.getInputStream.readAllBytes().mkString
     process.waitFor()
 
+    // Get exit status
     val exitStatus = process.exitValue()
 
     // Delete the temporary files for assembly code and executable
