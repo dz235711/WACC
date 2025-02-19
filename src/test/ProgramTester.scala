@@ -59,6 +59,26 @@ class ProgramTester(path: String) {
   /** The expected exit status specified in the test file (0 if not specified) */
   val expectedExitStatus: Int = testData._3
 
+  /** Runs a command in the assembler container
+   *
+   * @param command The command to run
+   * @return The process builder for the command
+   */
+  private def dockerCommand(command: String): ProcessBuilder = {
+    val pBuilder = new ProcessBuilder()
+    pBuilder.command(
+      "docker",
+      "run",
+      "--rm",
+      "-v",
+      s"${new java.io.File(".").getAbsolutePath}:/workspace",
+      "--platform",
+      "linux/amd64",
+      "assembly-container",
+      command
+    )
+  }
+
   /** Compiles the program and runs it with some input
    * 
    * @param input The input to the program
@@ -79,27 +99,21 @@ class ProgramTester(path: String) {
 
     val pBuilder = new ProcessBuilder()
 
-    val command =
-      if sys.env.get("USE_DOCKER").contains("true") then
-        pBuilder.command(
-          "docker",
-          "run",
-          "--rm",
-          "-v",
-          s"${new java.io.File(".").getAbsolutePath}:/workspace",
-          "--platform",
-          "linux/amd64",
-          "assembly-container",
-          "gcc -o test -z noexecstack test.s && timeout 1s ./test"
-        )
-      else
-        val assembleProcess = pBuilder.command("gcc", "-o", "test", "-z", "noexecstack", "test.s").start()
-        assembleProcess.waitFor()
-        if (assembleProcess.exitValue() == 1)
-          throw new Exception("Failed to assemble with GCC")
-        pBuilder.command("timeout", "1s", "./test")
+    // Assemble the program
+    val assembleProcess =
+      if sys.env.get("USE_DOCKER").contains("true") then dockerCommand("gcc -o test -z noexecstack test.s").start()
+      else pBuilder.command("gcc", "-o", "test", "-z", "noexecstack", "test.s").start()
 
-    // Run the command
+    // Check if the assembly was successful
+    assembleProcess.waitFor()
+    if (assembleProcess.exitValue() == 1)
+      val assemblerOutput = new String(assembleProcess.getErrorStream.readAllBytes())
+      throw new Exception(s"Failed to assemble with GCC: $assemblerOutput")
+
+    // Run the program
+    val command =
+      if sys.env.get("USE_DOCKER").contains("true") then dockerCommand("timeout 1s ./test")
+      else pBuilder.command("timeout", "1s", "./test")
     val process = command.start()
 
     // Feed input to the process
@@ -108,7 +122,7 @@ class ProgramTester(path: String) {
     iStream.flush()
 
     // Read output
-    val output = process.getInputStream.readAllBytes().mkString
+    val output = new String(process.getInputStream.readAllBytes())
     process.waitFor()
 
     // Get exit status
