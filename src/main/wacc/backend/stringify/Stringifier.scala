@@ -17,10 +17,10 @@ class Stringifier {
 
     instructions.foreach(stringifyInstr)
 
-    stringCtx.add("ret")
-
-    addExit
-    addReadInt
+    if (flagCtx.get("exit").getOrElse(false)) then
+      addExit
+    if (flagCtx.get("readi").getOrElse(false)) then
+      addReadInt
 
     stringCtx.get
       .map(instr => {

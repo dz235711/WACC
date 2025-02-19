@@ -15,8 +15,8 @@ class MapContext[K, V](xs: MMap[K, V] = MMap.empty[K, V]) {
     this
   }
 
-  /** Returns the map of objects in the context
+  /** Returns the value of the object with the given key
     */
-  def get: IMap[K, V] = xs.toMap
+  def get(k: K): Option[V] = xs.get(k)
 
 }
