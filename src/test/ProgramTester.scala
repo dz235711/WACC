@@ -59,6 +59,26 @@ class ProgramTester(path: String) {
   /** The expected exit status specified in the test file (0 if not specified) */
   val expectedExitStatus: Int = testData._3
 
+  /** Runs a command in the assembler container
+   *
+   * @param command The command to run
+   * @return The process builder for the command
+   */
+  private def dockerCommand(command: String): ProcessBuilder = {
+    val pBuilder = new ProcessBuilder()
+    pBuilder.command(
+      "docker",
+      "run",
+      "--rm",
+      "-v",
+      s"${new java.io.File(".").getAbsolutePath}:/workspace",
+      "--platform",
+      "linux/amd64",
+      "assembly-container",
+      command
+    )
+  }
+
   /** Compiles the program and runs it with some input
    * 
    * @param input The input to the program
@@ -77,24 +97,35 @@ class ProgramTester(path: String) {
     writer.flush()
     writer.close()
 
-    // Create the processes to assemble and run the compiled assembly
     val pBuilder = new ProcessBuilder()
 
-    // Assemble the file with GCC
-    val assembleProcess = pBuilder.command("gcc", "-o", "test", "-z", "noexecstack", "test.s").start()
+    // Assemble the program
+    val assembleProcess =
+      if sys.env.get("USE_DOCKER").contains("true") then dockerCommand("gcc -o test -z noexecstack test.s").start()
+      else pBuilder.command("gcc", "-o", "test", "-z", "noexecstack", "test.s").start()
+
+    // Check if the assembly was successful
     assembleProcess.waitFor()
     if (assembleProcess.exitValue() == 1)
-      throw new Exception("Failed to assemble with GCC")
+      val assemblerOutput = new String(assembleProcess.getErrorStream.readAllBytes())
+      throw new Exception(s"Failed to assemble with GCC: $assemblerOutput")
 
-    val process = pBuilder.command("timeout", "1s", "./test").start()
+    // Run the program
+    val command =
+      if sys.env.get("USE_DOCKER").contains("true") then dockerCommand("timeout 1s ./test")
+      else pBuilder.command("timeout", "1s", "./test")
+    val process = command.start()
 
     // Feed input to the process
     val iStream = process.getOutputStream
     iStream.write(input.getBytes())
     iStream.flush()
-    val output = process.getInputStream.readAllBytes().mkString
+
+    // Read output
+    val output = new String(process.getInputStream.readAllBytes())
     process.waitFor()
 
+    // Get exit status
     val exitStatus = process.exitValue()
 
     // Delete the temporary files for assembly code and executable

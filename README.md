@@ -83,3 +83,20 @@ To run WACC locally, run the following command:
 ./compile [args]
 ```
 (The `--help` flag will show you the available options)
+
+## Testing
+To run the tests, run the following command:
+```shell
+scala test .
+```
+
+If you're not on an x86_64 machine, you can run the tests in a [docker container](https://docs.docker.com/engine/install):
+1. Build the docker image:
+```shell
+docker build --platform linux/amd64 -t assembly-container .
+```
+2. Run the tests:
+```shell
+USE_DOCKER=true scala test .
+```
+(You can also just set the environment variable: `export USE_DOCKER=true`)
