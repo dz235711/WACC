@@ -15,6 +15,8 @@ class Stringifier {
 
     instructions.foreach(stringifyInstr)
 
+    stringCtx.add("ret")
+
     if (flagCtx.get("exit").getOrElse(false)) then addExit
     if (flagCtx.get("readi").getOrElse(false)) then addReadInt
 
@@ -40,6 +42,34 @@ class Stringifier {
     case Call("scanf@plt") =>
       flagCtx.add("readi", true)
       stringCtx.add(s"call _readi")
+    case Call(label) => stringCtx.add(s"call $label")
+    case Ret(None)  => stringCtx.add("ret")
+    case Ret(Some(imm)) => stringCtx.add(s"ret ${imm.toString}")
+    case Push(src)  => stringCtx.add(s"push ${stringifyOperand(src)}")
+    case Pop(dest)  => stringCtx.add(s"pop ${stringifyOperand(dest)}")
+    case Lea(dest, src) => stringCtx.add(s"lea ${stringifyRegister(dest)}, ${stringifyPointer(src)}")
+    case DefineLabel(label) => stringCtx.add(s"$label:")
+    case Jmp(label) => stringCtx.add(s"jmp $label")
+    case JmpEqual(label) => stringCtx.add(s"je $label")
+    case JmpNotEqual(label) => stringCtx.add(s"jne $label")
+    case JmpGreater(label) => stringCtx.add(s"jg $label")
+    case JmpGreaterEqual(label) => stringCtx.add(s"jge $label")
+    case JmpLess(label) => stringCtx.add(s"jl $label")
+    case JmpLessEqual(label) => stringCtx.add(s"jle $label")
+    case JmpZero(label) => stringCtx.add(s"jz $label")
+    case JmpNotZero(label) => stringCtx.add(s"jnz $label")
+    case JumpCarry(label) => stringCtx.add(s"jc $label")
+    case JumpNotCarry(label) => stringCtx.add(s"jnc $label")
+    case JumpOverflow(label) => stringCtx.add(s"jo $label")
+    case JumpNotOverflow(label) => stringCtx.add(s"jno $label")
+    case JumpSign(label) => stringCtx.add(s"js $label")
+    case JumpNotSign(label) => stringCtx.add(s"jns $label")
+    case JumpParity(label) => stringCtx.add(s"jp $label")
+    case JumpNotParity(label) => stringCtx.add(s"jnp $label")
+    case JumpAbove(label) => stringCtx.add(s"ja $label")
+    case JumpAboveEqual(label) => stringCtx.add(s"jae $label")
+    case JumpBelow(label) => stringCtx.add(s"jb $label")
+    case JumpBelowEqual(label) => stringCtx.add(s"jbe $label")
   }
 
   private def stringifyOperand(operand: Register | Pointer | Immediate | String): String = operand match {
