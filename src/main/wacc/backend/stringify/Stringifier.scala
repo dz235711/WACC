@@ -70,6 +70,15 @@ class Stringifier {
     case JumpAboveEqual(label) => stringCtx.add(s"jae $label")
     case JumpBelow(label) => stringCtx.add(s"jb $label")
     case JumpBelowEqual(label) => stringCtx.add(s"jbe $label")
+    case And(dest, src) => stringCtx.add(s"and ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
+    case Or(dest, src) => stringCtx.add(s"or ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
+    case Xor(dest, src) => stringCtx.add(s"xor ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
+    case ShiftArithLeft(dest, count) => stringCtx.add(s"sal ${stringifyOperand(dest)}, $count")
+    case ShiftArithRight(dest, count) => stringCtx.add(s"sar ${stringifyOperand(dest)}, $count")
+    case ShiftLogicalLeft(dest, count) => stringCtx.add(s"shl ${stringifyOperand(dest)}, $count")
+    case ShiftLogicalRight(dest, count) => stringCtx.add(s"shr ${stringifyOperand(dest)}, $count")
+    case Test(src1, src2) => stringCtx.add(s"test ${stringifyOperand(src1)}, ${stringifyOperand(src2)}")
+    case Compare(dest, src) => stringCtx.add(s"cmp ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
   }
 
   private def stringifyOperand(operand: Register | Pointer | Immediate | String): String = operand match {
