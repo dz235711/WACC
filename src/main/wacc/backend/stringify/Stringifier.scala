@@ -31,7 +31,6 @@ class Stringifier {
   private def stringifyInstr(
       instr: Instruction
   )(using stringCtx: ListContext[String], flagCtx: MapContext[String, Boolean]): Unit = instr match {
-    case Nop => ()
     case Mov(dest, src) =>
       val destStr = stringifyOperand(dest)
       val srcStr = stringifyOperand(src)
@@ -43,8 +42,9 @@ class Stringifier {
       flagCtx.add("readi", true)
       stringCtx.add(s"call _readi")
     case Call(label) => stringCtx.add(s"call $label")
-    case Ret(None)  => stringCtx.add("ret")
-    case Ret(Some(imm)) => stringCtx.add(s"ret ${imm.toString}")
+    case Ret(imm) => stringCtx.add(s"ret${ifDefined(imm, prefix = " ")}")
+    case Nop => stringCtx.add("nop")
+    case Halt => stringCtx.add("hlt")
     case Push(src)  => stringCtx.add(s"push ${stringifyOperand(src)}")
     case Pop(dest)  => stringCtx.add(s"pop ${stringifyOperand(dest)}")
     case Lea(dest, src) => stringCtx.add(s"lea ${stringifyRegister(dest)}, ${stringifyPointer(src)}")
@@ -88,7 +88,9 @@ class Stringifier {
     case Mul(src) => stringCtx.add(s"mul ${stringifyOperand(src)}")
     case SignedMul(dest, src1, src2) => stringCtx.add(s"imul ${ifDefined(dest, postfix = ", ")}${stringifyOperand(src1)}${ifDefined(src2, prefix = ", ")}")
     case Neg(dest) => stringCtx.add(s"neg ${stringifyOperand(dest)}")
+    case Not(dest) => stringCtx.add(s"not ${stringifyOperand(dest)}")
     case Sub(dest, src) => stringCtx.add(s"sub ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
+    case Comment(comment) => stringCtx.add(s"# $comment")
   }
 
   private def ifDefined(operand: Option[Register | Pointer | Immediate | String], prefix: String = "", postfix: String = ""): String = operand match {
