@@ -15,10 +15,8 @@ class Stringifier {
 
     instructions.foreach(stringifyInstr)
 
-    if (flagCtx.get("exit").getOrElse(false)) then
-      addExit
-    if (flagCtx.get("readi").getOrElse(false)) then
-      addReadInt
+    if (flagCtx.get("exit").getOrElse(false)) then addExit
+    if (flagCtx.get("readi").getOrElse(false)) then addReadInt
 
     stringCtx.get
       .map(instr => {
@@ -47,10 +45,20 @@ class Stringifier {
   private def stringifyOperand(operand: Register | Pointer | Immediate | String): String = operand match {
     case n: Immediate => n.toString
     case r: Register  => stringifyRegister(r)
+    case p: Pointer   => stringifyPointer(p)
     case s: String    => s
   }
 
-  def stringifyRegister(register: Register): String = register match {
+  private def stringifyPointer(pointer: Pointer) = pointer match {
+    case RegPointer(reg)                               => s"[$reg]"
+    case RegImmPointer(reg, imm)                       => s"[$reg + $imm]"
+    case RegRegPointer(reg1, reg2)                     => s"[$reg1 + $reg2]"
+    case RegScaleRegPointer(reg1, scale, reg2)         => s"[$reg1 + $scale * $reg2]"
+    case RegScaleRegImmPointer(reg1, scale, reg2, imm) => s"[$reg1 + $scale * $reg2 + $imm]"
+    case ScaleRegImmPointer(scale, reg, imm)           => s"[$scale * $reg + $imm]"
+  }
+
+  private def stringifyRegister(register: Register): String = register match {
     case RAX(s) => prependSize(s, "AX", false)
     case RBX(s) => prependSize(s, "BX", false)
     case RCX(s) => prependSize(s, "CX", false)
@@ -69,18 +77,18 @@ class Stringifier {
     case R15(s) => appendSize(s, "R15")
   }
 
-  private def prependSize(size: Size, reg: String, keepTail: Boolean = true): String = size match {
-    case W8  => (if keepTail then reg else reg.slice(0, 1)) + "L"
-    case W16 => reg
-    case W32 => "E" + reg
-    case W64 => "R" + reg
+  private def prependSize(size: Size, register: String, keepTail: Boolean = true): String = size match {
+    case W8  => (if keepTail then register else register.slice(0, register.length - 1)) + "L"
+    case W16 => register
+    case W32 => "E" + register
+    case W64 => "R" + register
   }
 
-  private def appendSize(size: Size, reg: String): String = size match {
-    case W8  => reg + "B"
-    case W16 => reg + "W"
-    case W32 => reg + "D"
-    case W64 => reg
+  private def appendSize(size: Size, register: String): String = size match {
+    case W8  => register + "B"
+    case W16 => register + "W"
+    case W32 => register + "D"
+    case W64 => register
   }
 
   private def addExit(using ctx: ListContext[String]): Unit = {
