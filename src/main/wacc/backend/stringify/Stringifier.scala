@@ -79,6 +79,21 @@ class Stringifier {
     case ShiftLogicalRight(dest, count) => stringCtx.add(s"shr ${stringifyOperand(dest)}, $count")
     case Test(src1, src2) => stringCtx.add(s"test ${stringifyOperand(src1)}, ${stringifyOperand(src2)}")
     case Compare(dest, src) => stringCtx.add(s"cmp ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
+    case AddCarry(dest, src) => stringCtx.add(s"adc ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
+    case Add(dest, src) => stringCtx.add(s"add ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
+    case Dec(dest) => stringCtx.add(s"dec ${stringifyOperand(dest)}")
+    case Inc(dest) => stringCtx.add(s"inc ${stringifyOperand(dest)}")
+    case Div(src) => stringCtx.add(s"div ${stringifyOperand(src)}")
+    case SignedDiv(src) => stringCtx.add(s"idiv ${stringifyOperand(src)}")
+    case Mul(src) => stringCtx.add(s"mul ${stringifyOperand(src)}")
+    case SignedMul(dest, src1, src2) => stringCtx.add(s"imul ${ifDefined(dest, postfix = ", ")}${stringifyOperand(src1)}${ifDefined(src2, prefix = ", ")}")
+    case Neg(dest) => stringCtx.add(s"neg ${stringifyOperand(dest)}")
+    case Sub(dest, src) => stringCtx.add(s"sub ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
+  }
+
+  private def ifDefined(operand: Option[Register | Pointer | Immediate | String], prefix: String = "", postfix: String = ""): String = operand match {
+    case Some(operand) => s"$prefix${stringifyOperand(operand)}$postfix"
+    case None          => ""
   }
 
   private def stringifyOperand(operand: Register | Pointer | Immediate | String): String = operand match {
