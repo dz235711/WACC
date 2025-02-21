@@ -9,5 +9,8 @@ test.s
 test
 reports/
 
+# Assembly
+*.s
+
 # Intellij
 .idea/

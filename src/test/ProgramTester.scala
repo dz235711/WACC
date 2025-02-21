@@ -87,15 +87,8 @@ class ProgramTester(path: String) {
   def run(input: String): (Int, String) = {
     val prog = runFrontend(lines, false).getOrElse(throw new Exception("Compilation error"))
 
-    // Create temporary file to write compiled assembly into
-    val source = new File("test.s")
-    source.createNewFile()
-
-    // Write assembly
-    val writer = new PrintWriter(source)
-    writer.write(runBackend(prog, false))
-    writer.flush()
-    writer.close()
+    // Write the program to a temporary file
+    val source = writeFile("test.s", runBackend(prog, false))
 
     val pBuilder = new ProcessBuilder()
 
