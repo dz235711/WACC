@@ -84,16 +84,6 @@ def main(args: Array[String]): Unit = {
     exit(1)
   }
 
-  if (path.get.contains("exit-1.wacc")) {
-    writeFile("exit-1.s", exit_1)
-    exit(0)
-  }
-
-  if (path.get.contains("echoBigInt.wacc")) {
-    writeFile("echoBigInt.s", echo_big_int)
-    exit(0)
-  }
-
   // Read the file
   val file = readFile(path.get)
   if (file.isEmpty) {
