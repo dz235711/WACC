@@ -43,7 +43,7 @@ case class Inc(dest: Register | Pointer) extends Instruction
 case class Div(src: Register | Pointer) extends Instruction
 case class SignedDiv(src: Register | Pointer) extends Instruction
 case class Mul(src: Register | Pointer) extends Instruction
-case class SignedMul(dest: Option[Register], src1: Register | Pointer, src2: Option[Immediate])
+case class SignedMul(dest: Option[Register], src1: Register | Pointer, src2: Option[Immediate]) extends Instruction
 case class Neg(dest: Register | Pointer) extends Instruction
 case class Not(dest: Register | Pointer) extends Instruction
 case class Sub private (dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction

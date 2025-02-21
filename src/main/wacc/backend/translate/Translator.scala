@@ -5,7 +5,7 @@ import wacc.Size.*
 
 class Translator {
   def translate(program: Program): List[Instruction] = {
-    given translateCtx: MutableContext[Instruction] = new MutableContext()
+    given translateCtx: ListContext[Instruction] = new ListContext()
     translateStmt(program.body)
     translateCtx.get
   }
@@ -15,7 +15,7 @@ class Translator {
    * @param stmt The statement to translate
    * @param ctx The context to add instructions to
    */
-  private def translateStmt(stmt: Stmt)(using ctx: MutableContext[Instruction]): Unit = stmt match {
+  private def translateStmt(stmt: Stmt)(using ctx: ListContext[Instruction]): Unit = stmt match {
     case Skip              => ctx.add(Nop)
     case Exit(IntLiter(n)) => ctx.add(Mov(RDI(W32), n)).add(Call("exit@plt"))
   }

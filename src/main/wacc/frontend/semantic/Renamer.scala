@@ -26,7 +26,7 @@ class Renamer private {
    * @param p The program to rename (ast)
    * @return The renamed program (RenamedAST)
    */
-  def renameProgram(p: SyntaxAST.Program)(using ctx: MutableContext[WaccError]): RenamedAST.Program = {
+  def renameProgram(p: SyntaxAST.Program)(using ctx: ListContext[WaccError]): RenamedAST.Program = {
     // Generate unique identifiers for all functions
     val fids = p.fs.map(f => {
       val (t, id) = f.decl
@@ -84,7 +84,7 @@ class Renamer private {
   private def renameFunc(
       f: SyntaxAST.Func,
       qualifiedName: QualifiedName
-  )(using ctx: MutableContext[WaccError]): RenamedAST.Func = {
+  )(using ctx: ListContext[WaccError]): RenamedAST.Func = {
     // Construct a map of the parameters to use as a scope for the body
     val funcScope: Scope = paramsToScope(f.params)
     val renamedBody = renameStmt(f.body, funcScope, Map(), true)._1
@@ -103,7 +103,7 @@ class Renamer private {
    */
   private def paramsToScope(
       params: List[SyntaxAST.Param]
-  )(using ctx: MutableContext[WaccError]): Scope =
+  )(using ctx: ListContext[WaccError]): Scope =
     params.foldLeft(Map())((params, param) => {
       val (t, id) = param
 
@@ -139,7 +139,7 @@ class Renamer private {
       parentScope: Scope,
       currentScope: Scope,
       isFunc: Boolean
-  )(using ctx: MutableContext[WaccError]): (RenamedAST.Stmt, Scope) = stmt match {
+  )(using ctx: ListContext[WaccError]): (RenamedAST.Stmt, Scope) = stmt match {
 
     case SyntaxAST.Skip() => (RenamedAST.Skip()(stmt.pos), currentScope)
 
@@ -258,7 +258,7 @@ class Renamer private {
    * @return The renamed rvalue
    */
   private def renameRValue(r: SyntaxAST.RValue, scope: Scope)(using
-      ctx: MutableContext[WaccError]
+      ctx: ListContext[WaccError]
   ): RenamedAST.RValue =
     r match {
       case SyntaxAST.ArrayLiter(es) =>
@@ -301,7 +301,7 @@ class Renamer private {
     }
 
   private def renameIdent(v: SyntaxAST.Ident, scope: Scope)(using
-      ctx: MutableContext[WaccError]
+      ctx: ListContext[WaccError]
   ): RenamedAST.Ident = {
     if (!scope.contains(v.v)) {
       ctx.add(
@@ -320,7 +320,7 @@ class Renamer private {
   private def renameArrayElem(
       arrElem: SyntaxAST.ArrayElem,
       scope: Scope
-  )(using ctx: MutableContext[WaccError]): RenamedAST.ArrayElem = {
+  )(using ctx: ListContext[WaccError]): RenamedAST.ArrayElem = {
     val renamedIdent = renameIdent(arrElem.ident, scope)
     RenamedAST.ArrayElem(renamedIdent, arrElem.es.map(renameExpr(_, scope)))(arrElem.pos)
   }
@@ -332,7 +332,7 @@ class Renamer private {
    * @return The renamed lvalue
    */
   private def renameLValue(l: SyntaxAST.LValue, scope: Scope)(using
-      ctx: MutableContext[WaccError]
+      ctx: ListContext[WaccError]
   ): RenamedAST.LValue =
     l match {
       case SyntaxAST.Fst(lNested) => RenamedAST.Fst(renameLValue(lNested, scope))(l.pos)
@@ -347,7 +347,7 @@ class Renamer private {
    * @param scope The scope of the expression
    * @return The renamed expression
    */
-  private def renameExpr(e: SyntaxAST.Expr, scope: Scope)(using ctx: MutableContext[WaccError]): RenamedAST.Expr =
+  private def renameExpr(e: SyntaxAST.Expr, scope: Scope)(using ctx: ListContext[WaccError]): RenamedAST.Expr =
     e match {
       case SyntaxAST.Not(eNested)    => RenamedAST.Not(renameExpr(eNested, scope))(e.pos)
       case SyntaxAST.Negate(eNested) => RenamedAST.Negate(renameExpr(eNested, scope))(e.pos)
@@ -391,7 +391,7 @@ class Renamer private {
 }
 
 object Renamer extends Renamer {
-  def rename(p: SyntaxAST.Program)(using ctx: MutableContext[WaccError]): RenamedAST.Program =
+  def rename(p: SyntaxAST.Program)(using ctx: ListContext[WaccError]): RenamedAST.Program =
     val renamer = new Renamer()
     renamer.renameProgram(p)
 }
