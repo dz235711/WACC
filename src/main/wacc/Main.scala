@@ -96,8 +96,9 @@ def main(args: Array[String]): Unit = {
   runFrontend(lines, verbose) match {
     case Right(program) =>
       // Run the backend
-      val output = runBackend(program, verbose)
-      println(output)
+      val assembly = runBackend(program, verbose)
+      // Output the assembly file
+      writeFile(path.get.split("/").last, assembly)
       exit(0)
     case Left((status, output)) =>
       // Print output msg or errors to output stream
