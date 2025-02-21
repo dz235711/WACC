@@ -5,16 +5,32 @@ import wacc.Size.*
 type Operand = Register | Pointer | Immediate | String
 
 class x86Stringifier {
+
+  /**
+    * Converts a list of instructions into a string representation
+    *
+    * @param instructions
+    * @return a string representation of the instructions
+    */
   def stringify(instructions: List[Instruction]): String = {
     instructions
       .map(instr => {
+        // we first convert the instruction to a string
         val translated = stringifyInstr(instr)
+
+        // we then add indentation if the instruction is not a label
         if (translated.startsWith(".") || translated.endsWith(":")) translated
         else s"${" " * INDENTATION_SIZE}translated"
       })
       .mkString("\n")
   }
 
+  /**
+    * Converts an instruction into a string representation
+    *
+    * @param instr
+    * @return a string representation of the instruction
+    */
   private def stringifyInstr(
       instr: Instruction
   ): String = instr match {
@@ -72,6 +88,14 @@ class x86Stringifier {
     case Comment(comment) => s"// $comment"
   }
 
+  /**
+    * Converts an operand into a string representation iff it is defined
+    *
+    * @param operand
+    * @param prefix
+    * @param postfix
+    * @return a string representation of the operand
+    */
   private def stringifyOperand(
       operand: Option[Operand],
       prefix: String = "",
@@ -81,6 +105,14 @@ class x86Stringifier {
     case None          => ""
   }
 
+  /**
+    * Converts an operand into a string representation
+    *
+    * @param operand
+    * @param prefix
+    * @param postfix
+    * @return a string representation of the operand
+    */
   private def stringifyOperand(operand: Operand): String = operand match {
     case n: Immediate => s"$n"
     case r: Register  => stringifyRegister(r)
@@ -88,6 +120,12 @@ class x86Stringifier {
     case s: String    => s
   }
 
+  /**
+    * Converts a pointer into a string representation
+    *
+    * @param pointer
+    * @return a string representation of the pointer
+    */
   private def stringifyPointer(pointer: Pointer): String = s"${ptrSize(pointer.size)} ${pointer match {
       case RegPointer(reg)           => s"[${stringifyOperand(reg)}]"
       case RegImmPointer(reg, imm)   => s"[${stringifyOperand(reg)}+${stringifyOperand(imm)}]"
@@ -100,6 +138,12 @@ class x86Stringifier {
         s"[${stringifyOperand(scale)}*${stringifyOperand(reg)}+${stringifyOperand(imm)}]"
     }}"
 
+  /**
+    * Converts a size into a string representation
+    *
+    * @param size
+    * @return a string representation of the size as a ptr
+    */
   private def ptrSize(size: Size): String = s"${size match {
       case W8  => "byte"
       case W16 => "word"
@@ -107,6 +151,12 @@ class x86Stringifier {
       case W64 => "qword"
     }} ptr"
 
+  /**
+    * Converts a register into a string representation
+    *
+    * @param register
+    * @return a string representation of the register
+    */
   private def stringifyRegister(register: Register): String = register match {
     case RAX(s) => prependSize(s, "ax", false)
     case RBX(s) => prependSize(s, "bx", false)
@@ -126,13 +176,30 @@ class x86Stringifier {
     case R15(s) => appendSize(s, "r15")
   }
 
+  /**
+    * Prepends a size to a register
+    *
+    * @param size
+    * @param register
+    * @param keepTail
+    * @return the register with the size prepended
+    */
   private def prependSize(size: Size, register: String, keepTail: Boolean = true): String = size match {
+    /* Some registers, like RAX converts to AL whilst ones like RSI converts to SIL and therefore for RSI we keep the
+     * tail ('I') whilst we chop the 'X' off RAX */
     case W8  => s"${(if keepTail then register else register.slice(0, register.length - 1))}l"
     case W16 => register
     case W32 => s"e$register"
     case W64 => s"r$register"
   }
 
+  /**
+    * Appends a size to a register
+    *
+    * @param size
+    * @param register
+    * @return the register with the size appended
+    */
   private def appendSize(size: Size, register: String): String = size match {
     case W8  => s"${register}b"
     case W16 => s"${register}w"
