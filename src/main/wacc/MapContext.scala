@@ -1,7 +1,6 @@
 package wacc
 
 import scala.collection.mutable.Map as MMap
-import scala.collection.immutable.Map as IMap
 
 class MapContext[K, V](xs: MMap[K, V] = MMap.empty[K, V]) {
 

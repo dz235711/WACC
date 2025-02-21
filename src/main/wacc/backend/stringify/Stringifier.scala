@@ -2,98 +2,79 @@ package wacc
 
 import wacc.Size.*
 
-class Stringifier {
+class x86Stringifier {
   def stringify(instructions: List[Instruction]): String = {
-    given stringCtx: ListContext[String] = new ListContext()
-    given flagCtx: MapContext[String, Boolean] = new MapContext()
-
-    stringCtx.add(".intel_syntax noprefix")
-    stringCtx.add(".globl main")
-    stringCtx.add(".section .rodata")
-    stringCtx.add(".text")
-    stringCtx.add("main:")
-
-    instructions.foreach(stringifyInstr)
-
-    stringCtx.add("ret")
-
-    if (flagCtx.get("exit").getOrElse(false)) then addExit
-    if (flagCtx.get("readi").getOrElse(false)) then addReadInt
-
-    stringCtx.get
+    instructions
       .map(instr => {
-        if (instr.startsWith(".") || instr.endsWith(":")) instr
-        else " " * INDENTATION_SIZE + instr
+        val translated = stringifyInstr(instr)
+        if (translated.startsWith(".") || translated.endsWith(":")) translated
+        else " " * INDENTATION_SIZE + translated
       })
       .mkString("\n")
   }
 
   private def stringifyInstr(
       instr: Instruction
-  )(using stringCtx: ListContext[String], flagCtx: MapContext[String, Boolean]): Unit = instr match {
-    case Mov(dest, src) =>
-      val destStr = stringifyOperand(dest)
-      val srcStr = stringifyOperand(src)
-      stringCtx.add(s"mov $destStr, $srcStr")
-    case Call("exit@plt") =>
-      flagCtx.add("exit", true)
-      stringCtx.add(s"call _exit")
-    case Call("scanf@plt") =>
-      flagCtx.add("readi", true)
-      stringCtx.add(s"call _readi")
-    case Call(label) => stringCtx.add(s"call $label")
-    case Ret(imm) => stringCtx.add(s"ret${ifDefined(imm, prefix = " ")}")
-    case Nop => stringCtx.add("nop")
-    case Halt => stringCtx.add("hlt")
-    case Push(src)  => stringCtx.add(s"push ${stringifyOperand(src)}")
-    case Pop(dest)  => stringCtx.add(s"pop ${stringifyOperand(dest)}")
-    case Lea(dest, src) => stringCtx.add(s"lea ${stringifyRegister(dest)}, ${stringifyPointer(src)}")
-    case DefineLabel(label) => stringCtx.add(s"$label:")
-    case Jmp(label) => stringCtx.add(s"jmp $label")
-    case JmpEqual(label) => stringCtx.add(s"je $label")
-    case JmpNotEqual(label) => stringCtx.add(s"jne $label")
-    case JmpGreater(label) => stringCtx.add(s"jg $label")
-    case JmpGreaterEqual(label) => stringCtx.add(s"jge $label")
-    case JmpLess(label) => stringCtx.add(s"jl $label")
-    case JmpLessEqual(label) => stringCtx.add(s"jle $label")
-    case JmpZero(label) => stringCtx.add(s"jz $label")
-    case JmpNotZero(label) => stringCtx.add(s"jnz $label")
-    case JumpCarry(label) => stringCtx.add(s"jc $label")
-    case JumpNotCarry(label) => stringCtx.add(s"jnc $label")
-    case JumpOverflow(label) => stringCtx.add(s"jo $label")
-    case JumpNotOverflow(label) => stringCtx.add(s"jno $label")
-    case JumpSign(label) => stringCtx.add(s"js $label")
-    case JumpNotSign(label) => stringCtx.add(s"jns $label")
-    case JumpParity(label) => stringCtx.add(s"jp $label")
-    case JumpNotParity(label) => stringCtx.add(s"jnp $label")
-    case JumpAbove(label) => stringCtx.add(s"ja $label")
-    case JumpAboveEqual(label) => stringCtx.add(s"jae $label")
-    case JumpBelow(label) => stringCtx.add(s"jb $label")
-    case JumpBelowEqual(label) => stringCtx.add(s"jbe $label")
-    case And(dest, src) => stringCtx.add(s"and ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
-    case Or(dest, src) => stringCtx.add(s"or ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
-    case Xor(dest, src) => stringCtx.add(s"xor ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
-    case ShiftArithLeft(dest, count) => stringCtx.add(s"sal ${stringifyOperand(dest)}, $count")
-    case ShiftArithRight(dest, count) => stringCtx.add(s"sar ${stringifyOperand(dest)}, $count")
-    case ShiftLogicalLeft(dest, count) => stringCtx.add(s"shl ${stringifyOperand(dest)}, $count")
-    case ShiftLogicalRight(dest, count) => stringCtx.add(s"shr ${stringifyOperand(dest)}, $count")
-    case Test(src1, src2) => stringCtx.add(s"test ${stringifyOperand(src1)}, ${stringifyOperand(src2)}")
-    case Compare(dest, src) => stringCtx.add(s"cmp ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
-    case AddCarry(dest, src) => stringCtx.add(s"adc ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
-    case Add(dest, src) => stringCtx.add(s"add ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
-    case Dec(dest) => stringCtx.add(s"dec ${stringifyOperand(dest)}")
-    case Inc(dest) => stringCtx.add(s"inc ${stringifyOperand(dest)}")
-    case Div(src) => stringCtx.add(s"div ${stringifyOperand(src)}")
-    case SignedDiv(src) => stringCtx.add(s"idiv ${stringifyOperand(src)}")
-    case Mul(src) => stringCtx.add(s"mul ${stringifyOperand(src)}")
-    case SignedMul(dest, src1, src2) => stringCtx.add(s"imul ${ifDefined(dest, postfix = ", ")}${stringifyOperand(src1)}${ifDefined(src2, prefix = ", ")}")
-    case Neg(dest) => stringCtx.add(s"neg ${stringifyOperand(dest)}")
-    case Not(dest) => stringCtx.add(s"not ${stringifyOperand(dest)}")
-    case Sub(dest, src) => stringCtx.add(s"sub ${stringifyOperand(dest)}, ${stringifyOperand(src)}")
-    case Comment(comment) => stringCtx.add(s"# $comment")
+  ): String = instr match {
+    case Mov(dest, src)                 => s"mov ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
+    case Call(label)                    => s"call $label"
+    case Ret(imm)                       => s"ret${ifDefined(imm, prefix = " ")}"
+    case Nop                            => "nop"
+    case Halt                           => "hlt"
+    case Push(src)                      => s"push ${stringifyOperand(src)}"
+    case Pop(dest)                      => s"pop ${stringifyOperand(dest)}"
+    case Lea(dest, src)                 => s"lea ${stringifyRegister(dest)}, ${stringifyPointer(src)}"
+    case DefineLabel(label)             => s"$label:"
+    case Jmp(label)                     => s"jmp $label"
+    case JmpEqual(label)                => s"je $label"
+    case JmpNotEqual(label)             => s"jne $label"
+    case JmpGreater(label)              => s"jg $label"
+    case JmpGreaterEqual(label)         => s"jge $label"
+    case JmpLess(label)                 => s"jl $label"
+    case JmpLessEqual(label)            => s"jle $label"
+    case JmpZero(label)                 => s"jz $label"
+    case JmpNotZero(label)              => s"jnz $label"
+    case JumpCarry(label)               => s"jc $label"
+    case JumpNotCarry(label)            => s"jnc $label"
+    case JumpOverflow(label)            => s"jo $label"
+    case JumpNotOverflow(label)         => s"jno $label"
+    case JumpSign(label)                => s"js $label"
+    case JumpNotSign(label)             => s"jns $label"
+    case JumpParity(label)              => s"jp $label"
+    case JumpNotParity(label)           => s"jnp $label"
+    case JumpAbove(label)               => s"ja $label"
+    case JumpAboveEqual(label)          => s"jae $label"
+    case JumpBelow(label)               => s"jb $label"
+    case JumpBelowEqual(label)          => s"jbe $label"
+    case And(dest, src)                 => s"and ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
+    case Or(dest, src)                  => s"or ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
+    case Xor(dest, src)                 => s"xor ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
+    case ShiftArithLeft(dest, count)    => s"sal ${stringifyOperand(dest)}, $count"
+    case ShiftArithRight(dest, count)   => s"sar ${stringifyOperand(dest)}, $count"
+    case ShiftLogicalLeft(dest, count)  => s"shl ${stringifyOperand(dest)}, $count"
+    case ShiftLogicalRight(dest, count) => s"shr ${stringifyOperand(dest)}, $count"
+    case Test(src1, src2)               => s"test ${stringifyOperand(src1)}, ${stringifyOperand(src2)}"
+    case Compare(dest, src)             => s"cmp ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
+    case AddCarry(dest, src)            => s"adc ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
+    case Add(dest, src)                 => s"add ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
+    case Dec(dest)                      => s"dec ${stringifyOperand(dest)}"
+    case Inc(dest)                      => s"inc ${stringifyOperand(dest)}"
+    case Div(src)                       => s"div ${stringifyOperand(src)}"
+    case SignedDiv(src)                 => s"idiv ${stringifyOperand(src)}"
+    case Mul(src)                       => s"mul ${stringifyOperand(src)}"
+    case SignedMul(dest, src1, src2) =>
+      s"imul ${ifDefined(dest, postfix = ", ")}${stringifyOperand(src1)}${ifDefined(src2, prefix = ", ")}"
+    case Neg(dest)        => s"neg ${stringifyOperand(dest)}"
+    case Not(dest)        => s"not ${stringifyOperand(dest)}"
+    case Sub(dest, src)   => s"sub ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
+    case Comment(comment) => s"// $comment"
   }
 
-  private def ifDefined(operand: Option[Register | Pointer | Immediate | String], prefix: String = "", postfix: String = ""): String = operand match {
+  private def ifDefined(
+      operand: Option[Register | Pointer | Immediate | String],
+      prefix: String = "",
+      postfix: String = ""
+  ): String = operand match {
     case Some(operand) => s"$prefix${stringifyOperand(operand)}$postfix"
     case None          => ""
   }
@@ -146,40 +127,4 @@ class Stringifier {
     case W32 => register + "D"
     case W64 => register
   }
-
-  private def addExit(using ctx: ListContext[String]): Unit = {
-    ctx.add("_exit:")
-    ctx.add("push rbp")
-    ctx.add("mov rbp, rsp")
-    ctx.add("and rsp, -16")
-    ctx.add("call exit@plt")
-    ctx.add("mov rsp, rbp")
-    ctx.add("pop rbp")
-    ctx.add("ret")
-  }
-
-  private def addReadInt(using ctx: ListContext[String]): Unit = {
-    ctx.add(".section .rodata")
-    ctx.add(".int 2")
-    ctx.add(".L._readi_str0:")
-    ctx.add(".asciz \"%d\"")
-    ctx.add(".text")
-
-    ctx.add("_readi:")
-    ctx.add("push rbp")
-    ctx.add("mov rbp, rsp")
-    ctx.add("and rsp, -16")
-    ctx.add("sub rsp, 16")
-    ctx.add("mov dword ptr [rsp], edi")
-    ctx.add("lea rsi, qword ptr [rsp]")
-    ctx.add("lea rdi, [rip + .L._readi_str0]")
-    ctx.add("mov al, 0")
-    ctx.add("call scanf@plt")
-    ctx.add("mov eax, dword ptr [rsp]")
-    ctx.add("add rsp, 16")
-    ctx.add("mov rsp, rbp")
-    ctx.add("pop rbp")
-    ctx.add("ret")
-  }
-
 }
