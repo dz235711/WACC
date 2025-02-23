@@ -2,7 +2,7 @@ package wacc
 
 type Immediate = Int
 
-sealed trait Pointer {
+sealed trait Pointer extends Location {
   val size: Size
 }
 

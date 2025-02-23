@@ -7,7 +7,7 @@ enum Size {
   case W64
 }
 
-sealed trait Register {
+sealed trait Register extends Location {
   val width: Size
 }
 
