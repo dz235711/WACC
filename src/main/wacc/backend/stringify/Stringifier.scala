@@ -327,6 +327,35 @@ object Stringifier {
     Ret
   )
 
+  private val CharReadSpecifier = " %c"
+
+  // Subroutine for reading an character
+  private val _readc = List(
+    SectionReadOnlyData,
+    IntData(CharReadSpecifier.length),
+    DefineLabel(".charRead"),
+    Asciz(CharReadSpecifier),
+    Text,
+    DefineLabel("_readc"),
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64)),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Comment("Allocate space on the stack to store the read value"),
+    Sub(RSP(W64), 16),
+    Comment("Store original value in case of EOF"),
+    Mov(RegPointer(RSP(W64))(W8), RDI(W8)),
+    Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
+    Lea(RDI(W64), RegImmPointer(RIP, ".charRead")(W64)),
+    Mov(RAX(W8), 0),
+    Call("scanf@plt"),
+    Mov(RAX(W8), RegPointer(RSP(W64))(W8)),
+    Add(RSP(W64), 16),
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret
+  )
+
   // Subroutine for exiting the program.
   private val _exit = List(
     DefineLabel("_exit"),
