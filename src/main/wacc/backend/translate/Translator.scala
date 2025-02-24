@@ -1,13 +1,14 @@
 package wacc
 
 import TypedAST.{Call as TypedCall, *}
-import wacc.RenamedAST.KnownType.{CharType, IntType}
+import wacc.RenamedAST.KnownType.*
 import wacc.Size.*
 
 val NULL = 0
 val TRUE = 1
 
 class Translator {
+
   def translate(program: Program): List[Instruction] = {
     given translateCtx: ListContext[Instruction] = new ListContext()
     given locationCtx: LocationContext = new LocationContext()
@@ -150,6 +151,53 @@ class Translator {
     instructionCtx.add(Jmp(afterTrueLabel))
     instructionCtx.add(DefineLabel(falseLabel))
 
-  private def translateRValue(value: TypedAST.RValue) = ???
-  private def translateExpr(value: TypedAST.Expr) = ???
+  /* case class ArrayLiter(es: List[Expr], override val getType: SemType) extends RValue case class NewPair(e1: Expr,
+   * e2: Expr, override val getType: SemType) extends RValue case class Fst(l: LValue, override val getType: SemType)
+   * extends LValue, RValue case class Snd(l: LValue, override val getType: SemType) extends LValue, RValue case class
+   * Call(v: Ident, args: List[Expr], override val getType: SemType) extends RValue */
+
+  private def translateRValue(
+      value: TypedAST.RValue
+  )(using instructionCtx: ListContext[Instruction], locationCtx: LocationContext) = value match {
+    case ArrayLiter(es, ty) =>
+      // Calculate size needed for the array
+      val typeSize = ty match {
+        case IntType      => 4
+        case CharType     => 1
+        case BoolType     => 1
+        case StringType   => 8
+        case ArrayType(_) => 8
+        case _            => throw new RuntimeException("Invalid type for array")
+      }
+      val size = 4 + ((es.size) * typeSize) // 4 bytes for the size of the array
+
+      // Allocate memory for the array
+      instructionCtx.add(Mov(RDI(W32), size))
+      instructionCtx.add(Call("_malloc"))
+      val ptr = locationCtx.setNextReg(RAX(W64))
+
+      // Store the size of the array and array elements
+      instructionCtx.add(Mov(ptr, es.size))
+      es.zipWithIndex.foreach { (e, i) =>
+        val resultLoc = locationCtx.getNext
+        translateExpr(e)
+        val src = resultLoc match {
+          case r: Register => r
+          case p: Pointer  => locationCtx.setNextReg(p)
+        }
+        instructionCtx.add(Mov(RegImmPointer(ptr, (i * typeSize))(getSize(typeSize)), src))
+      }
+  }
+
+  private def translateExpr(
+      exp: TypedAST.Expr
+  )(using instructionCtx: ListContext[Instruction], locationCtx: LocationContext): Unit = ???
+
+  private def getSize(size: Int): Size = size match {
+    case 1 => W8
+    case 2 => W16
+    case 4 => W32
+    case 8 => W64
+    case _ => throw new RuntimeException("Invalid size")
+  }
 }

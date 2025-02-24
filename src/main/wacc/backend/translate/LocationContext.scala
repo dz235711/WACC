@@ -11,4 +11,5 @@ class LocationContext {
   def saveCallerRegisters(): Unit = ???
   def restoreCallerRegisters(): Unit = ???
   def restoreCalleeRegisters(): Unit = ???
+  def setNextReg(l: Location): Register = ???
 }
