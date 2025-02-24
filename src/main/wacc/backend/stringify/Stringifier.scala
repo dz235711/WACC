@@ -285,8 +285,9 @@ object Stringifier {
     )
   )
 
-  /** Subroutine for printing a string. */
   private val printsLabel = "_prints"
+
+  /** Subroutine for printing a string. */
   private val _prints = createStringConstant(StringFormatLabel, StringFormatSpecifier) ::: createFunction(
     printsLabel,
     List(
@@ -394,16 +395,18 @@ object Stringifier {
       And(RSP(W64), -16),
       Call("malloc@plt"),
       Compare(RAX(W64), 0),
-      JmpEqual("_outOfMemory")
+      JmpEqual(outOfMemoryLabel)
     )
   )
 
   private val OutOfMemoryStringLabel = ".outOfMemoryString"
   private val OutOfMemoryString = "fatal error: out of memory\n"
 
+  private val outOfMemoryLabel = "_outOfMemory"
+
   /** Subroutine for an out of memory error. */
   private val _outOfMemory = createStringConstant(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
-    DefineLabel("_outOfMemory"),
+    DefineLabel(outOfMemoryLabel),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
     Lea(RDI(W64), RegImmPointer(RIP, OutOfMemoryStringLabel)(W64)),
@@ -430,7 +433,7 @@ object Stringifier {
       Comment("Align stack to 16 bytes for external calls"),
       And(RSP(W64), -16),
       Compare(RDI(W64), 0),
-      JmpEqual("_errNull"),
+      JmpEqual(errNullLabel),
       Call("free@plt")
     )
   )
@@ -438,9 +441,11 @@ object Stringifier {
   private val NullPairStringLabel = ".nullPairString"
   private val NullPairString = "fatal error: null pair dereferenced or freed\n"
 
+  private val errNullLabel = "_errNull"
+
   /** Subroutine for a null pair error. */
   private val _errNull = createStringConstant(NullPairStringLabel, NullPairString) ::: List(
-    DefineLabel("_errNull"),
+    DefineLabel(errNullLabel),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
     Lea(RDI(W64), RegImmPointer(RIP, NullPairStringLabel)(W64)),
