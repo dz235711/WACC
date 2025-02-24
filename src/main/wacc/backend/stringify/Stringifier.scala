@@ -225,6 +225,23 @@ object Stringifier {
     Text
   )
 
+  /**
+    * Creates a list of assembly instructions to define a function
+    * 
+    * @param label The label of the function
+    * @param body The body of the function
+    * @return A list of assembly instructions that defines the function, including the stack frame setup and teardown
+    */
+  private def createFunction(label: String, body: List[Instruction]): List[Instruction] = List(
+    DefineLabel(label),
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64))
+  ) ::: body ::: List(
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret(None)
+  )
+
   private val IntFormatLabel = ".intFormat"
   private val IntFormatSpecifier = "%d"
 
@@ -238,93 +255,79 @@ object Stringifier {
   private val PointerFormatSpecifier = "%p"
 
   // Subroutine for printing an integer.
-  private val _printi = createStringConstant(IntFormatLabel, IntFormatSpecifier) ::: List(
-    DefineLabel("_printi"),
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64)),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Mov(RSI(W32), RDI(W32)),
-    Lea(RDI(W64), RegImmPointer(RIP, IntFormatLabel)(W64)),
-    Mov(RAX(W8), 0),
-    Call("printf@plt"),
-    Mov(RDI(W64), 0),
-    Call("fflush@plt"),
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
-    Ret
+  private val _printi = createStringConstant(IntFormatLabel, IntFormatSpecifier) ::: createFunction(
+    "_printi",
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Mov(RSI(W32), RDI(W32)),
+      Lea(RDI(W64), RegImmPointer(RIP, IntFormatLabel)(W64)),
+      Mov(RAX(W8), 0),
+      Call("printf@plt"),
+      Mov(RDI(W64), 0),
+      Call("fflush@plt")
+    )
   )
 
   // Subroutine for printing a character.
-  private val _printc = createStringConstant(CharacterFormatLabel, CharacterFormatSpecifier) ::: List(
-    DefineLabel("_printc"),
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64)),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Mov(RSI(W8), RDI(W8)),
-    Lea(RDI(W64), RegImmPointer(RIP, CharacterFormatLabel)(W64)),
-    Mov(RAX(W8), 0),
-    Call("printf@plt"),
-    Mov(RDI(W64), 0),
-    Call("fflush@plt"),
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
-    Ret
+  private val _printc = createStringConstant(CharacterFormatLabel, CharacterFormatSpecifier) ::: createFunction(
+    "_printc",
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Mov(RSI(W8), RDI(W8)),
+      Lea(RDI(W64), RegImmPointer(RIP, CharacterFormatLabel)(W64)),
+      Mov(RAX(W8), 0),
+      Call("printf@plt"),
+      Mov(RDI(W64), 0),
+      Call("fflush@plt"),
+      Mov(RSP(W64), RBP(W64))
+    )
   )
 
   // Subroutine for printing a string.
-  private val _prints = createStringConstant(StringFormatLabel, StringFormatSpecifier) ::: List(
-    DefineLabel("_prints"),
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64)),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Mov(RSI(W32), RegImmPointer(RDI(W64), -4)(W32)),
-    Lea(RDI(W64), RegImmPointer(RIP, StringFormatLabel)(W64)),
-    Mov(RAX(W8), 0),
-    Call("printf@plt"),
-    Mov(RDI(W64), 0),
-    Call("fflush@plt"),
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
-    Ret
+  private val _prints = createStringConstant(StringFormatLabel, StringFormatSpecifier) ::: createFunction(
+    "_prints",
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Mov(RSI(W32), RegImmPointer(RDI(W64), -4)(W32)),
+      Lea(RDI(W64), RegImmPointer(RIP, StringFormatLabel)(W64)),
+      Mov(RAX(W8), 0),
+      Call("printf@plt"),
+      Mov(RDI(W64), 0),
+      Call("fflush@plt")
+    )
   )
 
   // Subroutine for printing a pair or an array.
-  private val _printp = createStringConstant(PointerFormatLabel, PointerFormatSpecifier) ::: List(
-    DefineLabel("_printp"), // Start of printp subroutine.
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64)),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Mov(RSI(W64), RDI(W64)),
-    Lea(RDI(W64), RegImmPointer(RIP, PointerFormatSpecifier)(W64)),
-    Mov(RAX(W8), 0),
-    Call("printf@plt"),
-    Mov(RDI(W64), 0),
-    Call("fflush@plt"),
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
-    Ret
+  private val _printp = createStringConstant(PointerFormatLabel, PointerFormatSpecifier) ::: createFunction(
+    "_printp",
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Mov(RSI(W64), RDI(W64)),
+      Lea(RDI(W64), RegImmPointer(RIP, PointerFormatSpecifier)(W64)),
+      Mov(RAX(W8), 0),
+      Call("printf@plt"),
+      Mov(RDI(W64), 0),
+      Call("fflush@plt")
+    )
   )
 
   private val printlnStrLabel = ".printlnStr"
   private val printlnStr = ""
 
-  private val _println = createStringConstant(printlnStrLabel, printlnStr) ::: List(
-    DefineLabel("_println"), // Start of println subroutine
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64)),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, printlnStrLabel)(W64)),
-    Call("puts@plt"),
-    Mov(RDI(W64), 0),
-    Call("fflush@plt"),
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
-    Ret
+  private val _println = createStringConstant(printlnStrLabel, printlnStr) ::: createFunction(
+    "_println",
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Lea(RDI(W64), RegImmPointer(RIP, printlnStrLabel)(W64)),
+      Call("puts@plt"),
+      Mov(RDI(W64), 0),
+      Call("fflush@plt")
+    )
   )
 
   private val IntReadLabel = ".intRead"
@@ -334,142 +337,110 @@ object Stringifier {
   private val CharacterReadSpecifier = " %c"
 
   // Subroutine for reading an integer
-  private val _readi = createStringConstant(IntReadLabel, IntReadSpecifier) ::: List(
-    DefineLabel("_readi"), // Start of readi subroutine
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64)),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Comment("Allocate space on the stack to store the read value"),
-    Sub(RSP(W64), 16),
-    Comment("Store original value in case of EOF"),
-    Mov(RegPointer(RSP(W64))(W32), RDI(W32)),
-    Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
-    Lea(RDI(W64), RegImmPointer(RIP, IntReadLabel)(W64)),
-    Mov(RAX(W8), 0),
-    Call("scanf@plt"),
-    Mov(RAX(W32), RegPointer(RSP(W64))(W32)),
-    Add(RSP(W64), 16),
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
-    Ret
+  private val _readi = createStringConstant(IntReadLabel, IntReadSpecifier) ::: createFunction(
+    "_readi",
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Comment("Allocate space on the stack to store the read value"),
+      Sub(RSP(W64), 16),
+      Comment("Store original value in case of EOF"),
+      Mov(RegPointer(RSP(W64))(W32), RDI(W32)),
+      Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
+      Lea(RDI(W64), RegImmPointer(RIP, IntReadLabel)(W64)),
+      Mov(RAX(W8), 0),
+      Call("scanf@plt"),
+      Mov(RAX(W32), RegPointer(RSP(W64))(W32)),
+      Add(RSP(W64), 16)
+    )
   )
 
   // Subroutine for reading an character
-  private val _readc = createStringConstant(CharacterReadLabel, CharacterReadSpecifier) ::: List(
-    SectionReadOnlyData,
-    IntData(CharacterReadSpecifier.length),
-    DefineLabel(".charRead"),
-    Asciz(CharacterReadSpecifier),
-    Text,
-    DefineLabel("_readc"), // Start of readc subroutine
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64)),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Comment("Allocate space on the stack to store the read value"),
-    Sub(RSP(W64), 16),
-    Comment("Store original value in case of EOF"),
-    Mov(RegPointer(RSP(W64))(W8), RDI(W8)),
-    Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
-    Lea(RDI(W64), RegImmPointer(RIP, ".charRead")(W64)),
-    Mov(RAX(W8), 0),
-    Call("scanf@plt"),
-    Mov(RAX(W8), RegPointer(RSP(W64))(W8)),
-    Add(RSP(W64), 16),
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
-    Ret
+  private val _readc = createStringConstant(CharacterReadLabel, CharacterReadSpecifier) ::: createFunction(
+    "_readc",
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Comment("Allocate space on the stack to store the read value"),
+      Sub(RSP(W64), 16),
+      Comment("Store original value in case of EOF"),
+      Mov(RegPointer(RSP(W64))(W8), RDI(W8)),
+      Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
+      Lea(RDI(W64), RegImmPointer(RIP, CharacterReadLabel)(W64)),
+      Mov(RAX(W8), 0),
+      Call("scanf@plt"),
+      Mov(RAX(W8), RegPointer(RSP(W64))(W8)),
+      Add(RSP(W64), 16)
+    )
   )
 
   // Subroutine for exiting the program.
-  private val _exit = List(
-    DefineLabel("_exit"),
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64)),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Call("exit@plt"),
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
-    Ret
+  private val _exit = createFunction(
+    "_exit",
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Call("exit@plt")
+    )
   )
 
   // Subroutine for allocating memory. Used for pairs and arrays.
-  private val _malloc = List(
-    DefineLabel("_malloc"),
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64)),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Call("malloc@plt"),
-    Compare(RAX(W64), 0),
-    JmpEqual("_outOfMemory"),
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
-    Ret
+  private val _malloc = createFunction(
+    "_malloc",
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Call("malloc@plt"),
+      Compare(RAX(W64), 0),
+      JmpEqual("_outOfMemory")
+    )
   )
 
+  private val OutOfMemoryStringLabel = ".outOfMemoryString"
   private val OutOfMemoryString = "fatal error: out of memory\n"
 
   // Subroutine for an out of memory error.
-  private val _outOfMemory = List(
-    SectionReadOnlyData,
-    Comment("Length of the error string"),
-    IntData(OutOfMemoryString.length),
-    DefineLabel(".outOfMemoryString"),
-    Asciz(OutOfMemoryString),
-    Text,
+  private val _outOfMemory = createStringConstant(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
     DefineLabel("_outOfMemory"),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, ".outOfMemoryString")(W64)),
+    Lea(RDI(W64), RegImmPointer(RIP, OutOfMemoryStringLabel)(W64)),
     Call("_prints"),
     Mov(RDI(W8), -1),
     Call("exit@plt"),
-    Ret
+    Ret(None)
   )
 
   // Subroutine for freeing array memory on the heap.
-  private val _free = List(
-    DefineLabel("_free"),
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64)),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Call("free@plt"),
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
-    Ret
+  private val _free = createFunction(
+    "_free",
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Call("free@plt")
+    )
   )
 
   // Subroutine for freeing pair memory on the heap.
-  private val _freepair = List(
-    DefineLabel("_freepair"),
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64)),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Compare(RDI(W64), 0),
-    JmpEqual("_errNull"),
-    Call("free@plt"),
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
-    Ret
+  private val _freepair = createFunction(
+    "_freepair",
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Compare(RDI(W64), 0),
+      JmpEqual("_errNull"),
+      Call("free@plt")
+    )
   )
 
+  private val NullPairStringLabel = ".nullPairString"
   private val NullPairString = "fatal error: null pair dereferenced or freed\n"
 
-  private val _errNull = List(
-    SectionReadOnlyData,
-    IntData(NullPairString.length),
-    DefineLabel(".nullPairString"),
-    Asciz(NullPairString),
-    Text,
+  private val _errNull = createStringConstant(NullPairStringLabel, NullPairString) ::: List(
     DefineLabel("_errNull"),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, ".nullPairString")(W64)),
+    Lea(RDI(W64), RegImmPointer(RIP, NullPairStringLabel)(W64)),
     Call("_prints"),
     Mov(RDI(W8), -1),
     Call("exit@plt")
