@@ -429,4 +429,49 @@ object Stringifier {
     Call("exit@plt"),
     Ret
   )
+
+  // Subroutine for freeing array memory on the heap.
+  private val _free = List(
+    DefineLabel("_free"),
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64)),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Call("free@plt"),
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret
+  )
+
+  // Subroutine for freeing pair memory on the heap.
+  private val _freepair = List(
+    DefineLabel("_freepair"),
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64)),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Compare(RDI(W64), 0),
+    JmpEqual("_errNull"),
+    Call("free@plt"),
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret
+  )
+
+  private val NullPairString = "fatal error: null pair dereferenced or freed\n"
+
+  private val _errNull = List(
+    SectionReadOnlyData,
+    IntData(NullPairString.length),
+    DefineLabel(".nullPairString"),
+    Asciz(NullPairString),
+    Text,
+    DefineLabel("_errNull"),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, ".nullPairString")(W64)),
+    Call("_prints"),
+    Mov(RDI(W8), -1),
+    Call("exit@plt")
+  )
 }
