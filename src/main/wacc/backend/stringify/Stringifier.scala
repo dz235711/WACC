@@ -327,7 +327,35 @@ object Stringifier {
     Ret
   )
 
+  private val IntReadSpecifier = " %d"
   private val CharReadSpecifier = " %c"
+
+  // Subroutine for reading an integer
+  private val _readi = List(
+    SectionReadOnlyData,
+    IntData(IntReadSpecifier.length),
+    DefineLabel(".intRead"),
+    Asciz(IntReadSpecifier),
+    Text,
+    DefineLabel("_readi"), // Start of readi subroutine
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64)),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Comment("Allocate space on the stack to store the read value"),
+    Sub(RSP(W64), 16),
+    Comment("Store original value in case of EOF"),
+    Mov(RegPointer(RSP(W64))(W32), RDI(W32)),
+    Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
+    Lea(RDI(W64), RegImmPointer(RIP, ".intRead")(W64)),
+    Mov(RAX(W8), 0),
+    Call("scanf@plt"),
+    Mov(RAX(W32), RegPointer(RSP(W64))(W32)),
+    Add(RSP(W64), 16),
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret
+  )
 
   // Subroutine for reading an character
   private val _readc = List(
