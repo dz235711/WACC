@@ -11,6 +11,9 @@ val TRUE = 1
 
 class Translator {
 
+  // Constants
+  val PAIR_SIZE = 16
+
   def translate(program: Program): List[Instruction] = {
     given translateCtx: ListContext[Instruction] = new ListContext()
     given locationCtx: LocationContext = new LocationContext()
@@ -179,6 +182,35 @@ class Translator {
         }
         instructionCtx.add(Mov(RegImmPointer(ptr, (i * typeSize))(getSize(typeSize)), src))
       }
+    case NewPair(e1, e2, PairType(t1, t2)) =>
+      // Find the sizes of the pair elements
+      val type1Size = getTypeSize(t1)
+      val type2Size = getTypeSize(t2)
+
+      // Allocate memory for the pair
+      instructionCtx.add(Mov(RDI(W32), PAIR_SIZE))
+      locationCtx.saveCallerRegisters()
+      instructionCtx.add(Call("_malloc"))
+      val ptr = locationCtx.setNextReg(RAX(W64))
+      locationCtx.restoreCallerRegisters()
+
+      // Store the pair elements
+      val resultLoc1 = locationCtx.getNext
+      translateExpr(e1)
+      val src1 = resultLoc1 match {
+        case r: Register => r
+        case p: Pointer  => locationCtx.setNextReg(p)
+      }
+      instructionCtx.add(Mov(RegPointer(ptr)(getSize(type1Size)), src1))
+
+      val resultLoc2 = locationCtx.getNext
+      translateExpr(e2)
+      val src2 = resultLoc2 match {
+        case r: Register => r
+        case p: Pointer  => locationCtx.setNextReg(p)
+      }
+      instructionCtx.add(Mov(RegImmPointer(ptr, type1Size)(getSize(type2Size)), src2))
+
   }
 
   private def translateExpr(
