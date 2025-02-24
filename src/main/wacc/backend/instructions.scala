@@ -2,7 +2,7 @@ package wacc
 
 type Immediate = Int
 
-sealed trait Pointer extends Location {
+sealed trait Pointer {
   val size: Size
 }
 
@@ -75,8 +75,8 @@ case class ShiftLogicalRight(dest: Register | Pointer, count: Immediate) extends
 case class Test(src1: Register | Pointer, src2: Immediate | Register) extends Instruction
 case class Compare private (src1: Register | Pointer, src2: Immediate | Register | Pointer) extends Instruction
 object Compare {
-  def apply(dest: Pointer, src: Immediate | Register): Compare = new Compare(dest, src)
   def apply(dest: Register, src: Immediate | Register | Pointer): Compare = new Compare(dest, src)
+  def apply(dest: Pointer, src: Immediate | Register): Compare = new Compare(dest, src)
 }
 
 // Jump instructions
