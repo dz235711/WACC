@@ -209,26 +209,43 @@ class x86Stringifier {
 }
 
 object Stringifier {
+
+  /**
+    * Creates a list of assembly instructions to define a string constant
+    * 
+    * @param label The label of the string constant
+    * @param string The string to define
+    * @return A list of assembly instructions that defines the string constant
+    */
+  private def createStringConstant(label: String, string: String): List[Instruction] = List(
+    SectionReadOnlyData,
+    IntData(string.length),
+    DefineLabel(label),
+    Asciz(string),
+    Text
+  )
+
+  private val IntFormatLabel = ".intFormat"
   private val IntFormatSpecifier = "%d"
+
+  private val CharacterFormatLabel = ".charFormat"
   private val CharacterFormatSpecifier = "%c"
+
+  private val StringFormatLabel = ".stringFormat"
   private val StringFormatSpecifier = "%.*s"
+
+  private val PointerFormatLabel = ".pointerFormat"
   private val PointerFormatSpecifier = "%p"
-  private val OutOfMemoryString = "fatal error: out of memory\n"
 
   // Subroutine for printing an integer.
-  private val _printi = List(
-    SectionReadOnlyData,
-    IntData(IntFormatSpecifier.length),
-    DefineLabel(".intFormat"),
-    Asciz(IntFormatSpecifier),
-    Text,
-    DefineLabel("_printi"), // Start of printi subroutine.
+  private val _printi = createStringConstant(IntFormatLabel, IntFormatSpecifier) ::: List(
+    DefineLabel("_printi"),
     Push(RBP(W64)),
     Mov(RBP(W64), RSP(W64)),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
     Mov(RSI(W32), RDI(W32)),
-    Lea(RDI(W64), RegImmPointer(RIP, ".intFormat")(W64)),
+    Lea(RDI(W64), RegImmPointer(RIP, IntFormatLabel)(W64)),
     Mov(RAX(W8), 0),
     Call("printf@plt"),
     Mov(RDI(W64), 0),
@@ -239,19 +256,14 @@ object Stringifier {
   )
 
   // Subroutine for printing a character.
-  private val _printc = List(
-    SectionReadOnlyData,
-    IntData(CharacterFormatSpecifier.length),
-    DefineLabel(".charFormat"),
-    Asciz(CharacterFormatSpecifier),
-    Text,
-    DefineLabel("_printc"), // Start of printc subroutine.
+  private val _printc = createStringConstant(CharacterFormatLabel, CharacterFormatSpecifier) ::: List(
+    DefineLabel("_printc"),
     Push(RBP(W64)),
     Mov(RBP(W64), RSP(W64)),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
     Mov(RSI(W8), RDI(W8)),
-    Lea(RDI(W64), RegImmPointer(RIP, ".charFormat")(W64)),
+    Lea(RDI(W64), RegImmPointer(RIP, CharacterFormatLabel)(W64)),
     Mov(RAX(W8), 0),
     Call("printf@plt"),
     Mov(RDI(W64), 0),
@@ -262,19 +274,14 @@ object Stringifier {
   )
 
   // Subroutine for printing a string.
-  private val _prints = List(
-    SectionReadOnlyData,
-    IntData(StringFormatSpecifier.length),
-    DefineLabel(".stringFormat"),
-    Asciz(StringFormatSpecifier),
-    Text,
-    DefineLabel("_prints"), // Start of prints subroutine.
+  private val _prints = createStringConstant(StringFormatLabel, StringFormatSpecifier) ::: List(
+    DefineLabel("_prints"),
     Push(RBP(W64)),
     Mov(RBP(W64), RSP(W64)),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
     Mov(RSI(W32), RegImmPointer(RDI(W64), -4)(W32)),
-    Lea(RDI(W64), RegImmPointer(RIP, ".stringFormat")(W64)),
+    Lea(RDI(W64), RegImmPointer(RIP, StringFormatLabel)(W64)),
     Mov(RAX(W8), 0),
     Call("printf@plt"),
     Mov(RDI(W64), 0),
@@ -285,19 +292,14 @@ object Stringifier {
   )
 
   // Subroutine for printing a pair or an array.
-  private val _printp = List(
-    SectionReadOnlyData,
-    IntData(PointerFormatSpecifier.length),
-    DefineLabel(".pointerFormat"),
-    Asciz(PointerFormatSpecifier),
-    Text,
+  private val _printp = createStringConstant(PointerFormatLabel, PointerFormatSpecifier) ::: List(
     DefineLabel("_printp"), // Start of printp subroutine.
     Push(RBP(W64)),
     Mov(RBP(W64), RSP(W64)),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
     Mov(RSI(W64), RDI(W64)),
-    Lea(RDI(W64), RegImmPointer(RIP, ".pointerFormat")(W64)),
+    Lea(RDI(W64), RegImmPointer(RIP, PointerFormatSpecifier)(W64)),
     Mov(RAX(W8), 0),
     Call("printf@plt"),
     Mov(RDI(W64), 0),
@@ -307,18 +309,16 @@ object Stringifier {
     Ret
   )
 
-  private val _println = List(
-    SectionReadOnlyData,
-    IntData(0),
-    DefineLabel(".printlnStr"),
-    Asciz(""),
-    Text,
-    DefineLabel("_println"),
+  private val printlnStrLabel = ".printlnStr"
+  private val printlnStr = ""
+
+  private val _println = createStringConstant(printlnStrLabel, printlnStr) ::: List(
+    DefineLabel("_println"), // Start of println subroutine
     Push(RBP(W64)),
     Mov(RBP(W64), RSP(W64)),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, ".printlnStr")(W64)),
+    Lea(RDI(W64), RegImmPointer(RIP, printlnStrLabel)(W64)),
     Call("puts@plt"),
     Mov(RDI(W64), 0),
     Call("fflush@plt"),
@@ -327,16 +327,14 @@ object Stringifier {
     Ret
   )
 
-  private val IntReadSpecifier = " %d"
-  private val CharReadSpecifier = " %c"
+  private val IntReadLabel = ".intRead"
+  private val IntReadSpecifier = "%d"
+
+  private val CharacterReadLabel = ".charRead"
+  private val CharacterReadSpecifier = " %c"
 
   // Subroutine for reading an integer
-  private val _readi = List(
-    SectionReadOnlyData,
-    IntData(IntReadSpecifier.length),
-    DefineLabel(".intRead"),
-    Asciz(IntReadSpecifier),
-    Text,
+  private val _readi = createStringConstant(IntReadLabel, IntReadSpecifier) ::: List(
     DefineLabel("_readi"), // Start of readi subroutine
     Push(RBP(W64)),
     Mov(RBP(W64), RSP(W64)),
@@ -347,7 +345,7 @@ object Stringifier {
     Comment("Store original value in case of EOF"),
     Mov(RegPointer(RSP(W64))(W32), RDI(W32)),
     Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
-    Lea(RDI(W64), RegImmPointer(RIP, ".intRead")(W64)),
+    Lea(RDI(W64), RegImmPointer(RIP, IntReadLabel)(W64)),
     Mov(RAX(W8), 0),
     Call("scanf@plt"),
     Mov(RAX(W32), RegPointer(RSP(W64))(W32)),
@@ -358,13 +356,13 @@ object Stringifier {
   )
 
   // Subroutine for reading an character
-  private val _readc = List(
+  private val _readc = createStringConstant(CharacterReadLabel, CharacterReadSpecifier) ::: List(
     SectionReadOnlyData,
-    IntData(CharReadSpecifier.length),
+    IntData(CharacterReadSpecifier.length),
     DefineLabel(".charRead"),
-    Asciz(CharReadSpecifier),
+    Asciz(CharacterReadSpecifier),
     Text,
-    DefineLabel("_readc"),
+    DefineLabel("_readc"), // Start of readc subroutine
     Push(RBP(W64)),
     Mov(RBP(W64), RSP(W64)),
     Comment("Align stack to 16 bytes for external calls"),
@@ -411,6 +409,8 @@ object Stringifier {
     Pop(RBP(W64)),
     Ret
   )
+
+  private val OutOfMemoryString = "fatal error: out of memory\n"
 
   // Subroutine for an out of memory error.
   private val _outOfMemory = List(
