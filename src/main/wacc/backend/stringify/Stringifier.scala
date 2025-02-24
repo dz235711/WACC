@@ -307,6 +307,26 @@ object Stringifier {
     Ret
   )
 
+  private val _println = List(
+    SectionReadOnlyData,
+    IntData(0),
+    DefineLabel(".printlnStr"),
+    Asciz(""),
+    Text,
+    DefineLabel("_println"),
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64)),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, ".printlnStr")(W64)),
+    Call("puts@plt"),
+    Mov(RDI(W64), 0),
+    Call("fflush@plt"),
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret
+  )
+
   // Subroutine for exiting the program.
   private val _exit = List(
     DefineLabel("_exit"),
