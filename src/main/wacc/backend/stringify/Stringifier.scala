@@ -207,3 +207,149 @@ class x86Stringifier {
     case W64 => register
   }
 }
+
+object Stringifier {
+  private val IntFormatSpecifier = "%d"
+  private val CharacterFormatSpecifier = "%c"
+  private val StringFormatSpecifier = "%.*s"
+  private val PointerFormatSpecifier = "%p"
+  private val OutOfMemoryString = "fatal error: out of memory\n"
+
+  // Subroutine for printing an integer.
+  private val _printi = List(
+    SectionReadOnlyData,
+    IntData(IntFormatSpecifier.length),
+    DefineLabel(".intFormat"),
+    Asciz(IntFormatSpecifier),
+    Text,
+    DefineLabel("_printi"), // Start of printi subroutine.
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64)),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Mov(RSI(W32), RDI(W32)),
+    Lea(RDI(W64), RegImmPointer(RIP, ".intFormat")(W64)),
+    Mov(RAX(W8), 0),
+    Call("printf@plt"),
+    Mov(RDI(W64), 0),
+    Call("fflush@plt"),
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret
+  )
+
+  // Subroutine for printing a character.
+  private val _printc = List(
+    SectionReadOnlyData,
+    IntData(CharacterFormatSpecifier.length),
+    DefineLabel(".charFormat"),
+    Asciz(CharacterFormatSpecifier),
+    Text,
+    DefineLabel("_printc"), // Start of printc subroutine.
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64)),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Mov(RSI(W8), RDI(W8)),
+    Lea(RDI(W64), RegImmPointer(RIP, ".charFormat")(W64)),
+    Mov(RAX(W8), 0),
+    Call("printf@plt"),
+    Mov(RDI(W64), 0),
+    Call("fflush@plt"),
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret
+  )
+
+  // Subroutine for printing a string.
+  private val _prints = List(
+    SectionReadOnlyData,
+    IntData(StringFormatSpecifier.length),
+    DefineLabel(".stringFormat"),
+    Asciz(StringFormatSpecifier),
+    Text,
+    DefineLabel("_prints"), // Start of prints subroutine.
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64)),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Mov(RSI(W32), RegImmPointer(RDI(W64), -4)(W32)),
+    Lea(RDI(W64), RegImmPointer(RIP, ".stringFormat")(W64)),
+    Mov(RAX(W8), 0),
+    Call("printf@plt"),
+    Mov(RDI(W64), 0),
+    Call("fflush@plt"),
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret
+  )
+
+  // Subroutine for printing a pair or an array.
+  private val _printp = List(
+    SectionReadOnlyData,
+    IntData(PointerFormatSpecifier.length),
+    DefineLabel(".pointerFormat"),
+    Asciz(PointerFormatSpecifier),
+    Text,
+    DefineLabel("_printp"), // Start of printp subroutine.
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64)),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Mov(RSI(W64), RDI(W64)),
+    Lea(RDI(W64), RegImmPointer(RIP, ".pointerFormat")(W64)),
+    Mov(RAX(W8), 0),
+    Call("printf@plt"),
+    Mov(RDI(W64), 0),
+    Call("fflush@plt"),
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret
+  )
+
+  // Subroutine for exiting the program.
+  private val _exit = List(
+    DefineLabel("_exit"),
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64)),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Call("exit@plt"),
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret
+  )
+
+  // Subroutine for allocating memory. Used for pairs and arrays.
+  private val _malloc = List(
+    DefineLabel("_malloc"),
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64)),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Call("malloc@plt"),
+    Compare(RAX(W64), 0),
+    JmpEqual("_outOfMemory"),
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret
+  )
+
+  // Subroutine for an out of memory error.
+  private val _outOfMemory = List(
+    SectionReadOnlyData,
+    Comment("Length of the error string"),
+    IntData(OutOfMemoryString.length),
+    DefineLabel(".outOfMemoryString"),
+    Asciz(OutOfMemoryString),
+    Text,
+    DefineLabel("_outOfMemory"),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, ".outOfMemoryString")(W64)),
+    Call("_prints"),
+    Mov(RDI(W8), -1),
+    Call("exit@plt"),
+    Ret
+  )
+}
