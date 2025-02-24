@@ -3,6 +3,8 @@ package wacc
 import TypedAST.{Call as TypedCall, *}
 import wacc.RenamedAST.KnownType.*
 import wacc.Size.*
+import wacc.RenamedAST.SemType
+import wacc.TypedAST.PairLiter.getType
 
 val NULL = 0
 val TRUE = 1
@@ -151,30 +153,20 @@ class Translator {
     instructionCtx.add(Jmp(afterTrueLabel))
     instructionCtx.add(DefineLabel(falseLabel))
 
-  /* case class ArrayLiter(es: List[Expr], override val getType: SemType) extends RValue case class NewPair(e1: Expr,
-   * e2: Expr, override val getType: SemType) extends RValue case class Fst(l: LValue, override val getType: SemType)
-   * extends LValue, RValue case class Snd(l: LValue, override val getType: SemType) extends LValue, RValue case class
-   * Call(v: Ident, args: List[Expr], override val getType: SemType) extends RValue */
-
   private def translateRValue(
       value: TypedAST.RValue
   )(using instructionCtx: ListContext[Instruction], locationCtx: LocationContext) = value match {
     case ArrayLiter(es, ty) =>
       // Calculate size needed for the array
-      val typeSize = ty match {
-        case IntType      => 4
-        case CharType     => 1
-        case BoolType     => 1
-        case StringType   => 8
-        case ArrayType(_) => 8
-        case _            => throw new RuntimeException("Invalid type for array")
-      }
+      val typeSize = getTypeSize(ty)
       val size = 4 + ((es.size) * typeSize) // 4 bytes for the size of the array
 
       // Allocate memory for the array
       instructionCtx.add(Mov(RDI(W32), size))
+      locationCtx.saveCallerRegisters()
       instructionCtx.add(Call("_malloc"))
       val ptr = locationCtx.setNextReg(RAX(W64))
+      locationCtx.restoreCallerRegisters()
 
       // Store the size of the array and array elements
       instructionCtx.add(Mov(ptr, es.size))
@@ -199,5 +191,15 @@ class Translator {
     case 4 => W32
     case 8 => W64
     case _ => throw new RuntimeException("Invalid size")
+  }
+
+  private def getTypeSize(ty: SemType): Int = ty match {
+    case IntType        => 4 // TODO: Magic number
+    case CharType       => 1
+    case BoolType       => 1
+    case StringType     => 8
+    case ArrayType(_)   => 8
+    case PairType(_, _) => 8
+    case _              => throw new RuntimeException("Invalid type")
   }
 }
