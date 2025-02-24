@@ -254,7 +254,7 @@ object Stringifier {
   private val PointerFormatLabel = ".pointerFormat"
   private val PointerFormatSpecifier = "%p"
 
-  // Subroutine for printing an integer.
+  /** Subroutine for printing an integer. */
   private val _printi = createStringConstant(IntFormatLabel, IntFormatSpecifier) ::: createFunction(
     "_printi",
     List(
@@ -269,7 +269,7 @@ object Stringifier {
     )
   )
 
-  // Subroutine for printing a character.
+  /** Subroutine for printing a character. */
   private val _printc = createStringConstant(CharacterFormatLabel, CharacterFormatSpecifier) ::: createFunction(
     "_printc",
     List(
@@ -285,9 +285,10 @@ object Stringifier {
     )
   )
 
-  // Subroutine for printing a string.
+  /** Subroutine for printing a string. */
+  private val printsLabel = "_prints"
   private val _prints = createStringConstant(StringFormatLabel, StringFormatSpecifier) ::: createFunction(
-    "_prints",
+    printsLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
       And(RSP(W64), -16),
@@ -300,7 +301,7 @@ object Stringifier {
     )
   )
 
-  // Subroutine for printing a pair or an array.
+  /** Subroutine for printing a pair or an array. */
   private val _printp = createStringConstant(PointerFormatLabel, PointerFormatSpecifier) ::: createFunction(
     "_printp",
     List(
@@ -318,6 +319,7 @@ object Stringifier {
   private val printlnStrLabel = ".printlnStr"
   private val printlnStr = ""
 
+  /** Subroutine for printing a newline. */
   private val _println = createStringConstant(printlnStrLabel, printlnStr) ::: createFunction(
     "_println",
     List(
@@ -336,7 +338,7 @@ object Stringifier {
   private val CharacterReadLabel = ".charRead"
   private val CharacterReadSpecifier = " %c"
 
-  // Subroutine for reading an integer
+  /** Subroutine for reading an integer. */
   private val _readi = createStringConstant(IntReadLabel, IntReadSpecifier) ::: createFunction(
     "_readi",
     List(
@@ -355,7 +357,7 @@ object Stringifier {
     )
   )
 
-  // Subroutine for reading an character
+  /** Subroutine for reading an character. */
   private val _readc = createStringConstant(CharacterReadLabel, CharacterReadSpecifier) ::: createFunction(
     "_readc",
     List(
@@ -374,7 +376,7 @@ object Stringifier {
     )
   )
 
-  // Subroutine for exiting the program.
+  /** Subroutine for exiting the program. */
   private val _exit = createFunction(
     "_exit",
     List(
@@ -384,7 +386,7 @@ object Stringifier {
     )
   )
 
-  // Subroutine for allocating memory. Used for pairs and arrays.
+  /** Subroutine for allocating memory. Used for pairs and arrays. */
   private val _malloc = createFunction(
     "_malloc",
     List(
@@ -399,19 +401,19 @@ object Stringifier {
   private val OutOfMemoryStringLabel = ".outOfMemoryString"
   private val OutOfMemoryString = "fatal error: out of memory\n"
 
-  // Subroutine for an out of memory error.
+  /** Subroutine for an out of memory error. */
   private val _outOfMemory = createStringConstant(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
     DefineLabel("_outOfMemory"),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
     Lea(RDI(W64), RegImmPointer(RIP, OutOfMemoryStringLabel)(W64)),
-    Call("_prints"),
+    Call(printsLabel),
     Mov(RDI(W8), -1),
     Call("exit@plt"),
     Ret(None)
   )
 
-  // Subroutine for freeing array memory on the heap.
+  /** Subroutine for freeing array memory on the heap. */
   private val _free = createFunction(
     "_free",
     List(
@@ -421,7 +423,7 @@ object Stringifier {
     )
   )
 
-  // Subroutine for freeing pair memory on the heap.
+  /** Subroutine for freeing pair memory on the heap. */
   private val _freepair = createFunction(
     "_freepair",
     List(
@@ -436,12 +438,13 @@ object Stringifier {
   private val NullPairStringLabel = ".nullPairString"
   private val NullPairString = "fatal error: null pair dereferenced or freed\n"
 
+  /** Subroutine for a null pair error. */
   private val _errNull = createStringConstant(NullPairStringLabel, NullPairString) ::: List(
     DefineLabel("_errNull"),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
     Lea(RDI(W64), RegImmPointer(RIP, NullPairStringLabel)(W64)),
-    Call("_prints"),
+    Call(printsLabel),
     Mov(RDI(W8), -1),
     Call("exit@plt")
   )
