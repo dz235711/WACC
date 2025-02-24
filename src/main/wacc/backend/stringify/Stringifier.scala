@@ -242,6 +242,15 @@ object Stringifier {
     Ret(None)
   )
 
+  // C library functions
+  private val ClibExit = "exit@plt"
+  private val ClibFlush = "fflush@plt"
+  private val ClibFree = "free@plt"
+  private val ClibMalloc = "malloc@plt"
+  private val ClibPrintf = "printf@plt"
+  private val ClibPuts = "puts@plt"
+  private val ClibScanf = "scanf@plt"
+
   private val IntFormatLabel = ".intFormat"
   private val IntFormatSpecifier = "%d"
 
@@ -263,9 +272,9 @@ object Stringifier {
       Mov(RSI(W32), RDI(W32)),
       Lea(RDI(W64), RegImmPointer(RIP, IntFormatLabel)(W64)),
       Mov(RAX(W8), 0),
-      Call("printf@plt"),
+      Call(ClibPrintf),
       Mov(RDI(W64), 0),
-      Call("fflush@plt")
+      Call(ClibFlush)
     )
   )
 
@@ -278,9 +287,9 @@ object Stringifier {
       Mov(RSI(W8), RDI(W8)),
       Lea(RDI(W64), RegImmPointer(RIP, CharacterFormatLabel)(W64)),
       Mov(RAX(W8), 0),
-      Call("printf@plt"),
+      Call(ClibPrintf),
       Mov(RDI(W64), 0),
-      Call("fflush@plt"),
+      Call(ClibFlush),
       Mov(RSP(W64), RBP(W64))
     )
   )
@@ -296,9 +305,9 @@ object Stringifier {
       Mov(RSI(W32), RegImmPointer(RDI(W64), -4)(W32)),
       Lea(RDI(W64), RegImmPointer(RIP, StringFormatLabel)(W64)),
       Mov(RAX(W8), 0),
-      Call("printf@plt"),
+      Call(ClibPrintf),
       Mov(RDI(W64), 0),
-      Call("fflush@plt")
+      Call(ClibFlush)
     )
   )
 
@@ -311,9 +320,9 @@ object Stringifier {
       Mov(RSI(W64), RDI(W64)),
       Lea(RDI(W64), RegImmPointer(RIP, PointerFormatSpecifier)(W64)),
       Mov(RAX(W8), 0),
-      Call("printf@plt"),
+      Call(ClibPrintf),
       Mov(RDI(W64), 0),
-      Call("fflush@plt")
+      Call(ClibFlush)
     )
   )
 
@@ -327,9 +336,9 @@ object Stringifier {
       Comment("Align stack to 16 bytes for external calls"),
       And(RSP(W64), -16),
       Lea(RDI(W64), RegImmPointer(RIP, printlnStrLabel)(W64)),
-      Call("puts@plt"),
+      Call(ClibPuts),
       Mov(RDI(W64), 0),
-      Call("fflush@plt")
+      Call(ClibFlush)
     )
   )
 
@@ -352,7 +361,7 @@ object Stringifier {
       Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
       Lea(RDI(W64), RegImmPointer(RIP, IntReadLabel)(W64)),
       Mov(RAX(W8), 0),
-      Call("scanf@plt"),
+      Call(ClibScanf),
       Mov(RAX(W32), RegPointer(RSP(W64))(W32)),
       Add(RSP(W64), 16)
     )
@@ -371,7 +380,7 @@ object Stringifier {
       Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
       Lea(RDI(W64), RegImmPointer(RIP, CharacterReadLabel)(W64)),
       Mov(RAX(W8), 0),
-      Call("scanf@plt"),
+      Call(ClibScanf),
       Mov(RAX(W8), RegPointer(RSP(W64))(W8)),
       Add(RSP(W64), 16)
     )
@@ -383,7 +392,7 @@ object Stringifier {
     List(
       Comment("Align stack to 16 bytes for external calls"),
       And(RSP(W64), -16),
-      Call("exit@plt")
+      Call(ClibExit)
     )
   )
 
@@ -393,7 +402,7 @@ object Stringifier {
     List(
       Comment("Align stack to 16 bytes for external calls"),
       And(RSP(W64), -16),
-      Call("malloc@plt"),
+      Call(ClibMalloc),
       Compare(RAX(W64), 0),
       JmpEqual(outOfMemoryLabel)
     )
@@ -412,7 +421,7 @@ object Stringifier {
     Lea(RDI(W64), RegImmPointer(RIP, OutOfMemoryStringLabel)(W64)),
     Call(printsLabel),
     Mov(RDI(W8), -1),
-    Call("exit@plt"),
+    Call(ClibExit),
     Ret(None)
   )
 
@@ -422,7 +431,7 @@ object Stringifier {
     List(
       Comment("Align stack to 16 bytes for external calls"),
       And(RSP(W64), -16),
-      Call("free@plt")
+      Call(ClibFree)
     )
   )
 
@@ -434,7 +443,7 @@ object Stringifier {
       And(RSP(W64), -16),
       Compare(RDI(W64), 0),
       JmpEqual(errNullLabel),
-      Call("free@plt")
+      Call(ClibFree)
     )
   )
 
@@ -451,6 +460,6 @@ object Stringifier {
     Lea(RDI(W64), RegImmPointer(RIP, NullPairStringLabel)(W64)),
     Call(printsLabel),
     Mov(RDI(W8), -1),
-    Call("exit@plt")
+    Call(ClibExit)
   )
 }
