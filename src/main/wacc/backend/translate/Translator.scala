@@ -83,22 +83,19 @@ class Translator {
     case Asgn(l, r) =>
       val resultLoc = locationCtx.getNext(typeToSize(l.getType))
       translateRValue(r)
-      locationCtx.moveToLVal(
-        resultLoc,
-        l
-      )
+      val dest = getLValue(l)
+      locationCtx.movLocLoc(resultLoc, dest)
 
     case Read(l) =>
       locationCtx.saveCallerRegisters()
-      l.getType match {
-        case IntType =>
-          instructionCtx.add(Call("read_int"))
-          locationCtx.moveToLVal(RAX(typeToSize(IntType)), l)
-        case CharType =>
-          instructionCtx.add(Call("read_char"))
-          locationCtx.moveToLVal(RAX(typeToSize(CharType)), l)
-        case _ => throw new RuntimeException("Unexpected Error: Invalid type for read")
+      val (funName, size) = l.getType match {
+        case IntType  => ("read_int", typeToSize(IntType))
+        case CharType => ("read_char", typeToSize(CharType))
+        case _        => throw new RuntimeException("Unexpected Error: Invalid type for read")
       }
+      instructionCtx.add(Call(funName))
+      val dest = getLValue(l)
+      instructionCtx.add(Mov(RAX(size), dest))
       locationCtx.restoreCallerRegisters()
 
     case Free(e) =>
@@ -282,7 +279,7 @@ class Translator {
       val codeDest = locationCtx.getNext(typeToSize(IntType))
       translateExpr(e)
       locationCtx.movLocLoc(chrDest, codeDest)
-      locationCtx.unreserveLast()  
+      locationCtx.unreserveLast()
     case Mult(e1, e2) =>
       val multDest = locationCtx.reserveNext(typeToSize(IntType))
       translateExpr(e1)
@@ -361,8 +358,9 @@ class Translator {
     // TODO: Set byte
 
     case NotEquals(e1, e2) =>
-      cmpExp(e1, e2)
-    // TODO: Set byte
+      val dest = locationCtx.getNext(typeToSize(BoolType))
+      translateExpr(Equals(e1, e2))
+      instructionCtx.add(Not(dest))
 
     case TypedAnd(e1, e2) =>
       val andDest = locationCtx.reserveNext(typeToSize(BoolType))
