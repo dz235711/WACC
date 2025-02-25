@@ -247,6 +247,32 @@ class Translator {
         case p: Pointer  => locationCtx.setNextReg(p)
       }
       instructionCtx.add(Mov(RegImmPointer(ptr, (PAIR_SIZE / 2))(getSize(type2Size)), src2))
+    case f @ Fst(_, ty) =>
+      // Get the current location in the map of the Fst
+      val fstLoc = getLValue(f)
+      // Check this isn't null
+      instructionCtx.add(fstLoc match {
+        case r: Register => Compare(r, NULL)
+        case p: Pointer  => Compare(p, NULL)
+      })
+      instructionCtx.add(JmpEqual("fst_null_error"))
+
+      // Move this into the expected result location
+      val resultLoc = locationCtx.getNext(typeToSize(ty))
+      locationCtx.movLocLoc(resultLoc, fstLoc)
+    case s @ Snd(_, ty) =>
+      // Get the current location in the map of the Snd
+      val sndLoc = getLValue(s)
+      // Check this isn't null
+      instructionCtx.add(sndLoc match {
+        case r: Register => Compare(r, NULL)
+        case p: Pointer  => Compare(p, NULL)
+      })
+      instructionCtx.add(JmpEqual("snd_null_error"))
+
+      // Move this into the expected result location
+      val resultLoc = locationCtx.getNext(typeToSize(ty))
+      locationCtx.movLocLoc(resultLoc, sndLoc)
 
   }
 
