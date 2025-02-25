@@ -363,25 +363,15 @@ class Translator {
       locationCtx.regInstr(subDest, e2Dest, { (regOp1, locOp2) => Sub(regOp1, locOp2) })
       locationCtx.unreserveLast()
 
-    case Greater(e1, e2) =>
-      cmpExp(e1, e2)
-    // TODO: Set byte
+    case Greater(e1, e2) => cmpExp(e1, e2, SetGreater.apply)
 
-    case GreaterEq(e1, e2) =>
-      cmpExp(e1, e2)
-    // TODO: Set byte
+    case GreaterEq(e1, e2) => cmpExp(e1, e2, SetGreaterEqual.apply)
 
-    case Smaller(e1, e2) =>
-      cmpExp(e1, e2)
-    // TODO: Set byte
+    case Smaller(e1, e2) => cmpExp(e1, e2, SetSmaller.apply)
+        
+    case SmallerEq(e1, e2) => cmpExp(e1, e2, SetSmallerEqual.apply)
 
-    case SmallerEq(e1, e2) =>
-      cmpExp(e1, e2)
-    // TODO: Set byte
-
-    case Equals(e1, e2) =>
-      cmpExp(e1, e2)
-    // TODO: Set byte
+    case Equals(e1, e2) => cmpExp(e1, e2, SetEqual.apply) 
 
     case NotEquals(e1, e2) =>
       val dest = locationCtx.getNext(typeToSize(BoolType))
@@ -405,12 +395,13 @@ class Translator {
       locationCtx.unreserveLast()
   }
 
-  private def cmpExp(e1: Expr, e2: Expr)(using instructionCtx: ListContext[Instruction], locationCtx: LocationContext) =
-    val greaterEqDest = locationCtx.reserveNext(typeToSize(e1.getType))
+  private def cmpExp(e1: Expr, e2: Expr, setter: Location => Instruction)(using instructionCtx: ListContext[Instruction], locationCtx: LocationContext) =
+    val dest = locationCtx.reserveNext(typeToSize(e1.getType))
     translateExpr(e1)
     val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
     translateExpr(e2)
-    locationCtx.regInstr(greaterEqDest, e2Dest, { (regOp1, locOp2) => Compare(regOp1, locOp2) })
+    locationCtx.regInstr(dest, e2Dest, { (regOp1, locOp2) => Compare(regOp1, locOp2) })
+    instructionCtx.add(setter(dest))
     locationCtx.unreserveLast()
 
   /** Calculate and return the location of an LValue.
