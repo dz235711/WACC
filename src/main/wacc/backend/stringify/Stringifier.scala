@@ -85,7 +85,7 @@ class x86Stringifier {
     case Neg(dest)           => s"neg ${stringifyOperand(dest)}"
     case Not(dest)           => s"not ${stringifyOperand(dest)}"
     case Sub(dest, src)      => s"sub ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
-    case Comment(comment)    => s"// $comment"
+    case Comment(comment)    => s"# $comment"
     case NoPrefixSyntax      => ".intel_syntax noprefix"
     case GlobalMain          => ".globl main"
     case SectionReadOnlyData => ".section .rodata"
