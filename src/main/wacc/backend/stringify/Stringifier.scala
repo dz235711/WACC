@@ -211,19 +211,28 @@ class x86Stringifier {
 object Stringifier {
 
   /**
-    * Creates a list of assembly instructions to define a string constant
-    * 
-    * @param label The label of the string constant
-    * @param string The string to define
-    * @return A list of assembly instructions that defines the string constant
-    */
-  private def createStringConstant(label: String, string: String): List[Instruction] = List(
-    SectionReadOnlyData,
+   * Creates a list of assembly instructions to define a string
+   * 
+   * @param label The label of the string constant
+   * @param string The string to define
+   * @return A list of assembly instructions that defines the string constant
+   */
+  private def createString(label: Label, string: String): List[Instruction] = List(
     IntData(string.length),
     DefineLabel(label),
     Asciz(string),
     Text
   )
+
+  /**
+    * Creates a list of assembly instructions to define a read only string
+    * 
+    * @param label The label of the string constant
+    * @param string The string to define
+    * @return A list of assembly instructions that defines the read only string constant
+    */
+  private def createReadOnlyString(label: Label, string: String): List[Instruction] =
+    SectionReadOnlyData :: createString(label, string)
 
   /**
     * Creates a list of assembly instructions to define a function
@@ -232,7 +241,7 @@ object Stringifier {
     * @param body The body of the function
     * @return A list of assembly instructions that defines the function, including the stack frame setup and teardown
     */
-  private def createFunction(label: String, body: List[Instruction]): List[Instruction] = List(
+  private def createFunction(label: Label, body: List[Instruction]): List[Instruction] = List(
     DefineLabel(label),
     Push(RBP(W64)),
     Mov(RBP(W64), RSP(W64))
@@ -264,7 +273,7 @@ object Stringifier {
   private val PointerFormatSpecifier = "%p"
 
   /** Subroutine for printing an integer. */
-  private val _printi = createStringConstant(IntFormatLabel, IntFormatSpecifier) ::: createFunction(
+  private val _printi = createReadOnlyString(IntFormatLabel, IntFormatSpecifier) ::: createFunction(
     "_printi",
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -279,7 +288,7 @@ object Stringifier {
   )
 
   /** Subroutine for printing a character. */
-  private val _printc = createStringConstant(CharacterFormatLabel, CharacterFormatSpecifier) ::: createFunction(
+  private val _printc = createReadOnlyString(CharacterFormatLabel, CharacterFormatSpecifier) ::: createFunction(
     "_printc",
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -297,7 +306,7 @@ object Stringifier {
   private val printsLabel = "_prints"
 
   /** Subroutine for printing a string. */
-  private val _prints = createStringConstant(StringFormatLabel, StringFormatSpecifier) ::: createFunction(
+  private val _prints = createReadOnlyString(StringFormatLabel, StringFormatSpecifier) ::: createFunction(
     printsLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -312,7 +321,7 @@ object Stringifier {
   )
 
   /** Subroutine for printing a pair or an array. */
-  private val _printp = createStringConstant(PointerFormatLabel, PointerFormatSpecifier) ::: createFunction(
+  private val _printp = createReadOnlyString(PointerFormatLabel, PointerFormatSpecifier) ::: createFunction(
     "_printp",
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -330,7 +339,7 @@ object Stringifier {
   private val printlnStr = ""
 
   /** Subroutine for printing a newline. */
-  private val _println = createStringConstant(printlnStrLabel, printlnStr) ::: createFunction(
+  private val _println = createReadOnlyString(printlnStrLabel, printlnStr) ::: createFunction(
     "_println",
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -349,7 +358,7 @@ object Stringifier {
   private val CharacterReadSpecifier = " %c"
 
   /** Subroutine for reading an integer. */
-  private val _readi = createStringConstant(IntReadLabel, IntReadSpecifier) ::: createFunction(
+  private val _readi = createReadOnlyString(IntReadLabel, IntReadSpecifier) ::: createFunction(
     "_readi",
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -368,7 +377,7 @@ object Stringifier {
   )
 
   /** Subroutine for reading an character. */
-  private val _readc = createStringConstant(CharacterReadLabel, CharacterReadSpecifier) ::: createFunction(
+  private val _readc = createReadOnlyString(CharacterReadLabel, CharacterReadSpecifier) ::: createFunction(
     "_readc",
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -414,7 +423,7 @@ object Stringifier {
   private val outOfMemoryLabel = "_outOfMemory"
 
   /** Subroutine for an out of memory error. */
-  private val _outOfMemory = createStringConstant(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
+  private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
     DefineLabel(outOfMemoryLabel),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
@@ -453,7 +462,7 @@ object Stringifier {
   private val errNullLabel = "_errNull"
 
   /** Subroutine for a null pair error. */
-  private val _errNull = createStringConstant(NullPairStringLabel, NullPairString) ::: List(
+  private val _errNull = createReadOnlyString(NullPairStringLabel, NullPairString) ::: List(
     DefineLabel(errNullLabel),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
