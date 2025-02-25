@@ -19,8 +19,6 @@ import java.rmi.UnexpectedException
 val NULL = 0
 val TRUE = 1
 
-// TODO: translateExpr consumes a location - make sure to free it after use in translateStmt
-
 class Translator {
 
   // Constants
@@ -88,14 +86,15 @@ class Translator {
 
     case Read(l) =>
       locationCtx.saveCallerRegisters()
-      val (funName, size) = l.getType match {
-        case IntType  => ("read_int", typeToSize(IntType))
-        case CharType => ("read_char", typeToSize(CharType))
-        case _        => throw new RuntimeException("Unexpected Error: Invalid type for read")
-      }
-      instructionCtx.add(Call(funName))
-      val dest = getLValue(l)
-      instructionCtx.add(Mov(RAX(size), dest))
+      // TODO: clib read 
+      // val (funName, size) = l.getType match {
+      //   case IntType  => ("read_int", typeToSize(IntType))
+      //   case CharType => ("read_char", typeToSize(CharType))
+      //   case _        => throw new RuntimeException("Unexpected Error: Invalid type for read")
+      // }
+      // instructionCtx.add(Call(funName))
+      // val dest = getLValue(l)
+      // instructionCtx.add(Mov(RAX(size), dest))
       locationCtx.restoreCallerRegisters()
 
     case Free(e) =>
@@ -109,7 +108,7 @@ class Translator {
       // Call free
       locationCtx.saveCallerRegisters()
       instructionCtx.add(Mov(RDI(typeToSize(e.getType)), dest))
-      instructionCtx.add(Call("free"))
+      // TODO: clib free
       locationCtx.restoreCallerRegisters()
 
     case Return(e) =>
@@ -125,7 +124,7 @@ class Translator {
 
       // Call exit
       instructionCtx.add(Mov(RDI(W8), dest))
-      instructionCtx.add(Call("exit"))
+      // TODO: clib exit
 
     case Print(e) =>
       val dest = locationCtx.getNext(typeToSize(e.getType))
@@ -143,7 +142,7 @@ class Translator {
 
       // Print a newline
       locationCtx.saveCallerRegisters()
-      instructionCtx.add(Call("print_ln"))
+      // TODO: call println
       locationCtx.restoreCallerRegisters()
 
     case If(cond, s1, s2) =>
@@ -207,7 +206,7 @@ class Translator {
       // Allocate memory for the array
       instructionCtx.add(Mov(RDI(W32), size))
       locationCtx.saveCallerRegisters()
-      instructionCtx.add(Call("_malloc"))
+      // TODO: clib malloc
       val ptr = locationCtx.setNextReg(RAX(W64))
       locationCtx.restoreCallerRegisters()
 
@@ -230,7 +229,7 @@ class Translator {
       // Allocate memory for the pair
       instructionCtx.add(Mov(RDI(W32), PAIR_SIZE))
       locationCtx.saveCallerRegisters()
-      instructionCtx.add(Call("_malloc"))
+      // TODO: clib malloc
       val ptr = locationCtx.setNextReg(RAX(W64))
       locationCtx.restoreCallerRegisters()
 
@@ -368,10 +367,10 @@ class Translator {
     case GreaterEq(e1, e2) => cmpExp(e1, e2, SetGreaterEqual.apply)
 
     case Smaller(e1, e2) => cmpExp(e1, e2, SetSmaller.apply)
-        
+
     case SmallerEq(e1, e2) => cmpExp(e1, e2, SetSmallerEqual.apply)
 
-    case Equals(e1, e2) => cmpExp(e1, e2, SetEqual.apply) 
+    case Equals(e1, e2) => cmpExp(e1, e2, SetEqual.apply)
 
     case NotEquals(e1, e2) =>
       val dest = locationCtx.getNext(typeToSize(BoolType))
@@ -395,7 +394,10 @@ class Translator {
       locationCtx.unreserveLast()
   }
 
-  private def cmpExp(e1: Expr, e2: Expr, setter: Location => Instruction)(using instructionCtx: ListContext[Instruction], locationCtx: LocationContext) =
+  private def cmpExp(e1: Expr, e2: Expr, setter: Location => Instruction)(using
+      instructionCtx: ListContext[Instruction],
+      locationCtx: LocationContext
+  ) =
     val dest = locationCtx.reserveNext(typeToSize(e1.getType))
     translateExpr(e1)
     val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
