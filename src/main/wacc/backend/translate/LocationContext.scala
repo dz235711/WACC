@@ -66,9 +66,12 @@ class LocationContext {
   def regInstr(loc1: Location, loc2: Location, op: (Register, Location) => Instruction): Unit = ???
 
   /** Perform some operation that forces the use of some register(s). These registers are saved and restored after the operation.
-   * 
+   *
    * @param regsToUse The registers modified by the operation
    * @param op The operation to perform
    */
   def withFreeRegisters(regsToUse: List[Register], op: => Unit): Unit = ???
+
+  // TODO: delete this
+  def setNextReg(l: Location): Register = ???
 }

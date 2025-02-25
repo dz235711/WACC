@@ -13,6 +13,7 @@ val TRUE = 1
 // TODO: translateExpr consumes a location - make sure to free it after use in translateStmt
 
 class Translator {
+
   def translate(program: Program): List[Instruction] = {
     given translateCtx: ListContext[Instruction] = new ListContext()
     given locationCtx: LocationContext = new LocationContext()
@@ -21,7 +22,7 @@ class Translator {
   }
 
   /** Convert a semantic type to a size
-   * 
+   *
    * @param t The semantic type to convert
    * @return The size of the semantic type
    */
@@ -33,6 +34,14 @@ class Translator {
     case ArrayType(_)   => W64
     case PairType(_, _) => W64
     case _              => throw new UnexpectedException("Unexpected Error: Invalid type")
+  }
+
+  private def getSize(size: Int): Size = size match {
+    case 1 => W8
+    case 2 => W16
+    case 4 => W32
+    case 8 => W64
+    case _ => throw new RuntimeException("Invalid size")
   }
 
   /** Translates a statement to a list of instructions
@@ -170,7 +179,39 @@ class Translator {
     instructionCtx.add(Jmp(afterTrueLabel))
     instructionCtx.add(DefineLabel(falseLabel))
 
-  private def translateRValue(value: TypedAST.RValue) = ???
+  private def translateRValue(value: TypedAST.RValue)(using
+      instructionCtx: ListContext[Instruction],
+      locationCtx: LocationContext
+  ) = value match {
+    case ArrayLiter(es, ty) =>
+      // Calculate size needed for the array
+      val typeSize = ty match {
+        case IntType      => 4
+        case CharType     => 1
+        case BoolType     => 1
+        case StringType   => 8
+        case ArrayType(_) => 8
+        case _            => throw new RuntimeException("Invalid type for array")
+      }
+      val size = 4 + (es.size * typeSize) // 4 bytes for the size of the array
+
+      // Allocate memory for the array
+      instructionCtx.add(Mov(RDI(W32), size))
+      instructionCtx.add(Call("_malloc"))
+      val ptr = locationCtx.setNextReg(RAX(W64))
+
+      // Store the size of the array and array elements
+      instructionCtx.add(Mov(ptr, es.size))
+      es.zipWithIndex.foreach { (e, i) =>
+        val resultLoc = locationCtx.getNext(typeToSize(e.getType))
+        translateExpr(e)
+        val src = resultLoc match {
+          case r: Register => r
+          case p: Pointer  => locationCtx.setNextReg(p)
+        }
+        instructionCtx.add(Mov(RegImmPointer(ptr, (i * typeSize))(getSize(typeSize)), src))
+      }
+  }
 
   private def translateExpr(
       expr: TypedAST.Expr
