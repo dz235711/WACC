@@ -11,6 +11,11 @@ sealed trait Register {
   val width: Size
 }
 
+/** The program counter register. */
+object RIP extends Register {
+  val width = Size.W64
+}
+
 /** The return register, saved by caller. */
 case class RAX(width: Size) extends Register
 

@@ -1,6 +1,7 @@
 package wacc
 
 type Immediate = Int
+type Label = String
 
 sealed trait Pointer {
   val size: Size
@@ -10,7 +11,7 @@ sealed trait Pointer {
 case class RegPointer(reg: Register)(val size: Size) extends Pointer
 
 /** Pointer for `[reg + imm]` */
-case class RegImmPointer(reg: Register, imm: Immediate)(val size: Size) extends Pointer
+case class RegImmPointer(reg: Register, imm: Immediate | Label)(val size: Size) extends Pointer
 
 /** Pointer for `[reg1 + reg2]` */
 case class RegRegPointer(reg1: Register, reg2: Register)(val size: Size) extends Pointer
@@ -19,11 +20,11 @@ case class RegRegPointer(reg1: Register, reg2: Register)(val size: Size) extends
 case class RegScaleRegPointer(reg1: Register, scale: Int, reg2: Register)(val size: Size) extends Pointer
 
 /** Pointer for `[reg1 + scale * reg2 + imm]` */
-case class RegScaleRegImmPointer(reg1: Register, scale: Int, reg2: Register, imm: Immediate)(val size: Size)
+case class RegScaleRegImmPointer(reg1: Register, scale: Int, reg2: Register, imm: Immediate | Label)(val size: Size)
     extends Pointer
 
 /** Pointer for `[scale * reg + imm]` */
-case class ScaleRegImmPointer(scale: Int, reg: Register, imm: Immediate)(val size: Size) extends Pointer
+case class ScaleRegImmPointer(scale: Int, reg: Register, imm: Immediate | Label)(val size: Size) extends Pointer
 
 sealed trait Instruction
 
@@ -80,28 +81,28 @@ object Compare {
 }
 
 // Jump instructions
-case class DefineLabel(label: String) extends Instruction
-case class Jmp(label: String) extends Instruction
-case class JmpEqual(label: String) extends Instruction
-case class JmpNotEqual(label: String) extends Instruction
-case class JmpGreater(label: String) extends Instruction
-case class JmpGreaterEqual(label: String) extends Instruction
-case class JmpLess(label: String) extends Instruction
-case class JmpLessEqual(label: String) extends Instruction
-case class JmpZero(label: String) extends Instruction
-case class JmpNotZero(label: String) extends Instruction
-case class JumpCarry(label: String) extends Instruction
-case class JumpNotCarry(label: String) extends Instruction
-case class JumpOverflow(label: String) extends Instruction
-case class JumpNotOverflow(label: String) extends Instruction
-case class JumpSign(label: String) extends Instruction
-case class JumpNotSign(label: String) extends Instruction
-case class JumpParity(label: String) extends Instruction
-case class JumpNotParity(label: String) extends Instruction
-case class JumpAbove(label: String) extends Instruction
-case class JumpAboveEqual(label: String) extends Instruction
-case class JumpBelow(label: String) extends Instruction
-case class JumpBelowEqual(label: String) extends Instruction
+case class DefineLabel(label: Label) extends Instruction
+case class Jmp(label: Label) extends Instruction
+case class JmpEqual(label: Label) extends Instruction
+case class JmpNotEqual(label: Label) extends Instruction
+case class JmpGreater(label: Label) extends Instruction
+case class JmpGreaterEqual(label: Label) extends Instruction
+case class JmpLess(label: Label) extends Instruction
+case class JmpLessEqual(label: Label) extends Instruction
+case class JmpZero(label: Label) extends Instruction
+case class JmpNotZero(label: Label) extends Instruction
+case class JumpCarry(label: Label) extends Instruction
+case class JumpNotCarry(label: Label) extends Instruction
+case class JumpOverflow(label: Label) extends Instruction
+case class JumpNotOverflow(label: Label) extends Instruction
+case class JumpSign(label: Label) extends Instruction
+case class JumpNotSign(label: Label) extends Instruction
+case class JumpParity(label: Label) extends Instruction
+case class JumpNotParity(label: Label) extends Instruction
+case class JumpAbove(label: Label) extends Instruction
+case class JumpAboveEqual(label: Label) extends Instruction
+case class JumpBelow(label: Label) extends Instruction
+case class JumpBelowEqual(label: Label) extends Instruction
 
 // Data transfer instructions
 case class Mov private (dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction
@@ -114,10 +115,18 @@ case class Pop(dest: Register | Pointer) extends Instruction
 case class Lea(dest: Register, src: Pointer) extends Instruction
 
 // Control transfer instructions
-case class Call(label: String) extends Instruction
+case class Call(label: Label) extends Instruction
 case class Ret(imm: Option[Immediate]) extends Instruction
 object Nop extends Instruction
 object Halt extends Instruction
 
 // Comment instruction
 case class Comment(comment: String) extends Instruction
+
+// Memory sections and directives
+object NoPrefixSyntax extends Instruction
+object GlobalMain extends Instruction
+object SectionReadOnlyData extends Instruction
+object Text extends Instruction
+case class IntData(length: Int) extends Instruction
+case class Asciz(str: String) extends Instruction
