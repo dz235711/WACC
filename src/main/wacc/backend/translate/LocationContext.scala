@@ -63,7 +63,7 @@ class LocationContext {
    * @param loc2 The second location
    * @param op The operation to perform on the two locations, where the first location is guaranteed to be a register
    */
-  def regInstr(loc1: Location, loc2: Location, op: (Register, Location) => Instruction): Unit = ???
+  def regInstr(loc1: Location, loc2: Location | Immediate, op: (Register, Location) => Instruction): Unit = ???
 
   /** Perform some operation that forces the use of some register(s). These registers are saved and restored after the operation.
    *

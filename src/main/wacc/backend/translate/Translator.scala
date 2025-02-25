@@ -1,6 +1,14 @@
 package wacc
 
-import TypedAST.{Call as TypedCall, Not as TypedNot, *}
+import TypedAST.{
+  Call as TypedCall,
+  Not as TypedNot,
+  Add as TypedAdd,
+  Sub as TypedSub,
+  And as TypedAnd,
+  Or as TypedOr,
+  *
+}
 import wacc.RenamedAST.KnownType.{ArrayType, BoolType, CharType, IntType, PairType, StringType}
 import wacc.RenamedAST.{KnownType}
 import wacc.Size.*
@@ -98,10 +106,7 @@ class Translator {
       translateExpr(e)
 
       // Check for null
-      instructionCtx.add(dest match {
-        case r: Register => Compare(r, NULL)
-        case p: Pointer  => Compare(p, NULL)
-      })
+      locationCtx.regInstr(dest, NULL, { (regOp1, locOp2) => Compare(regOp1, locOp2) })
       instructionCtx.add(JmpEqual("free_null_error"))
 
       // Call free
@@ -277,16 +282,15 @@ class Translator {
       val codeDest = locationCtx.getNext(typeToSize(IntType))
       translateExpr(e)
       locationCtx.movLocLoc(chrDest, codeDest)
-      locationCtx.unreserveLast()
-
+      locationCtx.unreserveLast()  
     case Mult(e1, e2) =>
       val multDest = locationCtx.reserveNext(typeToSize(IntType))
       translateExpr(e1)
       val e2Dest = locationCtx.getNext(typeToSize(IntType))
       translateExpr(e2)
       locationCtx.regInstr(multDest, e2Dest, { (regOp1, locOp2) => SignedMul(Some(regOp1), locOp2, None) })
-      // TODO: runtime error if over/underflow
       locationCtx.unreserveLast()
+    // TODO: runtime error if over/underflow
 
     case Mod(e1, e2) =>
       val modDest = locationCtx.reserveNext(typeToSize(IntType))
@@ -298,11 +302,92 @@ class Translator {
         List(RAX(typeToSize(IntType)), RDI(typeToSize(IntType))), {
           instructionCtx.add(Mov(RAX(typeToSize(IntType)), e1Dest))
           instructionCtx.add(SignedDiv(modDest))
-          locationCtx.movLocLoc(modDest, RAX(typeToSize(IntType)))
+          locationCtx.movLocLoc(modDest, RDI(typeToSize(IntType)))
         }
       )
+      locationCtx.unreserveLast()
 
+    case Div(e1, e2) =>
+      val divDest = locationCtx.reserveNext(typeToSize(IntType))
+      translateExpr(e2)
+      // TODO: runtime error if divide by 0
+      val e1Dest = locationCtx.getNext(typeToSize(IntType))
+      translateExpr(e1)
+      locationCtx.withFreeRegisters(
+        List(RAX(typeToSize(IntType)), RDI(typeToSize(IntType))), {
+          instructionCtx.add(Mov(RAX(typeToSize(IntType)), e1Dest))
+          instructionCtx.add(SignedDiv(divDest))
+          locationCtx.movLocLoc(divDest, RAX(typeToSize(IntType)))
+        }
+      )
+      locationCtx.unreserveLast()
+
+    case TypedAdd(e1, e2) =>
+      val addDest = locationCtx.reserveNext(typeToSize(IntType))
+      translateExpr(e1)
+      val e2Dest = locationCtx.getNext(typeToSize(IntType))
+      translateExpr(e2)
+      // TODO: runtime error if over/underflow
+      locationCtx.regInstr(addDest, e2Dest, { (regOp1, locOp2) => Add(regOp1, locOp2) })
+      locationCtx.unreserveLast()
+
+    case TypedSub(e1, e2) =>
+      val subDest = locationCtx.reserveNext(typeToSize(IntType))
+      translateExpr(e1)
+      val e2Dest = locationCtx.getNext(typeToSize(IntType))
+      translateExpr(e2)
+      // TODO: runtime error if over/underflow
+      locationCtx.regInstr(subDest, e2Dest, { (regOp1, locOp2) => Sub(regOp1, locOp2) })
+      locationCtx.unreserveLast()
+
+    case Greater(e1, e2) =>
+      cmpExp(e1, e2)
+    // TODO: Set byte
+
+    case GreaterEq(e1, e2) =>
+      cmpExp(e1, e2)
+    // TODO: Set byte
+
+    case Smaller(e1, e2) =>
+      cmpExp(e1, e2)
+    // TODO: Set byte
+
+    case SmallerEq(e1, e2) =>
+      cmpExp(e1, e2)
+    // TODO: Set byte
+
+    case Equals(e1, e2) =>
+      cmpExp(e1, e2)
+    // TODO: Set byte
+
+    case NotEquals(e1, e2) =>
+      cmpExp(e1, e2)
+    // TODO: Set byte
+
+    case TypedAnd(e1, e2) =>
+      val andDest = locationCtx.reserveNext(typeToSize(BoolType))
+      translateExpr(e1)
+      val e2Dest = locationCtx.getNext(typeToSize(BoolType))
+      translateExpr(e2)
+      locationCtx.regInstr(andDest, e2Dest, { (regOp1, locOp2) => And(regOp1, locOp2) })
+      locationCtx.unreserveLast()
+
+    case TypedOr(e1, e2) =>
+      val orDest = locationCtx.reserveNext(typeToSize(BoolType))
+      translateExpr(e1)
+      val e2Dest = locationCtx.getNext(typeToSize(BoolType))
+      translateExpr(e2)
+      locationCtx.regInstr(orDest, e2Dest, { (regOp1, locOp2) => Or(regOp1, locOp2) })
+      locationCtx.unreserveLast()
   }
+
+  private def cmpExp(e1: Expr, e2: Expr)(using instructionCtx: ListContext[Instruction], locationCtx: LocationContext) =
+    val greaterEqDest = locationCtx.reserveNext(typeToSize(e1.getType))
+    translateExpr(e1)
+    val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
+    translateExpr(e2)
+    locationCtx.regInstr(greaterEqDest, e2Dest, { (regOp1, locOp2) => Compare(regOp1, locOp2) })
+    locationCtx.unreserveLast()
 
   /** Calculate and return the location of an LValue.
    *
@@ -319,17 +404,3 @@ class Translator {
     translateExpr(e)
     instructionCtx.add(instr(dest))
 }
-
-/* case class Mod(e1: Expr, e2: Expr) extends Expr, IntType case class Add(e1: Expr, e2: Expr) extends Expr, IntType
- * case class Div(e1: Expr, e2: Expr) extends Expr, IntType case class Sub(e1: Expr, e2: Expr) extends Expr, IntType
- * case class Greater(e1: Expr, e2: Expr) extends Expr, BoolType case class GreaterEq(e1: Expr, e2: Expr) extends Expr,
- * BoolType case class Smaller(e1: Expr, e2: Expr) extends Expr, BoolType case class SmallerEq(e1: Expr, e2: Expr)
- * extends Expr, BoolType case class Equals(e1: Expr, e2: Expr) extends Expr, BoolType case class NotEquals(e1: Expr,
- * e2: Expr) extends Expr, BoolType case class And(e1:
- * Expr, e2: Expr) extends Expr, BoolType case class Or(e1: Expr, e2: Expr) extends Expr, BoolType
- *
- * case class IntLiter(x: Int) extends Expr, IntType case class BoolLiter(b: Boolean) extends Expr, BoolType case class
- * CharLiter(c: Char) extends Expr, CharType case class StringLiter(s: String) extends Expr, StringType object PairLiter
- * extends Expr, Type { def getType: SemType = PairType(?, ?) } case class Ident(id: Int, override val getType: SemType)
- * extends Expr, LValue case class ArrayElem(v: Ident, es: List[Expr], override val getType: SemType) extends Expr,
- * LValue case class NestedExpr(e: Expr, override val getType: SemType) extends Expr, Type */
