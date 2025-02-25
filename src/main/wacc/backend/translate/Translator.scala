@@ -304,6 +304,13 @@ class Translator {
 
   }
 
+  /** Calculate and return the location of an LValue.
+   *
+   * @param l The LValue to calculate the location of
+   * @return The location of the LValue, which can e.g. be written into or read from directly
+   */
+  private def getLValue(l: LValue): Location = ???
+
   private def unary(e: Expr, instr: Location => Instruction)(using
       instructionCtx: ListContext[Instruction],
       locationCtx: LocationContext
