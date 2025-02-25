@@ -82,10 +82,16 @@ class x86Stringifier {
     case Mul(src)                       => s"mul ${stringifyOperand(src)}"
     case SignedMul(dest, src1, src2) =>
       s"imul ${stringifyOperand(dest, postfix = ", ")}${stringifyOperand(src1)}${stringifyOperand(src2, prefix = ", ")}"
-    case Neg(dest)        => s"neg ${stringifyOperand(dest)}"
-    case Not(dest)        => s"not ${stringifyOperand(dest)}"
-    case Sub(dest, src)   => s"sub ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
-    case Comment(comment) => s"// $comment"
+    case Neg(dest)           => s"neg ${stringifyOperand(dest)}"
+    case Not(dest)           => s"not ${stringifyOperand(dest)}"
+    case Sub(dest, src)      => s"sub ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
+    case Comment(comment)    => s"// $comment"
+    case NoPrefixSyntax      => ".intel_syntax noprefix"
+    case GlobalMain          => ".globl main"
+    case SectionReadOnlyData => ".section .rodata"
+    case Text                => ".text"
+    case IntData(value)      => s".int $value"
+    case Asciz(string)       => s".asciz $string"
   }
 
   /**
