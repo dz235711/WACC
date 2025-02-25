@@ -1,13 +1,17 @@
 package wacc
 
-import TypedAST.{Call as TypedCall, *}
-import wacc.RenamedAST.KnownType.*
+import TypedAST.{Call as TypedCall, Not as TypedNot, *}
+import wacc.RenamedAST.KnownType.{ArrayType, BoolType, CharType, IntType, PairType, StringType}
+import wacc.RenamedAST.{KnownType}
 import wacc.Size.*
 import wacc.RenamedAST.SemType
-import wacc.TypedAST.PairLiter.getType
+
+import java.rmi.UnexpectedException
 
 val NULL = 0
 val TRUE = 1
+
+// TODO: translateExpr consumes a location - make sure to free it after use in translateStmt
 
 class Translator {
 
@@ -21,6 +25,39 @@ class Translator {
     translateCtx.get
   }
 
+  /** Convert a semantic type to a size
+   *
+   * @param t The semantic type to convert
+   * @return The size of the semantic type
+   */
+  private def typeToSize(t: SemType): Size = t match {
+    case IntType        => W32
+    case BoolType       => W8
+    case CharType       => W8
+    case StringType     => W64
+    case ArrayType(_)   => W64
+    case PairType(_, _) => W64
+    case _              => throw new UnexpectedException("Unexpected Error: Invalid type")
+  }
+
+  private def getSize(size: Int): Size = size match {
+    case 1 => W8
+    case 2 => W16
+    case 4 => W32
+    case 8 => W64
+    case _ => throw new RuntimeException("Invalid size")
+  }
+
+  private def getTypeSize(ty: SemType): Int = ty match {
+    case IntType        => 4 // TODO: Magic number
+    case CharType       => 1
+    case BoolType       => 1
+    case StringType     => 8
+    case ArrayType(_)   => 8
+    case PairType(_, _) => 8
+    case _              => throw new RuntimeException("Invalid type")
+  }
+
   /** Translates a statement to a list of instructions
    *
    * @param stmt The statement to translate
@@ -31,14 +68,14 @@ class Translator {
     case Skip => instructionCtx.add(Nop)
 
     case Decl(v, r) =>
-      val dest = locationCtx.getNext
+      val dest = locationCtx.getNext(typeToSize(v.getType))
       translateRValue(r)
       locationCtx.addLocation(v, dest)
 
     case Asgn(l, r) =>
-      val resultLoc = locationCtx.getNext
+      val resultLoc = locationCtx.getNext(typeToSize(l.getType))
       translateRValue(r)
-      locationCtx.moveToLocation(
+      locationCtx.moveToLVal(
         resultLoc,
         l
       )
@@ -48,16 +85,16 @@ class Translator {
       l.getType match {
         case IntType =>
           instructionCtx.add(Call("read_int"))
-          locationCtx.moveToLocation(RAX(W32), l)
+          locationCtx.moveToLVal(RAX(typeToSize(IntType)), l)
         case CharType =>
           instructionCtx.add(Call("read_char"))
-          locationCtx.moveToLocation(RAX(W8), l)
+          locationCtx.moveToLVal(RAX(typeToSize(CharType)), l)
         case _ => throw new RuntimeException("Unexpected Error: Invalid type for read")
       }
       locationCtx.restoreCallerRegisters()
 
     case Free(e) =>
-      val dest = locationCtx.getNext
+      val dest = locationCtx.getNext(typeToSize(e.getType))
       translateExpr(e)
 
       // Check for null
@@ -69,19 +106,19 @@ class Translator {
 
       // Call free
       locationCtx.saveCallerRegisters()
-      instructionCtx.add(Mov(RDI(W64), dest))
+      instructionCtx.add(Mov(RDI(typeToSize(e.getType)), dest))
       instructionCtx.add(Call("free"))
       locationCtx.restoreCallerRegisters()
 
     case Return(e) =>
-      val dest = locationCtx.getNext
+      val dest = locationCtx.getNext(typeToSize(e.getType))
       translateExpr(e)
-      instructionCtx.add(Mov(RAX(W64), dest))
+      instructionCtx.add(Mov(RAX(typeToSize(e.getType)), dest))
       locationCtx.restoreCalleeRegisters()
       instructionCtx.add(Ret(None))
 
     case Exit(e) =>
-      val dest = locationCtx.getNext
+      val dest = locationCtx.getNext(typeToSize(e.getType))
       translateExpr(e)
 
       // Call exit
@@ -89,7 +126,7 @@ class Translator {
       instructionCtx.add(Call("exit"))
 
     case Print(e) =>
-      val dest = locationCtx.getNext
+      val dest = locationCtx.getNext(typeToSize(e.getType))
       translateExpr(e)
 
       // Call the print function corresponding to the type of the expression
@@ -147,7 +184,7 @@ class Translator {
       instructionCtx: ListContext[Instruction],
       locationCtx: LocationContext
   ): Unit =
-    val dest = locationCtx.getNext
+    val dest = locationCtx.getNext(typeToSize(cond.getType))
     translateExpr(cond)
 
     instructionCtx.add(Test(dest, TRUE))
@@ -156,9 +193,10 @@ class Translator {
     instructionCtx.add(Jmp(afterTrueLabel))
     instructionCtx.add(DefineLabel(falseLabel))
 
-  private def translateRValue(
-      value: TypedAST.RValue
-  )(using instructionCtx: ListContext[Instruction], locationCtx: LocationContext) = value match {
+  private def translateRValue(value: TypedAST.RValue)(using
+      instructionCtx: ListContext[Instruction],
+      locationCtx: LocationContext
+  ) = value match {
     case ArrayLiter(es, ty) =>
       // Calculate size needed for the array
       val typeSize = getTypeSize(ty)
@@ -174,7 +212,7 @@ class Translator {
       // Store the size of the array and array elements
       instructionCtx.add(Mov(ptr, es.size))
       es.zipWithIndex.foreach { (e, i) =>
-        val resultLoc = locationCtx.getNext
+        val resultLoc = locationCtx.getNext(typeToSize(e.getType))
         translateExpr(e)
         val src = resultLoc match {
           case r: Register => r
@@ -209,29 +247,82 @@ class Translator {
         case r: Register => r
         case p: Pointer  => locationCtx.setNextReg(p)
       }
-      instructionCtx.add(Mov(RegImmPointer(ptr, type1Size)(getSize(type2Size)), src2))
+      instructionCtx.add(Mov(RegImmPointer(ptr, (PAIR_SIZE / 2))(getSize(type2Size)), src2))
 
   }
 
   private def translateExpr(
-      exp: TypedAST.Expr
-  )(using instructionCtx: ListContext[Instruction], locationCtx: LocationContext): Unit = ???
+      expr: TypedAST.Expr
+  )(using instructionCtx: ListContext[Instruction], locationCtx: LocationContext): Unit = expr match {
+    case TypedNot(e) => unary(e, { l => Not(l) })
+    case Negate(e)   => unary(e, { l => Neg(l) })
 
-  private def getSize(size: Int): Size = size match {
-    case 1 => W8
-    case 2 => W16
-    case 4 => W32
-    case 8 => W64
-    case _ => throw new RuntimeException("Invalid size")
+    case Len(e) =>
+      val lenDest =
+        locationCtx.reserveNext(typeToSize(IntType)) // we want to move the size of the array to this location
+      val arrDest = locationCtx.getNext(typeToSize(e.getType))
+      translateExpr(e)
+      locationCtx.movLocLoc(lenDest, arrDest)
+      locationCtx.unreserveLast()
+
+    case Ord(e) =>
+      val ordDest = locationCtx.reserveNext(typeToSize(IntType))
+      val charDest = locationCtx.getNext(typeToSize(CharType))
+      translateExpr(e)
+      locationCtx.movLocLoc(ordDest, charDest)
+      locationCtx.unreserveLast()
+
+    case Chr(e) =>
+      val chrDest = locationCtx.reserveNext(typeToSize(CharType))
+      val codeDest = locationCtx.getNext(typeToSize(IntType))
+      translateExpr(e)
+      locationCtx.movLocLoc(chrDest, codeDest)
+      locationCtx.unreserveLast()
+
+    case Mult(e1, e2) =>
+      val multDest = locationCtx.reserveNext(typeToSize(IntType))
+      translateExpr(e1)
+      val e2Dest = locationCtx.getNext(typeToSize(IntType))
+      translateExpr(e2)
+      locationCtx.regInstr(multDest, e2Dest, { (regOp1, locOp2) => SignedMul(Some(regOp1), locOp2, None) })
+      // TODO: runtime error if over/underflow
+      locationCtx.unreserveLast()
+
+    case Mod(e1, e2) =>
+      val modDest = locationCtx.reserveNext(typeToSize(IntType))
+      translateExpr(e2)
+      // TODO: runtime error if divide by 0
+      val e1Dest = locationCtx.getNext(typeToSize(IntType))
+      translateExpr(e1)
+      locationCtx.withFreeRegisters(
+        List(RAX(typeToSize(IntType)), RDI(typeToSize(IntType))), {
+          instructionCtx.add(Mov(RAX(typeToSize(IntType)), e1Dest))
+          instructionCtx.add(SignedDiv(modDest))
+          locationCtx.movLocLoc(modDest, RAX(typeToSize(IntType)))
+        }
+      )
+
   }
 
-  private def getTypeSize(ty: SemType): Int = ty match {
-    case IntType        => 4 // TODO: Magic number
-    case CharType       => 1
-    case BoolType       => 1
-    case StringType     => 8
-    case ArrayType(_)   => 8
-    case PairType(_, _) => 8
-    case _              => throw new RuntimeException("Invalid type")
-  }
+  private def unary(e: Expr, instr: Location => Instruction)(using
+      instructionCtx: ListContext[Instruction],
+      locationCtx: LocationContext
+  ) =
+    val dest = locationCtx.getNext(typeToSize(e.getType))
+    translateExpr(e)
+    instructionCtx.add(instr(dest))
 }
+
+/* case class Mod(e1: Expr, e2: Expr) extends Expr, IntType case class Add(e1: Expr, e2: Expr) extends Expr, IntType
+ * case class Div(e1: Expr, e2: Expr) extends Expr, IntType case class Sub(e1: Expr, e2: Expr) extends Expr, IntType
+ * case class Greater(e1: Expr, e2: Expr) extends Expr, BoolType case class GreaterEq(e1: Expr, e2: Expr) extends Expr,
+ * BoolType case class Smaller(e1: Expr, e2: Expr) extends Expr, BoolType case class SmallerEq(e1: Expr, e2: Expr)
+ * extends Expr, BoolType case class Equals(e1: Expr, e2: Expr) extends Expr, BoolType case class NotEquals(e1: Expr,
+ * e2: Expr) extends Expr, BoolType case class And(e1:
+ * Expr, e2: Expr) extends Expr, BoolType case class Or(e1: Expr, e2: Expr) extends Expr, BoolType
+ *
+ * case class IntLiter(x: Int) extends Expr, IntType case class BoolLiter(b: Boolean) extends Expr, BoolType case class
+ * CharLiter(c: Char) extends Expr, CharType case class StringLiter(s: String) extends Expr, StringType object PairLiter
+ * extends Expr, Type { def getType: SemType = PairType(?, ?) } case class Ident(id: Int, override val getType: SemType)
+ * extends Expr, LValue case class ArrayElem(v: Ident, es: List[Expr], override val getType: SemType) extends Expr,
+ * LValue case class NestedExpr(e: Expr, override val getType: SemType) extends Expr, Type */
