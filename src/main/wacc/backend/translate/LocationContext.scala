@@ -33,13 +33,6 @@ class LocationContext {
    */
   def unreserveLast(): Unit = ???
 
-  /** Move a value from a location to a given LValue
-   *
-   * @param loc The location to move from
-   * @param l The LValue to move to
-   */
-  def moveToLVal(loc: Location, l: LValue): Unit = ???
-
   /** Push caller-saved registers to the stack */
   def saveCallerRegisters(): Unit = ???
 

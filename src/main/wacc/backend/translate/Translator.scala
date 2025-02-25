@@ -75,20 +75,19 @@ class Translator {
     case Asgn(l, r) =>
       val resultLoc = locationCtx.getNext(typeToSize(l.getType))
       translateRValue(r)
-      locationCtx.moveToLVal(
-        resultLoc,
-        l
-      )
+      val lLoc = getLValue(l)
+      locationCtx.movLocLoc(lLoc, resultLoc)
 
     case Read(l) =>
       locationCtx.saveCallerRegisters()
+      val lLoc = getLValue(l)
       l.getType match {
         case IntType =>
           instructionCtx.add(Call("read_int"))
-          locationCtx.moveToLVal(RAX(typeToSize(IntType)), l)
+          locationCtx.movLocLoc(lLoc, RAX(typeToSize(IntType)))
         case CharType =>
           instructionCtx.add(Call("read_char"))
-          locationCtx.moveToLVal(RAX(typeToSize(CharType)), l)
+          locationCtx.movLocLoc(lLoc, RAX(typeToSize(CharType)))
         case _ => throw new RuntimeException("Unexpected Error: Invalid type for read")
       }
       locationCtx.restoreCallerRegisters()
