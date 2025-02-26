@@ -27,6 +27,13 @@ class LocationContext {
    */
   def addLocation(v: Ident, r: Location): Unit = ???
 
+  /** Get the location associated with an identifier
+   *
+   * @param v The identifier to get the location of
+   * @return The location associated with the identifier
+   */
+  def getLocation(v: Ident): Location = ???
+
   /** Move the getNext pointer to the last location
    *
    * @return The unreserved location
@@ -53,10 +60,10 @@ class LocationContext {
    * This is useful for operations that require a register as an operand, but you only have 2 locations.
    *
    * @param loc1 The first location
-   * @param loc2 The second location
+   * @param loc2 The second location/operand
    * @param op The operation to perform on the two locations, where the first location is guaranteed to be a register
    */
-  def regInstr(loc1: Location, loc2: Location | Immediate, op: (Register, Location) => Instruction): Unit = ???
+  def regInstr[Op2](loc1: Location, loc2: Op2, op: (Register, Op2) => Instruction): Unit = ???
 
   /** Perform some operation that forces the use of some register(s). These registers are saved and restored after the operation.
    *
