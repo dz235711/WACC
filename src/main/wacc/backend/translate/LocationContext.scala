@@ -1,24 +1,76 @@
 package wacc
 
 import wacc.TypedAST.{Call as TypedCall, *}
+import scala.collection.mutable.ListBuffer
+import wacc.Size.*
 
 type Location = Register | Pointer
 
 class LocationContext {
+
+  private val registers: ListBuffer[Size => Register] = ListBuffer(
+    RBX.apply,
+    RCX.apply,
+    RDX.apply,
+    RSI.apply,
+    RDI.apply,
+    R8.apply,
+    R9.apply,
+    R10.apply,
+    R11.apply,
+    R12.apply,
+    R13.apply,
+    R14.apply,
+    R15.apply
+  )
+  private val reserved = ListBuffer[Location]()
 
   /** Get the next location to use, without actually using it
    *
    * @param size The size of the location
    * @return The next location to use
    */
-  def getNext(size: Size): Location = ???
+  def getNext(size: Size): Location = if (registers.nonEmpty) registers.head(size)
+  else RegPointer(RSP(W64))(size) // TODO: RSP handling and bit allignment
 
   /** Get the location to use and reserve it
    *
    * @param size The size of the location
    * @return The reserved location
    */
-  def reserveNext(size: Size): Location = ???
+  def reserveNext(size: Size): Location = {
+    val loc = getNext(size)
+    reserved += loc
+    loc
+  }
+
+  /** Move the getNext pointer to the last location */
+  def unreserveLast(): Unit = {
+    assert(reserved.nonEmpty)
+    val loc = reserved.last
+    reserved -= loc
+    loc match {
+      case r: Register => registers += constructorFromInstance(r)
+      case l           => // TODO: Handle RSP
+    }
+  }
+
+  private def constructorFromInstance(r: Register): (Size => Register) = r match {
+    case RBX(_) => RBX.apply
+    case RCX(_) => RCX.apply
+    case RDX(_) => RDX.apply
+    case RSI(_) => RSI.apply
+    case RDI(_) => RDI.apply
+    case R8(_)  => R8.apply
+    case R9(_)  => R9.apply
+    case R10(_) => R10.apply
+    case R11(_) => R11.apply
+    case R12(_) => R12.apply
+    case R13(_) => R13.apply
+    case R14(_) => R14.apply
+    case R15(_) => R15.apply
+    case _      => throw new IllegalArgumentException("Cannot get constructor from instance")
+  }
 
   /** Associate a location with an identifier
    *
@@ -33,9 +85,6 @@ class LocationContext {
    * @return The location associated with the identifier
    */
   def getLocation(v: Ident): Location = ???
-
-  /** Move the getNext pointer to the last location */
-  def unreserveLast(): Unit = ???
 
   /** Pop callee-saved registers from the stack */
   def restoreCalleeRegisters(): Unit = ???
