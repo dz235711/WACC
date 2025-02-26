@@ -33,9 +33,6 @@ class LocationContext {
    */
   def unreserveLast(): Unit = ???
 
-  /** Push caller-saved registers to the stack */
-  def saveCallerRegisters(): Unit = ???
-
   /** Pop caller-saved registers from the stack */
   def restoreCallerRegisters(): Unit = ???
 

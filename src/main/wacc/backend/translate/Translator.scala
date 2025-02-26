@@ -110,7 +110,7 @@ class Translator {
       locationCtx.movLocLoc(resultLoc, dest)
 
     case Read(l) =>
-      locationCtx.saveCallerRegisters()
+      locationCtx.setUpCall(List())
       // TODO: clib read
       // val (funName, size) = l.getType match {
       //   case IntType  => ("read_int", typeToSize(IntType))
@@ -131,8 +131,7 @@ class Translator {
       instructionCtx.add(JmpEqual("free_null_error"))
 
       // Call free
-      locationCtx.saveCallerRegisters()
-      instructionCtx.add(Mov(RDI(typeToSize(e.getType)), dest))
+      locationCtx.setUpCall(List(dest))
       // TODO: clib free
       locationCtx.restoreCallerRegisters()
 
@@ -156,7 +155,7 @@ class Translator {
       translateExpr(e)
 
       // Call the print function corresponding to the type of the expression
-      locationCtx.saveCallerRegisters()
+      locationCtx.setUpCall(List(dest))
       e.getType match
         case _ => ??? // TODO
       locationCtx.restoreCallerRegisters()
@@ -166,7 +165,7 @@ class Translator {
       translateStmt(Print(e))
 
       // Print a newline
-      locationCtx.saveCallerRegisters()
+      locationCtx.setUpCall(List())
       // TODO: call println
       locationCtx.restoreCallerRegisters()
 
@@ -233,8 +232,13 @@ class Translator {
       val size = 4 + (es.size * typeSize) // 4 bytes for the size of the array
 
       // Allocate memory for the array
-      instructionCtx.add(Mov(RDI(W32), size))
-      locationCtx.saveCallerRegisters()
+      val tempSizeLocation = locationCtx.reserveNext(W32)
+      tempSizeLocation match {
+        case r: Register => instructionCtx.add(Mov(r, size))
+        case p: Pointer  => instructionCtx.add(Mov(p, size))
+      }
+      locationCtx.setUpCall(List(tempSizeLocation))
+      locationCtx.unreserveLast()
       // TODO: clib malloc
       val ptr = locationCtx.setNextReg(RAX(W64))
       locationCtx.restoreCallerRegisters()
@@ -256,8 +260,13 @@ class Translator {
       val type2Size = getTypeSize(t2)
 
       // Allocate memory for the pair
-      instructionCtx.add(Mov(RDI(W32), PAIR_SIZE))
-      locationCtx.saveCallerRegisters()
+      val tempSizeLocation = locationCtx.reserveNext(W32)
+      tempSizeLocation match {
+        case r: Register => instructionCtx.add(Mov(r, PAIR_SIZE))
+        case p: Pointer  => instructionCtx.add(Mov(p, PAIR_SIZE))
+      }
+      locationCtx.setUpCall(List(tempSizeLocation))
+      locationCtx.unreserveLast()
       // TODO: clib malloc
       val ptr = locationCtx.setNextReg(RAX(W64))
       locationCtx.restoreCallerRegisters()
@@ -304,7 +313,7 @@ class Translator {
       // Move this into the expected result location
       val resultLoc = locationCtx.getNext(typeToSize(ty))
       locationCtx.movLocLoc(resultLoc, sndLoc)
-    case TypedAST.Call(v, args, ty) =>
+    case TypedCall(v, args, ty) =>
       // Translate arguments into temporary locations
       val argLocations: List[Location] = args.map { arg =>
         val dest = locationCtx.reserveNext(typeToSize(arg.getType))
