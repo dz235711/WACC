@@ -561,6 +561,15 @@ class Translator {
     translateExpr(e)
     instr(dest)
 
+  /**
+    * Translate a binary operation and store the result in the next available location at the time of invocation.
+    *
+    * @param e1 The first expression to translate
+    * @param e2 The second expression to translate
+    * @param instr The instruction to perform on the two expressions
+    * @param check1 Overflow check for the first expression
+    * @param check2 Overflow check for both expressions
+    */
   private def binary(
       e1: Expr,
       e2: Expr,
