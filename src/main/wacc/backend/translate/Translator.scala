@@ -166,22 +166,23 @@ class Translator {
       locationCtx.cleanUpCall()
 
     case Free(e) =>
-      val dest = locationCtx.getNext(typeToSize(e.getType))
-      translateExpr(e)
-
       // Check for null
-      locationCtx.regInstr(dest, NULL, { (regOp1, locOp2) => Compare(regOp1, locOp2) })
-      instructionCtx.addInstruction(JmpEqual("free_null_error"))
+      unary(
+        e,
+        { l =>
+          locationCtx.regInstr(l, NULL, { Compare(_, _) })
+          instructionCtx.addInstruction(JmpEqual("free_null_error"))
 
-      // Call free
-      locationCtx.setUpCall(List(dest))
-      // TODO: clib free
+          // Call free
+          locationCtx.setUpCall(List(l))
+        }
+      )
+
+      // TODO:clib free
       locationCtx.cleanUpCall()
 
     case Return(e) =>
-      val dest = locationCtx.getNext(typeToSize(e.getType))
-      translateExpr(e)
-      instructionCtx.addInstruction(Mov(RAX(typeToSize(e.getType)), dest))
+      unary(e, { l => instructionCtx.addInstruction(Mov(RAX(typeToSize(e.getType)), l)) })
       locationCtx.restoreCalleeRegisters()
       instructionCtx.addInstruction(Ret(None))
 
