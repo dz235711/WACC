@@ -1,6 +1,6 @@
 package wacc
 
-import wacc.TypedAST.{Call as TypedCall, *}
+import wacc.TypedAST._
 
 type Location = Register | Pointer
 

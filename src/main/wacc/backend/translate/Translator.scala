@@ -66,6 +66,9 @@ class Translator {
   /** The size of a pointer */
   val POINTER_SIZE = W64
 
+  /** The size of an integer in bytes */
+  val INT_SIZE = 4
+
   /** The value of NULL */
   val NULL = 0
 
@@ -95,34 +98,6 @@ class Translator {
     case ArrayType(_)   => W64
     case PairType(_, _) => W64
     case _              => throw new UnexpectedException("Unexpected Error: Invalid type")
-  }
-
-  /** Convert a number of bytes to a Size
-   *
-   * @param size The number of bytes
-   * @return The Size corresponding to the number of bytes
-   */
-  private def getSize(size: Int): Size = size match {
-    case 1 => W8
-    case 2 => W16
-    case 4 => W32
-    case 8 => W64
-    case _ => throw new RuntimeException("Invalid size")
-  }
-
-  /** Get the size of a semantic type in bytes
-   *
-   * @param ty The semantic type to get the size of
-   * @return The size of the semantic type in bytes
-   */
-  private def getTypeSize(ty: SemType): Int = ty match {
-    case IntType        => 4 // TODO: Magic number
-    case CharType       => 1
-    case BoolType       => 1
-    case StringType     => 8
-    case ArrayType(_)   => 8
-    case PairType(_, _) => 8
-    case _              => throw new RuntimeException("Invalid type")
   }
 
   /** Generates a function name from an id
@@ -272,8 +247,7 @@ class Translator {
   ): Unit = value match {
     case ArrayLiter(es, ty) =>
       // Calculate size needed for the array
-      val typeSize = getTypeSize(ty)
-      val size = 4 + (es.size * typeSize) // 4 bytes for the size of the array
+      val size = (typeToSize(ty).toBytes * es.size) + INT_SIZE
 
       // Allocate memory for the array
       val tempSizeLocation = locationCtx.reserveNext(W32)
@@ -295,7 +269,7 @@ class Translator {
       es.zipWithIndex.foreach { (e, i) =>
         val expLoc = locationCtx.getNext(typeToSize(e.getType))
         translateExpr(e)
-        val offset: Immediate = i * typeSize
+        val offset: Immediate = i * typeToSize(e.getType).toBytes
         locationCtx.regInstrN[(Immediate, Size)](
           List(ptrLoc, expLoc),
           (offset, typeToSize(e.getType)),
@@ -305,10 +279,6 @@ class Translator {
         )
       }
     case NewPair(e1, e2, PairType(t1, t2)) =>
-      // Find the sizes of the pair elements
-      val type1Size = getTypeSize(t1)
-      val type2Size = getTypeSize(t2)
-
       // Allocate memory for the pair
       val tempSizeLocation = locationCtx.reserveNext(W32)
       instructionCtx.addInstruction(tempSizeLocation match {
