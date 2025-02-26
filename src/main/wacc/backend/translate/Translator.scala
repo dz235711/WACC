@@ -401,13 +401,11 @@ class Translator {
       locationCtx.unreserveLast()
 
     case Mult(e1, e2) =>
-      val multDest = locationCtx.reserveNext(typeToSize(IntType))
-      translateExpr(e1)
-      val e2Dest = locationCtx.getNext(typeToSize(IntType))
-      translateExpr(e2)
-      locationCtx.regInstr(multDest, e2Dest, { (regOp1, locOp2) => SignedMul(Some(regOp1), locOp2, None) })
-      locationCtx.unreserveLast()
-    // TODO: runtime error if over/underflow
+      binary(
+        e1,
+        e2,
+        { (regOp1, locOp2) => SignedMul(Some(regOp1), locOp2, None) }
+      ) // TODO: runtime error if over/underflow
 
     case Mod(e1, e2) =>
       val modDest = locationCtx.reserveNext(typeToSize(IntType))
@@ -439,23 +437,9 @@ class Translator {
       )
       locationCtx.unreserveLast()
 
-    case TypedAdd(e1, e2) =>
-      val addDest = locationCtx.reserveNext(typeToSize(IntType))
-      translateExpr(e1)
-      val e2Dest = locationCtx.getNext(typeToSize(IntType))
-      translateExpr(e2)
-      // TODO: runtime error if over/underflow
-      locationCtx.regInstr(addDest, e2Dest, { (regOp1, locOp2) => Add(regOp1, locOp2) })
-      locationCtx.unreserveLast()
+    case TypedAdd(e1, e2) => binary(e1, e2, Add.apply) // TODO: runtime error if over/underflow
 
-    case TypedSub(e1, e2) =>
-      val subDest = locationCtx.reserveNext(typeToSize(IntType))
-      translateExpr(e1)
-      val e2Dest = locationCtx.getNext(typeToSize(IntType))
-      translateExpr(e2)
-      // TODO: runtime error if over/underflow
-      locationCtx.regInstr(subDest, e2Dest, { (regOp1, locOp2) => Sub(regOp1, locOp2) })
-      locationCtx.unreserveLast()
+    case TypedSub(e1, e2) => binary(e1, e2, Sub.apply) // TODO: runtime error if over/underflow
 
     case Greater(e1, e2) => cmpExp(e1, e2, SetGreater.apply)
 
@@ -472,21 +456,9 @@ class Translator {
       translateExpr(Equals(e1, e2))
       instructionCtx.addInstruction(Not(dest))
 
-    case TypedAnd(e1, e2) =>
-      val andDest = locationCtx.reserveNext(typeToSize(BoolType))
-      translateExpr(e1)
-      val e2Dest = locationCtx.getNext(typeToSize(BoolType))
-      translateExpr(e2)
-      locationCtx.regInstr(andDest, e2Dest, { (regOp1, locOp2) => And(regOp1, locOp2) })
-      locationCtx.unreserveLast()
+    case TypedAnd(e1, e2) => binary(e1, e2, And.apply)
 
-    case TypedOr(e1, e2) =>
-      val orDest = locationCtx.reserveNext(typeToSize(BoolType))
-      translateExpr(e1)
-      val e2Dest = locationCtx.getNext(typeToSize(BoolType))
-      translateExpr(e2)
-      locationCtx.regInstr(orDest, e2Dest, { (regOp1, locOp2) => Or(regOp1, locOp2) })
-      locationCtx.unreserveLast()
+    case TypedOr(e1, e2) => binary(e1, e2, Or.apply)
 
     case IntLiter(x) =>
       val dest = locationCtx.getNext(typeToSize(IntType))
@@ -578,4 +550,24 @@ class Translator {
     val dest = locationCtx.getNext(typeToSize(e.getType))
     translateExpr(e)
     instr(dest)
+
+  private def binary(
+      e1: Expr,
+      e2: Expr,
+      instr: (Register, Location) => Instruction,
+      check1: Option[Location => Unit] = None,
+      check2: Option[(Location, Location) => Unit] = None
+  )(using
+      instructionCtx: InstructionContext,
+      locationCtx: LocationContext
+  ): Unit = {
+    val dest = locationCtx.reserveNext(typeToSize(e1.getType))
+    translateExpr(e1)
+    if check1.isDefined then check1.get(dest)
+    val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
+    if check2.isDefined then check2.get(dest, e2Dest)
+    translateExpr(e2)
+    locationCtx.regInstr(dest, e2Dest, { (regOp1, locOp2) => instr(regOp1, locOp2) })
+    locationCtx.unreserveLast()
+  }
 }
