@@ -37,7 +37,10 @@ class LocationContext {
   /** Move the getNext pointer to the last location */
   def unreserveLast(): Unit = ???
 
-  /** Set up stack frame and push callee-saved registers onto the stack*/
+  /** Set up stack frame, assign parameters a location and push callee-saved registers onto the stack
+   * 
+   * @param params The parameters of the function
+  */
   def setUpFunc(params: List[Ident]): Unit = ???
 
   /** Reset stack pointer and pop callee-saved registers from the stack */

@@ -514,6 +514,10 @@ class Translator {
     case NestedExpr(e, ty) => translateExpr(e)
   }
 
+  /** Translates a function.
+    *
+    * @param f The function to translate
+    */
   private def translateFunction(
       f: Func
   )(using instructionCtx: InstructionContext, locationCtx: LocationContext): Unit =
