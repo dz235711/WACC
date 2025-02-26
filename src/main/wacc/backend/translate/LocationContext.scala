@@ -37,9 +37,6 @@ class LocationContext {
   /** Move the getNext pointer to the last location */
   def unreserveLast(): Unit = ???
 
-  /** Pop caller-saved registers from the stack */
-  def restoreCallerRegisters(): Unit = ???
-
   /** Pop callee-saved registers from the stack */
   def restoreCalleeRegisters(): Unit = ???
 
@@ -74,12 +71,15 @@ class LocationContext {
    */
   def withFreeRegisters(regsToUse: List[Register], op: => Unit): Unit = ???
 
-  // TODO: delete this
-  def setNextReg(l: Location): Register = ???
-
-  /** Set up the call to a function by moving arguments to their intended locations
+  /** Saves caller registers and moves arguments to their intended registers/on the stack
     * 
     * @param argLocations The temporary locations of the arguments
     */
   def setUpCall(argLocations: List[Location]): Unit = ???
+
+  /** Restore caller registers and save result to a location
+    * 
+    * @return The location of the result
+    */
+  def cleanUpCall(): Location = ???
 }

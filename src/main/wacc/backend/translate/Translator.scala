@@ -63,6 +63,9 @@ class Translator {
   /** The size of a pair in bytes */
   val PAIR_SIZE = 16
 
+  /** The size of a pointer */
+  val POINTER_SIZE = W64
+
   /** The value of NULL */
   val NULL = 0
 
@@ -160,7 +163,7 @@ class Translator {
       // instructionCtx.addInstruction(Call(funName))
       // val dest = getLValue(l)
       // instructionCtx.addInstruction(Mov(RAX(size), dest))
-      locationCtx.restoreCallerRegisters()
+      locationCtx.cleanUpCall()
 
     case Free(e) =>
       val dest = locationCtx.getNext(typeToSize(e.getType))
@@ -173,7 +176,7 @@ class Translator {
       // Call free
       locationCtx.setUpCall(List(dest))
       // TODO: clib free
-      locationCtx.restoreCallerRegisters()
+      locationCtx.cleanUpCall()
 
     case Return(e) =>
       val dest = locationCtx.getNext(typeToSize(e.getType))
@@ -198,7 +201,7 @@ class Translator {
       locationCtx.setUpCall(List(dest))
       e.getType match
         case _ => ??? // TODO
-      locationCtx.restoreCallerRegisters()
+      locationCtx.cleanUpCall()
 
     case PrintLn(e) =>
       // Print the expression
@@ -207,7 +210,7 @@ class Translator {
       // Print a newline
       locationCtx.setUpCall(List())
       // TODO: call println
-      locationCtx.restoreCallerRegisters()
+      locationCtx.cleanUpCall()
 
     case If(cond, s1, s2) =>
       val falseLabel = s"if_false_${cond.hashCode()}"
@@ -280,19 +283,25 @@ class Translator {
       locationCtx.setUpCall(List(tempSizeLocation))
       locationCtx.unreserveLast()
       // TODO: clib malloc
-      val ptr = locationCtx.setNextReg(RAX(W64))
-      locationCtx.restoreCallerRegisters()
+      val ptrLoc: Location = locationCtx.cleanUpCall()
 
       // Store the size of the array and array elements
-      instructionCtx.addInstruction(Mov(ptr, es.size))
+      locationCtx.regInstrN[(Immediate, Size)](
+        List(ptrLoc),
+        (es.size, POINTER_SIZE),
+        { (regs, data) => Mov(RegPointer(regs(0))(data._2), data._1) }
+      )
       es.zipWithIndex.foreach { (e, i) =>
-        val resultLoc = locationCtx.getNext(typeToSize(e.getType))
+        val expLoc = locationCtx.getNext(typeToSize(e.getType))
         translateExpr(e)
-        val src = resultLoc match {
-          case r: Register => r
-          case p: Pointer  => locationCtx.setNextReg(p)
-        }
-        instructionCtx.addInstruction(Mov(RegImmPointer(ptr, i * typeSize)(getSize(typeSize)), src))
+        val offset: Immediate = i * typeSize
+        locationCtx.regInstrN[(Immediate, Size)](
+          List(ptrLoc, expLoc),
+          (offset, typeToSize(e.getType)),
+          { (regs, data) =>
+            Mov(RegImmPointer(regs(0), data._1)(data._2), regs(1))
+          }
+        )
       }
     case NewPair(e1, e2, PairType(t1, t2)) =>
       // Find the sizes of the pair elements
@@ -308,25 +317,25 @@ class Translator {
       locationCtx.setUpCall(List(tempSizeLocation))
       locationCtx.unreserveLast()
       // TODO: clib malloc
-      val ptr = locationCtx.setNextReg(RAX(W64))
-      locationCtx.restoreCallerRegisters()
+      val ptrLoc = locationCtx.cleanUpCall()
 
       // Store the pair elements
       val resultLoc1 = locationCtx.getNext(W64)
       translateExpr(e1)
-      val src1 = resultLoc1 match {
-        case r: Register => r
-        case p: Pointer  => locationCtx.setNextReg(p)
-      }
-      instructionCtx.addInstruction(Mov(RegPointer(ptr)(getSize(type1Size)), src1))
+      locationCtx.regInstrN[Size](
+        List(ptrLoc, resultLoc1),
+        typeToSize(t1),
+        { (regs, size) => Mov(RegPointer(regs(0))(size), regs(1)) }
+      )
 
       val resultLoc2 = locationCtx.getNext(W64)
       translateExpr(e2)
-      val src2 = resultLoc2 match {
-        case r: Register => r
-        case p: Pointer  => locationCtx.setNextReg(p)
-      }
-      instructionCtx.addInstruction(Mov(RegImmPointer(ptr, PAIR_SIZE / 2)(getSize(type2Size)), src2))
+      val offsetSnd: Immediate = PAIR_SIZE / 2
+      locationCtx.regInstrN[(Immediate, Size)](
+        List(ptrLoc, resultLoc2),
+        (offsetSnd, typeToSize(t2)),
+        { (regs, data) => Mov(RegImmPointer(regs(0), data._1)(data._2), regs(1)) }
+      )
     case f @ Fst(_, ty) =>
       // Get the current location in the map of the Fst
       val fstLoc = getLValue(f)
@@ -369,7 +378,7 @@ class Translator {
       // Call the function
       instructionCtx.addInstruction(Call(getFunctionName(v.id)))
       // Restore caller-save registers
-      locationCtx.restoreCallerRegisters()
+      locationCtx.cleanUpCall()
     case e: Expr => translateExpr(e)
   }
 
