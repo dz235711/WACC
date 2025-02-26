@@ -10,19 +10,27 @@ import TypedAST.{
   *
 }
 import wacc.RenamedAST.KnownType.{ArrayType, BoolType, CharType, IntType, PairType, StringType}
-import wacc.RenamedAST.{KnownType}
+import wacc.RenamedAST.KnownType
 import wacc.Size.*
 import wacc.RenamedAST.SemType
 
 import java.rmi.UnexpectedException
 
-val NULL = 0
-val TRUE = 1
+// Agreement: a translate function will:
+// 1. put its result in the next available location at the time of its invocation
+// 2. unreserve any locations it reserves
 
 class Translator {
 
   // Constants
+  /** The size of a pair in bytes */
   val PAIR_SIZE = 16
+
+  /** The value of NULL */
+  val NULL = 0
+
+  /** The value of TRUE */
+  val TRUE = 1
 
   def translate(program: Program): List[Instruction] = {
     given translateCtx: ListContext[Instruction] = new ListContext()
@@ -46,6 +54,11 @@ class Translator {
     case _              => throw new UnexpectedException("Unexpected Error: Invalid type")
   }
 
+  /** Convert a number of bytes to a Size
+   *
+   * @param size The number of bytes
+   * @return The Size corresponding to the number of bytes
+   */
   private def getSize(size: Int): Size = size match {
     case 1 => W8
     case 2 => W16
@@ -54,6 +67,11 @@ class Translator {
     case _ => throw new RuntimeException("Invalid size")
   }
 
+  /** Get the size of a semantic type in bytes
+   *
+   * @param ty The semantic type to get the size of
+   * @return The size of the semantic type in bytes
+   */
   private def getTypeSize(ty: SemType): Int = ty match {
     case IntType        => 4 // TODO: Magic number
     case CharType       => 1
@@ -86,7 +104,7 @@ class Translator {
 
     case Read(l) =>
       locationCtx.saveCallerRegisters()
-      // TODO: clib read 
+      // TODO: clib read
       // val (funName, size) = l.getType match {
       //   case IntType  => ("read_int", typeToSize(IntType))
       //   case CharType => ("read_char", typeToSize(CharType))
@@ -124,7 +142,7 @@ class Translator {
 
       // Call exit
       instructionCtx.add(Mov(RDI(W8), dest))
-      // TODO: clib exit
+    // TODO: clib exit
 
     case Print(e) =>
       val dest = locationCtx.getNext(typeToSize(e.getType))
@@ -194,14 +212,18 @@ class Translator {
     instructionCtx.add(Jmp(afterTrueLabel))
     instructionCtx.add(DefineLabel(falseLabel))
 
+  /** Translates an RValue to and stores the result in the next available location at the time of invocation.
+   *
+   * @param value The RValue to translate
+   */
   private def translateRValue(value: TypedAST.RValue)(using
       instructionCtx: ListContext[Instruction],
       locationCtx: LocationContext
-  ) = value match {
+  ): Unit = value match {
     case ArrayLiter(es, ty) =>
       // Calculate size needed for the array
       val typeSize = getTypeSize(ty)
-      val size = 4 + ((es.size) * typeSize) // 4 bytes for the size of the array
+      val size = 4 + (es.size * typeSize) // 4 bytes for the size of the array
 
       // Allocate memory for the array
       instructionCtx.add(Mov(RDI(W32), size))
@@ -219,7 +241,7 @@ class Translator {
           case r: Register => r
           case p: Pointer  => locationCtx.setNextReg(p)
         }
-        instructionCtx.add(Mov(RegImmPointer(ptr, (i * typeSize))(getSize(typeSize)), src))
+        instructionCtx.add(Mov(RegImmPointer(ptr, i * typeSize)(getSize(typeSize)), src))
       }
     case NewPair(e1, e2, PairType(t1, t2)) =>
       // Find the sizes of the pair elements
@@ -248,7 +270,7 @@ class Translator {
         case r: Register => r
         case p: Pointer  => locationCtx.setNextReg(p)
       }
-      instructionCtx.add(Mov(RegImmPointer(ptr, (PAIR_SIZE / 2))(getSize(type2Size)), src2))
+      instructionCtx.add(Mov(RegImmPointer(ptr, PAIR_SIZE / 2)(getSize(type2Size)), src2))
     case f @ Fst(_, ty) =>
       // Get the current location in the map of the Fst
       val fstLoc = getLValue(f)
@@ -278,6 +300,11 @@ class Translator {
 
   }
 
+  /** Translates an expression. The result of the expression is stored in the next available location at the time of
+   * invocation.
+   *
+   * @param expr The expression to translate
+   */
   private def translateExpr(
       expr: TypedAST.Expr
   )(using instructionCtx: ListContext[Instruction], locationCtx: LocationContext): Unit = expr match {
@@ -394,11 +421,18 @@ class Translator {
       locationCtx.unreserveLast()
   }
 
+  /** Compare two expressions and set the result of the comparison in the next available location at the time of
+   * invocation.
+   *
+   * @param e1 The first expression to compare
+   * @param e2 The second expression to compare
+   * @param setter The function to set the result of the comparison (e.g. SetGreater, SetEqual, etc.)
+   */
   private def cmpExp(e1: Expr, e2: Expr, setter: Location => Instruction)(using
       instructionCtx: ListContext[Instruction],
       locationCtx: LocationContext
-  ) =
-    val dest = locationCtx.reserveNext(typeToSize(e1.getType))
+  ): Unit =
+    val dest = locationCtx.getNext(typeToSize(e1.getType))
     translateExpr(e1)
     val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
     translateExpr(e2)
@@ -413,6 +447,11 @@ class Translator {
    */
   private def getLValue(l: LValue): Location = ???
 
+  /** Translate a unary operation and store the result in the next available location at the time of invocation.
+   *
+   * @param e The expression to translate
+   * @param instr The instruction to perform on the expression
+   */
   private def unary(e: Expr, instr: Location => Instruction)(using
       instructionCtx: ListContext[Instruction],
       locationCtx: LocationContext
