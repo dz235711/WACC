@@ -78,6 +78,9 @@ class Translator {
   /** The value of FALSE */
   val FALSE = 0
 
+  /** The label for a user-defined function */
+  val FUNCTION_LABEL = "wacc_func_"
+
   def translate(program: Program): List[Instruction] = {
     given translateCtx: InstructionContext = new InstructionContext()
     given locationCtx: LocationContext = new LocationContext()
@@ -105,7 +108,7 @@ class Translator {
    * @param id The id (integer) to generate the function name
    * @return The function name
    */
-  private def getFunctionName(id: Int): String = s"wacc_func_$id"
+  private def getFunctionName(id: Int): String = s"$FUNCTION_LABEL$id"
 
   /** Translates a statement to a list of instructions
    *
@@ -491,6 +494,21 @@ class Translator {
 
     case NestedExpr(e, ty) => translateExpr(e)
   }
+
+  private def translateFunction(
+      f: Func
+  )(using instructionCtx: InstructionContext, locationCtx: LocationContext): Unit =
+    // Define the function label
+    instructionCtx.addInstruction(DefineLabel(getFunctionName(f.v.id)))
+
+    // Set up stack frame and save callee-save registers
+    locationCtx.setUpFunc(f.params)
+
+    // Translate the function body
+    translateStmt(f.body)
+
+    // Restore callee-save registers and clean up stack frame
+    locationCtx.cleanUpFunc()
 
   /** Compare two expressions and set the result of the comparison in the next available location at the time of
    * invocation.
