@@ -34,10 +34,7 @@ class LocationContext {
    */
   def getLocation(v: Ident): Location = ???
 
-  /** Move the getNext pointer to the last location
-   *
-   * @return The unreserved location
-   */
+  /** Move the getNext pointer to the last location */
   def unreserveLast(): Unit = ???
 
   /** Pop caller-saved registers from the stack */
@@ -61,6 +58,14 @@ class LocationContext {
    * @param op The operation to perform on the two locations, where the first location is guaranteed to be a register
    */
   def regInstr[Op2](loc1: Location, loc2: Op2, op: (Register, Op2) => Instruction): Unit = ???
+
+  /** Perform some operation that forces the use of n registers. 
+   * 
+   * @param locs The locations to use
+   * @param data The helper data to use
+   * @param op The operation to perform on the locations
+  */
+  def regInstrN[A](locs: List[Location], data: A, op: (List[Register], A) => Instruction): Unit = ???
 
   /** Perform some operation that forces the use of some register(s). These registers are saved and restored after the operation.
    *
