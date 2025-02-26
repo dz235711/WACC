@@ -381,30 +381,25 @@ class Translator {
   private def translateExpr(
       expr: TypedAST.Expr
   )(using instructionCtx: InstructionContext, locationCtx: LocationContext): Unit = expr match {
-    case TypedNot(e) => unary(e, { l => Not(l) })
-    case Negate(e)   => unary(e, { l => Neg(l) })
+    case TypedNot(e) => unary(e, { l => instructionCtx.addInstruction(Not(l)) })
+    case Negate(e)   => unary(e, { l => instructionCtx.addInstruction(Neg(l)) })
 
     case Len(e) =>
       val lenDest =
         locationCtx.reserveNext(typeToSize(IntType)) // we want to move the size of the array to this location
-      val arrDest = locationCtx.getNext(typeToSize(e.getType))
-      translateExpr(e)
-      locationCtx.movLocLoc(lenDest, arrDest)
+      unary(e, { l => locationCtx.movLocLoc(lenDest, l) })
       locationCtx.unreserveLast()
 
     case Ord(e) =>
       val ordDest = locationCtx.reserveNext(typeToSize(IntType))
-      val charDest = locationCtx.getNext(typeToSize(CharType))
-      translateExpr(e)
-      locationCtx.movLocLoc(ordDest, charDest)
+      unary(e, { l => locationCtx.movLocLoc(ordDest, l) })
       locationCtx.unreserveLast()
 
     case Chr(e) =>
       val chrDest = locationCtx.reserveNext(typeToSize(CharType))
-      val codeDest = locationCtx.getNext(typeToSize(IntType))
-      translateExpr(e)
-      locationCtx.movLocLoc(chrDest, codeDest)
+      unary(e, { l => locationCtx.movLocLoc(chrDest, l) })
       locationCtx.unreserveLast()
+
     case Mult(e1, e2) =>
       val multDest = locationCtx.reserveNext(typeToSize(IntType))
       translateExpr(e1)
@@ -576,11 +571,11 @@ class Translator {
    * @param e The expression to translate
    * @param instr The instruction to perform on the expression
    */
-  private def unary(e: Expr, instr: Location => Instruction)(using
+  private def unary(e: Expr, instr: Location => Unit)(using
       instructionCtx: InstructionContext,
       locationCtx: LocationContext
   ): Unit =
     val dest = locationCtx.getNext(typeToSize(e.getType))
     translateExpr(e)
-    instructionCtx.addInstruction(instr(dest))
+    instr(dest)
 }
