@@ -82,6 +82,13 @@ class Translator {
     case _              => throw new RuntimeException("Invalid type")
   }
 
+  /** Generates a function name from an id
+   * 
+   * @param id The id (integer) to generate the function name
+   * @return The function name
+   */
+  private def getFunctionName(id: Int): String = s"wacc_func_$id"
+
   /** Translates a statement to a list of instructions
    *
    * @param stmt The statement to translate
@@ -297,7 +304,24 @@ class Translator {
       // Move this into the expected result location
       val resultLoc = locationCtx.getNext(typeToSize(ty))
       locationCtx.movLocLoc(resultLoc, sndLoc)
-
+    case TypedAST.Call(v, args, ty) =>
+      // Translate arguments into temporary locations
+      val argLocations: List[Location] = args.map { arg =>
+        val dest = locationCtx.reserveNext(typeToSize(arg.getType))
+        translateExpr(arg)
+        dest
+      }
+      // Save caller-save registers and set up arguments
+      locationCtx.setUpCall(argLocations)
+      // Free argument temp locations
+      argLocations.foreach { _ =>
+        locationCtx.unreserveLast()
+      }
+      // Call the function
+      instructionCtx.add(Call(getFunctionName(v.id)))
+      // Restore caller-save registers
+      locationCtx.restoreCallerRegisters()
+    case e: Expr => translateExpr(e)
   }
 
   /** Translates an expression. The result of the expression is stored in the next available location at the time of

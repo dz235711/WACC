@@ -67,4 +67,10 @@ class LocationContext {
 
   // TODO: delete this
   def setNextReg(l: Location): Register = ???
+
+  /** Set up the call to a function by moving arguments to their intended locations
+    * 
+    * @param argLocations The temporary locations of the arguments
+    */
+  def setUpCall(argLocations: List[Location]): Unit = ???
 }
