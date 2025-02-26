@@ -15,6 +15,8 @@ import wacc.Size.*
 
 import java.rmi.UnexpectedException
 
+type HeapLValue = Fst | Snd | ArrayElem
+
 // Agreement: a translate function will:
 // 1. put its result in the next available location at the time of its invocation
 // 2. unreserve any locations it reserves
@@ -61,25 +63,25 @@ class Translator {
 
   // Constants
   /** The size of a pair in bytes */
-  val PAIR_SIZE = 16
+  private val PAIR_SIZE = 16
 
   /** The size of a pointer */
-  val POINTER_SIZE = W64
+  private val POINTER_SIZE = W64
 
   /** The size of an integer in bytes */
-  val INT_SIZE = 4
+  private val INT_SIZE = 4
 
   /** The value of NULL */
-  val NULL = 0
+  private val NULL = 0
 
   /** The value of TRUE */
-  val TRUE = 1
+  private val TRUE = 1
 
   /** The value of FALSE */
-  val FALSE = 0
+  private val FALSE = 0
 
   /** The label for a user-defined function */
-  val FUNCTION_LABEL = "wacc_func_"
+  private val FUNCTION_LABEL = "wacc_func_"
 
   def translate(program: Program): List[Instruction] = {
     given translateCtx: InstructionContext = new InstructionContext()
@@ -125,10 +127,22 @@ class Translator {
       locationCtx.addLocation(v, dest)
 
     case Asgn(l, r) =>
-      val resultLoc = locationCtx.getNext(typeToSize(l.getType))
       translateRValue(r)
-      val dest = getLValue(l)
-      locationCtx.movLocLoc(resultLoc, dest)
+      val resultLoc = locationCtx.reserveNext(typeToSize(l.getType))
+
+      l match {
+        case id: Ident =>
+          val dest = locationCtx.getLocation(id)
+          locationCtx.movLocLoc(dest, resultLoc)
+
+        case h: HeapLValue =>
+          val hDest = getHeapLocation(h)
+          locationCtx.regInstrN(
+            List(hDest, resultLoc),
+            None,
+            { (regs, _) => Mov(RegPointer(regs(0))(typeToSize(l.getType)), regs(1)) }
+          )
+      }
 
     case Read(l) =>
       locationCtx.setUpCall(List())
@@ -266,7 +280,7 @@ class Translator {
       // Store the size of the array and array elements
       locationCtx.regInstrN[(Immediate, Size)](
         List(ptrLoc),
-        (es.size, POINTER_SIZE),
+        Some((es.size, POINTER_SIZE)),
         { (regs, data) => Mov(RegPointer(regs(0))(data._2), data._1) }
       )
       es.zipWithIndex.foreach { (e, i) =>
@@ -275,7 +289,7 @@ class Translator {
         val offset: Immediate = i * typeToSize(e.getType).toBytes
         locationCtx.regInstrN[(Immediate, Size)](
           List(ptrLoc, expLoc),
-          (offset, typeToSize(e.getType)),
+          Some((offset, typeToSize(e.getType))),
           { (regs, data) =>
             Mov(RegImmPointer(regs(0), data._1)(data._2), regs(1))
           }
@@ -298,7 +312,7 @@ class Translator {
       translateExpr(e1)
       locationCtx.regInstrN[Size](
         List(ptrLoc, resultLoc1),
-        typeToSize(t1),
+        Some(typeToSize(t1)),
         { (regs, size) => Mov(RegPointer(regs(0))(size), regs(1)) }
       )
 
@@ -307,35 +321,35 @@ class Translator {
       val offsetSnd: Immediate = PAIR_SIZE / 2
       locationCtx.regInstrN[(Immediate, Size)](
         List(ptrLoc, resultLoc2),
-        (offsetSnd, typeToSize(t2)),
+        Some((offsetSnd, typeToSize(t2))),
         { (regs, data) => Mov(RegImmPointer(regs(0), data._1)(data._2), regs(1)) }
       )
     case f @ Fst(_, ty) =>
       // Get the current location in the map of the Fst
-      val fstLoc = getLValue(f)
-      // Check this isn't null
-      instructionCtx.addInstruction(fstLoc match {
-        case r: Register => Compare(r, NULL)
-        case p: Pointer  => Compare(p, NULL)
-      })
-      instructionCtx.addInstruction(JmpEqual("fst_null_error"))
+      val fstLoc = getHeapLocation(f)
 
       // Move this into the expected result location
-      val resultLoc = locationCtx.getNext(typeToSize(ty))
-      locationCtx.movLocLoc(resultLoc, fstLoc)
+      val dest = locationCtx.getNext(typeToSize(ty))
+
+      locationCtx.regInstrN(
+        List(dest, fstLoc),
+        None,
+        { (regs, _) => Mov(regs(0), RegPointer(regs(1))(typeToSize(f.getType))) }
+      )
+
     case s @ Snd(_, ty) =>
       // Get the current location in the map of the Snd
-      val sndLoc = getLValue(s)
-      // Check this isn't null
-      instructionCtx.addInstruction(sndLoc match {
-        case r: Register => Compare(r, NULL)
-        case p: Pointer  => Compare(p, NULL)
-      })
-      instructionCtx.addInstruction(JmpEqual("snd_null_error"))
+      val fstLoc = getHeapLocation(s)
 
       // Move this into the expected result location
-      val resultLoc = locationCtx.getNext(typeToSize(ty))
-      locationCtx.movLocLoc(resultLoc, sndLoc)
+      val dest = locationCtx.getNext(typeToSize(ty))
+
+      locationCtx.regInstrN(
+        List(dest, fstLoc),
+        None,
+        { (regs, _) => Mov(regs(0), RegPointer(regs(1))(typeToSize(s.getType))) }
+      )
+
     case TypedCall(v, args, ty) =>
       // Translate arguments into temporary locations
       val argLocations: List[Location] = args.map { arg =>
@@ -488,10 +502,14 @@ class Translator {
       locationCtx.movLocLoc(dest, loc)
 
     case elem: ArrayElem =>
-      val dest = locationCtx.reserveNext(typeToSize(elem.getType))
-      val loc = getLValue(elem)
-      locationCtx.movLocLoc(dest, loc)
-      locationCtx.unreserveLast()
+      val loc = getHeapLocation(elem)
+      val dest = locationCtx.getNext(typeToSize(elem.getType))
+
+      locationCtx.regInstrN(
+        List(dest, loc),
+        None,
+        { (regs, _) => Mov(regs(0), RegPointer(regs(1))(typeToSize(elem.getType))) }
+      )
 
     case NestedExpr(e, ty) => translateExpr(e)
   }
@@ -530,12 +548,86 @@ class Translator {
     instructionCtx.addInstruction(setter(dest))
     locationCtx.unreserveLast()
 
-  /** Calculate and return the location of an LValue.
+  /** Get the location of an LValue that is stored on the heap
    *
-   * @param l The LValue to calculate the location of
-   * @return The location of the LValue, which can e.g. be written into or read from directly
+   * @param l The LValue to get the location of
+   * @return The location of the pointer to the LValue
    */
-  private def getLValue(l: LValue): Location = ???
+  private def getHeapLocation(l: HeapLValue)(using
+      instructionCtx: InstructionContext,
+      locationCtx: LocationContext
+  ): Location = l match {
+
+    case elem @ ArrayElem(v, es, ty) =>
+      // move the base address of the array to the next available location
+      // reserve the base address of the array
+      val baseDest = locationCtx.reserveNext(typeToSize(v.getType))
+      val baseLoc = locationCtx.getLocation(v)
+      locationCtx.movLocLoc(baseDest, baseLoc)
+
+      // Calculate the final location
+      es.foldLeft(v.getType) { (tyAcc, e) =>
+        tyAcc match {
+          case ArrayType(nextTy) =>
+            // evaluate the index
+            translateExpr(e)
+            val indexDest = locationCtx.getNext(typeToSize(e.getType))
+
+            // TODO: runtime error if index out of bounds
+
+            // get the size of the type (for scaling)
+            val tySize = typeToSize(nextTy).toBytes
+
+            locationCtx.regInstrN[Unit](
+              List(baseDest, indexDest),
+              None,
+              { (regs, _) =>
+                // baseDest = baseDest + indexDest * tySize + 4
+                Lea(regs(0), RegScaleRegImmPointer(regs(0), tySize, regs(1), 4)(typeToSize(nextTy)))
+              }
+            )
+            nextTy
+          case _ => throw new RuntimeException("Invalid type")
+        }
+      }
+
+      locationCtx.unreserveLast()
+
+      // Return the final location
+      baseDest
+
+    case Fst(l, ty) =>
+      // Get the location of the pointer to the pair
+      val pairPtrLoc = l match {
+        case id: Ident     => locationCtx.getLocation(id)
+        case h: HeapLValue => getHeapLocation(h)
+      }
+      // TODO: runtime error if null
+
+      pairPtrLoc
+
+    case snd @ Snd(l, ty) =>
+      // Get the location of the pointer to the pair
+      val pairPtrLoc = l match {
+        case id: Ident     => locationCtx.getLocation(id)
+        case h: HeapLValue => getHeapLocation(h)
+      }
+      // TODO: runtime error if null
+
+      // Calculate the location of the second element
+      val sndDest = locationCtx.getNext(typeToSize(PairType(?, ty)))
+      locationCtx.movLocLoc(sndDest, pairPtrLoc)
+
+      // add the offset to the pointer
+      val offset = PAIR_SIZE / 2
+      locationCtx.regInstr(
+        sndDest,
+        None,
+        { (reg, _) => Lea(reg, RegImmPointer(reg, offset)(typeToSize(ty))) }
+      )
+
+      sndDest
+  }
 
   /** Translate a unary operation and store the result in the next available location at the time of invocation.
    *

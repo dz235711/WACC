@@ -68,7 +68,7 @@ class LocationContext {
    * @param data The helper data to use
    * @param op The operation to perform on the locations
   */
-  def regInstrN[A](locs: List[Location], data: A, op: (List[Register], A) => Instruction): Unit = ???
+  def regInstrN[A](locs: List[Location], data: Option[A], op: (List[Register], A) => Instruction): Unit = ???
 
   /** Perform some operation that forces the use of some register(s). These registers are saved and restored after the operation.
    *
