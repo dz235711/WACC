@@ -312,7 +312,7 @@ class Translator {
       locationCtx.restoreCallerRegisters()
 
       // Store the pair elements
-      val resultLoc1 = locationCtx.getNext
+      val resultLoc1 = locationCtx.getNext(W64)
       translateExpr(e1)
       val src1 = resultLoc1 match {
         case r: Register => r
@@ -320,7 +320,7 @@ class Translator {
       }
       instructionCtx.addInstruction(Mov(RegPointer(ptr)(getSize(type1Size)), src1))
 
-      val resultLoc2 = locationCtx.getNext
+      val resultLoc2 = locationCtx.getNext(W64)
       translateExpr(e2)
       val src2 = resultLoc2 match {
         case r: Register => r
