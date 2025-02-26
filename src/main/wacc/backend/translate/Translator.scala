@@ -354,6 +354,7 @@ class Translator {
       // Restore caller-save registers
       locationCtx.cleanUpCall()
     case e: Expr => translateExpr(e)
+    case _       => throw new UnexpectedException("Unexpected Error: Invalid RValue")
   }
 
   /** Translates an expression. The result of the expression is stored in the next available location at the time of
