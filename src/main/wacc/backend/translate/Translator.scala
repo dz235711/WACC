@@ -624,8 +624,8 @@ class Translator {
             locationCtx.regInstrN(
               List(baseDest, indexDest),
               { regs =>
-                // baseDest = baseDest + indexDest * tySize + 4
-                Lea(regs(0), RegScaleRegImmPointer(regs(0), tySize, regs(1), 4)(typeToSize(nextTy)))
+                // baseDest = baseDest + indexDest * tySize + INT_SIZE
+                Lea(regs(0), RegScaleRegImmPointer(regs(0), tySize, regs(1), INT_SIZE)(typeToSize(nextTy)))
               }
             )
             nextTy
