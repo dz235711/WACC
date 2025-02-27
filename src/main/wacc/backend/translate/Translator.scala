@@ -376,14 +376,16 @@ class Translator {
       }
       // Save caller-save registers and set up arguments
       locationCtx.setUpCall(argLocations)
-      // Free argument temp locations
-      argLocations.foreach { _ =>
-        locationCtx.unreserveLast()
-      }
       // Call the function
       instructionCtx.addInstruction(Call(getFunctionName(v.id)))
       // Restore caller-save registers
       locationCtx.cleanUpCall()
+
+      // Free argument temp locations
+      argLocations.foreach { _ =>
+        locationCtx.unreserveLast()
+      }
+
     case e: Expr => translateExpr(e)
     case _       => throw new UnexpectedException("Unexpected Error: Invalid RValue")
   }
