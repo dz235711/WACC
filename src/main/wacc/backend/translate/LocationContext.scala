@@ -31,7 +31,6 @@ class LocationContext {
 
   /** Free registers */
   private val freeRegs: mutable.ListBuffer[Size => Register] = mutable.ListBuffer(
-    RAX.apply,
     RBX.apply,
     R10.apply,
     R11.apply,
@@ -192,8 +191,7 @@ class LocationContext {
     instructionCtx.addInstruction(Mov(StackPointer, BasePointer))
 
     // 3. pop callee-saved registers
-    for (reg <- CalleeSaved.reverse)
-      instructionCtx.addInstruction(Pop(reg))
+    popLocs(CalleeSaved)
 
     // 4. pop base pointer
     instructionCtx.addInstruction(Pop(BasePointer))
@@ -220,15 +218,7 @@ class LocationContext {
     }
 
     // 3. Move remaining arguments to the stack
-    argLocations
-      .drop(ArgRegs.length)
-      .zipWithIndex
-      .foreach((argLoc, i) => {
-        val destLoc = RegImmPointer(RBP(W64), -PointerSize * (i + reservedStackLocs))(W64)
-        instructionCtx.addInstruction(Mov(RAX(W64), argLoc))
-        instructionCtx.addInstruction(Mov(destLoc, RAX(W64)))
-        reservedStackLocs += 1
-      })
+    pushLocs(argLocations.drop(ArgRegs.length))
   }
 
   /** Restore caller registers and save result to a location
@@ -245,7 +235,15 @@ class LocationContext {
    * @param dest The destination location
    * @param src The source location
    */
-  def movLocLoc(dest: Location, src: Location): Unit = ???
+  def movLocLoc(dest: Location, src: Location)(using instructionCtx: InstructionContext): Unit =
+    dest match {
+      case destR: Register => instructionCtx.addInstruction(Mov(destR, src))
+      case destP: Pointer  => src match {
+        case srcR: Register => instructionCtx.addInstruction(Mov(destP, srcR))
+        case srcP: Pointer  => instructionCtx.addInstruction(Mov(RAX(W64), src))
+                               instructionCtx.addInstruction(Mov(destP, RAX(W64)))
+      }
+    }
 
   /** Perform some operation that forces the use of a register.
    * This is useful for operations that require a register as an operand, but you only have 2 locations.
