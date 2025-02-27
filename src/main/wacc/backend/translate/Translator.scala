@@ -127,9 +127,8 @@ class Translator {
     case Skip => instructionCtx.addInstruction(Nop)
 
     case Decl(v, r) =>
-      val dest = locationCtx.getNext(typeToSize(v.getType))
       translateRValue(r)
-      locationCtx.addLocation(v, dest)
+      locationCtx.addLocation(v, typeToSize(v.getType))
 
     case Asgn(l, r) =>
       translateRValue(r)
