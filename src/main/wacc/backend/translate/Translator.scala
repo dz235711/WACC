@@ -179,8 +179,7 @@ class Translator {
       locationCtx.cleanUpCall()
 
     case Return(e) =>
-      unary(e, { l => instructionCtx.addInstruction(Mov(RAX(typeToSize(e.getType)), l)) })
-      locationCtx.restoreCalleeRegisters()
+      unary(e, locationCtx.cleanUpFunc)
       instructionCtx.addInstruction(Ret(None))
 
     case Exit(e) =>
@@ -534,9 +533,8 @@ class Translator {
 
     // Translate the function body
     translateStmt(f.body)
-
-    // Restore callee-save registers and clean up stack frame
-    locationCtx.cleanUpFunc()
+    // Restoration of callee-save registers and stack frame clean up handled by Return, since all function
+    // bodies are returning blocks
 
   /** Compare two expressions and set the result of the comparison in the next available location at the time of
    * invocation.

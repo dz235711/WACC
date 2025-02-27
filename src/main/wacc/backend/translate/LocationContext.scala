@@ -37,17 +37,33 @@ class LocationContext {
   /** Move the getNext pointer to the last location */
   def unreserveLast(): Unit = ???
 
-  /** Set up stack frame, assign parameters a location and push callee-saved registers onto the stack
+  /** Set up stack frame, assign parameters a location and push callee-saved registers onto the stack.
+   * Run this at the start of a function.
    * 
    * @param params The parameters of the function
   */
   def setUpFunc(params: List[Ident]): Unit = ???
 
-  /** Reset stack pointer and pop callee-saved registers from the stack */
-  def cleanUpFunc(): Unit = ???
+  /** Reset stack pointer and pop callee-saved registers from the stack, and set up the return value.
+   * Run this at the end of a function just before returning.
+   * 
+   * @param retVal The location of the return value
+   */
+  def cleanUpFunc(retVal: Location): Unit = ???
 
-  /** Pop callee-saved registers from the stack */
-  def restoreCalleeRegisters(): Unit = ???
+  /** Saves caller registers and moves arguments to their intended registers/on the stack.
+   * Run this just before calling a function.
+   *
+   * @param argLocations The temporary locations of the arguments
+   */
+  def setUpCall(argLocations: List[Location]): Unit = ???
+
+  /** Restore caller registers and save result to a location
+   * Run this just after calling a function.
+   *
+   * @return The location of the result
+   */
+  def cleanUpCall(): Location = ???
 
   /** Move a value from one location to another
    *
@@ -79,16 +95,4 @@ class LocationContext {
    * @param op The operation to perform
    */
   def withFreeRegisters(regsToUse: List[Register], op: => Unit): Unit = ???
-
-  /** Saves caller registers and moves arguments to their intended registers/on the stack
-    * 
-    * @param argLocations The temporary locations of the arguments
-    */
-  def setUpCall(argLocations: List[Location]): Unit = ???
-
-  /** Restore caller registers and save result to a location
-    * 
-    * @return The location of the result
-    */
-  def cleanUpCall(): Location = ???
 }
