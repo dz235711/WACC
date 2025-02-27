@@ -74,7 +74,7 @@ class LocationContext {
    */
   def getNext(size: Size): Location =
     if (freeRegs.nonEmpty) freeRegs.head(size)
-    else RegImmPointer(RBP(W64), reservedStackLocs * PointerSize)(size)
+    else RegImmPointer(BasePointer, reservedStackLocs * PointerSize)(size)
 
   /** Get the location to use and reserve it
    *
@@ -87,7 +87,7 @@ class LocationContext {
       reservedRegs += reg
       reg(size)
     } else {
-      val loc = RegImmPointer(RBP(W64), reservedStackLocs * PointerSize)(size)
+      val loc = RegImmPointer(BasePointer, reservedStackLocs * PointerSize)(size)
       reservedStackLocs += 1
       // decrement the stack pointer
       instructionCtx.addInstruction(Sub(StackPointer, PointerSize))
