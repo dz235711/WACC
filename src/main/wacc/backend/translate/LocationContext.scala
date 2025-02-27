@@ -1,8 +1,9 @@
 package wacc
 
 import wacc.TypedAST.{Call as TypedCall, *}
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ListBuffer, Map}
 import wacc.Size.*
+import javax.sound.midi.Instrument
 
 type Location = Register | Pointer
 
@@ -24,6 +25,11 @@ class LocationContext {
     R15.apply
   )
   private val reserved = ListBuffer[Location]()
+  var basePointerOffset = 0
+  private val identMap = Map[Ident, Location]()
+  private val argRegs = List(RDI(W64), RSI(W64), RDX(W64), RCX(W64), R8(W64), R9(W64))
+  private val calleeSaved = List(RBX(W64), RBP(W64), R12(W64), R13(W64), R14(W64), R15(W64))
+  private val callerSaved = List(RAX(W64), RCX(W64), RDX(W64), RSI(W64), RDI(W64), R8(W64), R9(W64), R10(W64), R11(W64))
 
   /** Get the next location to use, without actually using it
    *
@@ -31,7 +37,19 @@ class LocationContext {
    * @return The next location to use
    */
   def getNext(size: Size): Location = if (registers.nonEmpty) registers.head(size)
-  else RegPointer(RSP(W64))(size) // TODO: RSP handling and bit allignment
+  else RegImmPointer(RBP(W64), basePointerOffset)(size)
+
+  private def sizeToInt(size: Size): Int = size match {
+    case W8  => 1
+    case W16 => 2
+    case W32 => 4
+    case W64 => 8
+  }
+
+  private def popNext(size: Size): Location = if (registers.nonEmpty) registers.remove(0)(size)
+  else {val p = RegImmPointer(RBP(W64), basePointerOffset)(size)
+        basePointerOffset += sizeToInt(size)
+        p}
 
   /** Get the location to use and reserve it
    *
@@ -39,19 +57,18 @@ class LocationContext {
    * @return The reserved location
    */
   def reserveNext(size: Size): Location = {
-    val loc = getNext(size)
-    reserved += loc
+    val loc = popNext(size)
+    loc +=: reserved
     loc
   }
 
   /** Move the getNext pointer to the last location */
   def unreserveLast(): Unit = {
     assert(reserved.nonEmpty)
-    val loc = reserved.last
-    reserved -= loc
+    val loc = reserved.remove(0)
     loc match {
       case r: Register => registers += constructorFromInstance(r)
-      case l           => // TODO: Handle RSP
+      case p: Pointer  => basePointerOffset -= sizeToInt(p.size)
     }
   }
 
@@ -72,22 +89,28 @@ class LocationContext {
     case _      => throw new IllegalArgumentException("Cannot get constructor from instance")
   }
 
-  /** Associate a location with an identifier
+  /** Associate a location with an identifier, assuming the location has already been reserved
    *
    * @param v The identifier to associate with
    * @param r The location to associate
    */
-  def addLocation(v: Ident, r: Location): Unit = ???
+  def addLocation(v: Ident, r: Location): Unit = {
+    identMap(v) = r
+  }
 
   /** Get the location associated with an identifier
    *
    * @param v The identifier to get the location of
    * @return The location associated with the identifier
    */
-  def getLocation(v: Ident): Location = ???
+  def getLocation(v: Ident): Location = identMap(v)
 
   /** Pop callee-saved registers from the stack */
-  def restoreCalleeRegisters(): Unit = ???
+  def restoreCalleeRegisters()(using instructionCtx: InstructionContext): Unit = {
+    for (r <- calleeSaved.reverse) {
+      instructionCtx.addInstruction(Pop(r))
+    }
+  }
 
   /** Move a value from one location to another
    *
@@ -124,11 +147,31 @@ class LocationContext {
     * 
     * @param argLocations The temporary locations of the arguments
     */
-  def setUpCall(argLocations: List[Location]): Unit = ???
+  def setUpCall(argLocations: List[Location])(using instructionCtx: InstructionContext): Unit = {
+    for (r <- callerSaved) {
+      Push(r)
+    }
+    for ((argLoc, argReg) <- argLocations.take(argRegs.length).zip(argRegs)) {
+      argLoc match {
+        case r: Register  => instructionCtx.addInstruction(Mov(argReg, r))
+        case p: Pointer   => instructionCtx.addInstruction(Mov(argReg, p))
+      }
+    }
+    for (argLoc <- argLocations.drop(argRegs.length)) {
+      argLoc match {
+        case r: Register => instructionCtx.addInstruction(Push(r))
+        case p: Pointer  => instructionCtx.addInstruction(Push(p))
+      }
+    }
+  }
 
   /** Restore caller registers and save result to a location
     * 
     * @return The location of the result
     */
-  def cleanUpCall(): Location = ???
+  def cleanUpCall()(using instructionCtx: InstructionContext): Location = 
+    for (r <- callerSaved.reverse) {
+      instructionCtx.addInstruction(Pop(r))
+    }
+    RAX(W64)
 }
