@@ -49,7 +49,7 @@ class LocationContext {
   )
 
   /** The size of a pointer in bytes */
-  private val POINTER_SIZE = 8
+  private val PointerSize = 8
 
   /** Reserved registers in order, i.e. tail is latest reservation */
   private val reservedRegs = mutable.ListBuffer[Size => Register]()
@@ -75,7 +75,7 @@ class LocationContext {
    */
   def getNext(size: Size): Location =
     if (freeRegs.nonEmpty) freeRegs.head(size)
-    else RegImmPointer(RBP(W64), reservedStackLocs * POINTER_SIZE)(size)
+    else RegImmPointer(RBP(W64), reservedStackLocs * PointerSize)(size)
 
   /** Get the location to use and reserve it
    *
@@ -88,7 +88,7 @@ class LocationContext {
       reservedRegs += reg
       reg(size)
     } else {
-      val loc = RegImmPointer(RBP(W64), reservedStackLocs * POINTER_SIZE)(size)
+      val loc = RegImmPointer(RBP(W64), reservedStackLocs * PointerSize)(size)
       reservedStackLocs += 1
       loc
     }
@@ -143,7 +143,7 @@ class LocationContext {
     instructionCtx.addInstruction(Push(BasePointer))
 
     // 2. decrement stack pointer by number of callee-saved registers
-    instructionCtx.addInstruction(Sub(StackPointer, CalleeSaved.length * POINTER_SIZE))
+    instructionCtx.addInstruction(Sub(StackPointer, CalleeSaved.length * PointerSize))
 
     // 3. save callee-saved registers
     for (reg <- CalleeSaved)
@@ -167,12 +167,12 @@ class LocationContext {
       .drop(ArgRegs.length)
       .zipWithIndex
       .foreach((id, index) => {
-        val destLoc = RegImmPointer(RBP(W64), reservedStackLocs * POINTER_SIZE)(typeToSize(id.getType))
+        val destLoc = RegImmPointer(RBP(W64), reservedStackLocs * PointerSize)(typeToSize(id.getType))
 
         // The parameter is at rbp - 8 * (index + CalleeSaved.length + 2)
         // This is because there's the return address, old base pointer, and callee-saved registers on the stack above
         // the current base pointer
-        val currLoc = RegImmPointer(RBP(W64), -8 * (index + CalleeSaved.length + 2))(W64)
+        val currLoc = RegImmPointer(RBP(W64), -PointerSize * (index + CalleeSaved.length + 2))(W64)
         instructionCtx.addInstruction(Mov(RAX(W64), currLoc))
         instructionCtx.addInstruction(Mov(destLoc, RAX(W64)))
         reservedStackLocs += 1
@@ -220,12 +220,15 @@ class LocationContext {
     }
 
     // 3. Move remaining arguments to the stack
-    argLocations.drop(ArgRegs.length).zipWithIndex.foreach((argLoc, i) => {
-      val destLoc = RegImmPointer(RBP(W64), -POINTER_SIZE * (i + reservedStackLocs))(W64)
-      instructionCtx.addInstruction(Mov(RAX(W64), argLoc))
-      instructionCtx.addInstruction(Mov(destLoc, RAX(W64)))
-      reservedStackLocs += 1
-    })
+    argLocations
+      .drop(ArgRegs.length)
+      .zipWithIndex
+      .foreach((argLoc, i) => {
+        val destLoc = RegImmPointer(RBP(W64), -PointerSize * (i + reservedStackLocs))(W64)
+        instructionCtx.addInstruction(Mov(RAX(W64), argLoc))
+        instructionCtx.addInstruction(Mov(destLoc, RAX(W64)))
+        reservedStackLocs += 1
+      })
   }
 
   /** Restore caller registers and save result to a location
