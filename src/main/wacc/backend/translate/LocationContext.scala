@@ -1,15 +1,18 @@
 package wacc
 
-import wacc.TypedAST._
-import scala.collection.mutable.{ListBuffer, Map as MMap}
+import wacc.TypedAST.*
+
+import scala.collection.mutable
 import wacc.Size.*
+
+import scala.collection.mutable
 
 type Location = Register | Pointer
 
 class LocationContext {
 
   // Free registers
-  private val freeRegs: ListBuffer[Size => Register] = ListBuffer(
+  private val freeRegs: mutable.ListBuffer[Size => Register] = mutable.ListBuffer(
     RAX.apply,
     RBX.apply,
     RCX.apply,
@@ -27,17 +30,17 @@ class LocationContext {
   )
 
   // Reserved locations in reverse order, i.e. head is latest reservation
-  private val reserved = ListBuffer[Location]()
+  private val reserved = mutable.ListBuffer[Location]()
 
   /* Reserved registers in order, i.e. tail is latest reservation, this is to ensure oldest registers are temporarily
    * push/popped first to minimise stack usage */
-  private val reservedRegs = ListBuffer[Register]()
+  private val reservedRegs = mutable.ListBuffer[Register]()
 
-  // Offset from the base pointer, i.e. the stack pointer
+  // Offset from the base pointer
   var basePointerOffset = 0
 
   // Map from identifiers to locations
-  private val identMap = MMap[Ident, Location]()
+  private val identMap = mutable.Map[Ident, Location]()
 
   // Register constants
   private val ArgRegs = List(RDI(W64), RSI(W64), RDX(W64), RCX(W64), R8(W64), R9(W64))
@@ -49,15 +52,9 @@ class LocationContext {
    * @param size The size of the location
    * @return The next location to use
    */
-  def getNext(size: Size): Location = if (freeRegs.nonEmpty) freeRegs.head(size)
-  else RegImmPointer(RBP(W64), basePointerOffset)(size)
-
-  private def sizeToInt(size: Size): Int = size match {
-    case W8  => 8
-    case W16 => 16
-    case W32 => 32
-    case W64 => 64
-  }
+  def getNext(size: Size): Location =
+    if (freeRegs.nonEmpty) freeRegs.head(size)
+    else RegImmPointer(RBP(W64), basePointerOffset)(size)
 
   /** Get the location to use and reserve it
    *
@@ -69,7 +66,7 @@ class LocationContext {
     loc +=: reserved
     loc match {
       case r: Register => reservedRegs += r
-      case p: Pointer  => basePointerOffset -= sizeToInt(p.size)
+      case p: Pointer  => basePointerOffset -= p.size.toBytes
     }
     loc
   }
@@ -82,11 +79,11 @@ class LocationContext {
       case r: Register =>
         freeRegs += constructorFromInstance(r)
         reservedRegs.remove(reservedRegs.length - 1)
-      case p: Pointer => basePointerOffset += sizeToInt(p.size)
+      case p: Pointer => basePointerOffset += p.size.toBytes
     }
   }
 
-  private def constructorFromInstance(r: Register): (Size => Register) = r match {
+  private def constructorFromInstance(r: Register): Size => Register = r match {
     case RAX(_) => RAX.apply
     case RBX(_) => RBX.apply
     case RCX(_) => RCX.apply
