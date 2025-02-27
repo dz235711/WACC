@@ -269,33 +269,44 @@ class Translator {
       // Calculate size needed for the array
       val size = (typeToSize(ty).toBytes * es.size) + INT_SIZE
 
-      // Allocate memory for the array
-      val tempSizeLocation = locationCtx.reserveNext(W32)
+      // Allocate memory for the array and get the pointer to the array
+      val tempSizeLocation = locationCtx.getNext(W32)
       instructionCtx.addInstruction(tempSizeLocation match {
         case r: Register => Mov(r, size)
         case p: Pointer  => Mov(p, size)
       })
       locationCtx.setUpCall(List(tempSizeLocation))
-      locationCtx.unreserveLast()
       // TODO: clib malloc
       val ptrLoc: Location = locationCtx.cleanUpCall()
 
-      // Store the size of the array and array elements
+      // TODO: runtime error if malloc fails
+
+      // Move the pointer to the array to the next available location
+      val arrayLoc = locationCtx.reserveNext(W64)
+      locationCtx.movLocLoc(arrayLoc, ptrLoc)
+
+      // Store the size of the array
       locationCtx.regInstrN(
-        List(ptrLoc),
+        List(arrayLoc),
         { regs => Mov(RegPointer(regs(0))(POINTER_SIZE), es.size) }
       )
+
+      // Store the elements in the array
       es.zipWithIndex.foreach { (e, i) =>
         val expLoc = locationCtx.getNext(typeToSize(e.getType))
         translateExpr(e)
         val offset: Immediate = INT_SIZE + i * typeToSize(e.getType).toBytes
         locationCtx.regInstrN(
-          List(ptrLoc, expLoc),
+          List(arrayLoc, expLoc),
           { regs =>
             Mov(RegImmPointer(regs(0), offset)(typeToSize(e.getType)), regs(1))
           }
         )
       }
+
+      // Unreserve the array location
+      locationCtx.unreserveLast()
+
     case NewPair(e1, e2, PairType(t1, t2)) =>
       // Move the size of the pair to the next available location
       val tempSizeLocation = locationCtx.getNext(W32)
