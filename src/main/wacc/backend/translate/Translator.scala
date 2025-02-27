@@ -86,6 +86,11 @@ class Translator {
   def translate(program: Program): List[Instruction] = {
     given translateCtx: InstructionContext = new InstructionContext()
     given locationCtx: LocationContext = new LocationContext()
+
+    // Translate all functions in the program
+    program.fs.foreach { f => translateFunction(f) }
+
+    // Translate the program body
     translateStmt(program.body)
     translateCtx.getInstructions
   }
@@ -514,6 +519,10 @@ class Translator {
     case NestedExpr(e, ty) => translateExpr(e)
   }
 
+  /** Translates a function.
+    *
+    * @param f The function to translate
+    */
   private def translateFunction(
       f: Func
   )(using instructionCtx: InstructionContext, locationCtx: LocationContext): Unit =
