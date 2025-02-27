@@ -53,10 +53,10 @@ class LocationContext {
   else RegImmPointer(RBP(W64), basePointerOffset)(size)
 
   private def sizeToInt(size: Size): Int = size match {
-    case W8  => 1
-    case W16 => 2
-    case W32 => 4
-    case W64 => 8
+    case W8  => 8
+    case W16 => 16
+    case W32 => 32
+    case W64 => 64
   }
 
   /** Get the location to use and reserve it
@@ -137,7 +137,19 @@ class LocationContext {
    * 
    * @param params The parameters of the function
   */
-  def setUpFunc(params: List[Ident]): Unit = ???
+  def setUpFunc(params: List[Ident])(using instructionCtx: InstructionContext): Unit =
+    for ((param, reg) <- params.take(ArgRegs.length).zip(ArgRegs)) {
+      reg +=: reserved
+      reservedRegs += reg
+      freeRegs -= constructorFromInstance(reg)
+      addLocation(param, reg)
+    }
+    for (param <- params.drop(ArgRegs.length)) {
+      RegImmPointer(RBP(W64), basePointerOffset)(W64) +=: reserved
+      basePointerOffset -= 64
+      addLocation(param, reserved.head)
+    }
+    pushLocs(CalleeSaved)
 
   /** Reset stack pointer and pop callee-saved registers from the stack, and set up the return value.
    * Run this at the end of a function just before returning.
@@ -160,6 +172,7 @@ class LocationContext {
       }
     }
     pushLocs(argLocations.drop(ArgRegs.length))
+    basePointerOffset -= (argLocations.length - ArgRegs.length).max(0) * 64
   }
 
   /** Restore caller registers and save result to a location
