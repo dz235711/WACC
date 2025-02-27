@@ -212,13 +212,40 @@ class LocationContext {
     // 2. Move first 6 arguments to their intended registers
     for ((argLoc, argReg) <- argLocations.take(ArgRegs.length).zip(ArgRegs)) {
       argLoc match {
-        case r: Register => instructionCtx.addInstruction(Mov(argReg, r))
-        case p: Pointer  => instructionCtx.addInstruction(Mov(argReg, p))
+        case r: Register =>
+          if (CallerSaved.contains(r))
+            // If the location is a caller-saved register, it is now in the stack
+
+            instructionCtx.addInstruction(
+              Mov(
+                argReg,
+                RegImmPointer(StackPointer, PointerSize * (CallerSaved.length - CallerSaved.indexOf(r)))(r.width)
+              )
+            )
+          else
+            instructionCtx.addInstruction(Mov(argReg, r))
+        case p: Pointer => instructionCtx.addInstruction(Mov(argReg, p))
       }
     }
 
     // 3. Move remaining arguments to the stack
-    pushLocs(argLocations.drop(ArgRegs.length))
+    for ((argLoc, index) <- argLocations.drop(ArgRegs.length).zipWithIndex) {
+      argLoc match {
+        case r: Register =>
+          if (CallerSaved.contains(r))
+            // If the location is a caller-saved register, it is now in the stack
+            instructionCtx.addInstruction(
+              Push(
+                RegImmPointer(StackPointer, PointerSize * (CallerSaved.length - CallerSaved.indexOf(r) + index))(
+                  r.width
+                )
+              )
+            )
+          else
+            instructionCtx.addInstruction(Push(r))
+        case p: Pointer => instructionCtx.addInstruction(Push(p))
+      }
+    }
   }
 
   /** Restore caller registers and save result to a location
@@ -238,11 +265,13 @@ class LocationContext {
   def movLocLoc(dest: Location, src: Location)(using instructionCtx: InstructionContext): Unit =
     dest match {
       case destR: Register => instructionCtx.addInstruction(Mov(destR, src))
-      case destP: Pointer  => src match {
-        case srcR: Register => instructionCtx.addInstruction(Mov(destP, srcR))
-        case srcP: Pointer  => instructionCtx.addInstruction(Mov(RAX(W64), src))
-                               instructionCtx.addInstruction(Mov(destP, RAX(W64)))
-      }
+      case destP: Pointer =>
+        src match {
+          case srcR: Register => instructionCtx.addInstruction(Mov(destP, srcR))
+          case srcP: Pointer =>
+            instructionCtx.addInstruction(Mov(RAX(W64), srcP))
+            instructionCtx.addInstruction(Mov(destP, RAX(W64)))
+        }
     }
 
   /** Perform some operation that forces the use of a register.
