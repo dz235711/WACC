@@ -187,7 +187,7 @@ class Translator {
       translateExpr(e)
 
       // Call exit
-      instructionCtx.addInstruction(Mov(RDI(W8), dest))
+      locationCtx.setUpCall(List(dest))
     // TODO: clib exit
 
     case Print(e) =>
