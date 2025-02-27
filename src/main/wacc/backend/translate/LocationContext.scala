@@ -1,15 +1,16 @@
 package wacc
 
 import wacc.TypedAST.{Call as TypedCall, *}
-import scala.collection.mutable.{ListBuffer, Map}
+import scala.collection.mutable.{ListBuffer, Map as MMap}
 import wacc.Size.*
-import javax.sound.midi.Instrument
 
 type Location = Register | Pointer
 
 class LocationContext {
 
-  private val registers: ListBuffer[Size => Register] = ListBuffer(
+  // Free registers
+  private val freeRegs: ListBuffer[Size => Register] = ListBuffer(
+    RAX.apply,
     RBX.apply,
     RCX.apply,
     RDX.apply,
@@ -24,19 +25,31 @@ class LocationContext {
     R14.apply,
     R15.apply
   )
+
+  // Reserved locations in reverse order, i.e. head is latest reservation
   private val reserved = ListBuffer[Location]()
+
+  /* Reserved registers in order, i.e. tail is latest reservation, this is to ensure oldest registers are temporarily
+   * push/popped first to minimise stack usage */
+  private val reservedRegs = ListBuffer[Register]()
+
+  // Offset from the base pointer, i.e. the stack pointer
   var basePointerOffset = 0
-  private val identMap = Map[Ident, Location]()
-  private val argRegs = List(RDI(W64), RSI(W64), RDX(W64), RCX(W64), R8(W64), R9(W64))
-  private val calleeSaved = List(RBX(W64), RBP(W64), R12(W64), R13(W64), R14(W64), R15(W64))
-  private val callerSaved = List(RAX(W64), RCX(W64), RDX(W64), RSI(W64), RDI(W64), R8(W64), R9(W64), R10(W64), R11(W64))
+
+  // Map from identifiers to locations
+  private val identMap = MMap[Ident, Location]()
+
+  // Register constants
+  private val ArgRegs = List(RDI(W64), RSI(W64), RDX(W64), RCX(W64), R8(W64), R9(W64))
+  private val CalleeSaved = List(RBX(W64), RBP(W64), R12(W64), R13(W64), R14(W64), R15(W64))
+  private val CallerSaved = List(RAX(W64), RCX(W64), RDX(W64), RSI(W64), RDI(W64), R8(W64), R9(W64), R10(W64), R11(W64))
 
   /** Get the next location to use, without actually using it
    *
    * @param size The size of the location
    * @return The next location to use
    */
-  def getNext(size: Size): Location = if (registers.nonEmpty) registers.head(size)
+  def getNext(size: Size): Location = if (freeRegs.nonEmpty) freeRegs.head(size)
   else RegImmPointer(RBP(W64), basePointerOffset)(size)
 
   private def sizeToInt(size: Size): Int = size match {
@@ -46,19 +59,18 @@ class LocationContext {
     case W64 => 8
   }
 
-  private def popNext(size: Size): Location = if (registers.nonEmpty) registers.remove(0)(size)
-  else {val p = RegImmPointer(RBP(W64), basePointerOffset)(size)
-        basePointerOffset += sizeToInt(size)
-        p}
-
   /** Get the location to use and reserve it
    *
    * @param size The size of the location
    * @return The reserved location
    */
   def reserveNext(size: Size): Location = {
-    val loc = popNext(size)
+    val loc = getNext(size)
     loc +=: reserved
+    loc match {
+      case r: Register => reservedRegs += r
+      case p: Pointer  => basePointerOffset -= sizeToInt(p.size)
+    }
     loc
   }
 
@@ -67,12 +79,15 @@ class LocationContext {
     assert(reserved.nonEmpty)
     val loc = reserved.remove(0)
     loc match {
-      case r: Register => registers += constructorFromInstance(r)
-      case p: Pointer  => basePointerOffset -= sizeToInt(p.size)
+      case r: Register =>
+        freeRegs += constructorFromInstance(r)
+        reservedRegs.remove(reservedRegs.length - 1)
+      case p: Pointer => basePointerOffset += sizeToInt(p.size)
     }
   }
 
   private def constructorFromInstance(r: Register): (Size => Register) = r match {
+    case RAX(_) => RAX.apply
     case RBX(_) => RBX.apply
     case RCX(_) => RCX.apply
     case RDX(_) => RDX.apply
@@ -86,7 +101,7 @@ class LocationContext {
     case R13(_) => R13.apply
     case R14(_) => R14.apply
     case R15(_) => R15.apply
-    case _      => throw new IllegalArgumentException("Cannot get constructor from instance")
+    case _      => throw new IllegalArgumentException("This register shouldn't be used in location context")
   }
 
   /** Associate a location with an identifier, assuming the location has already been reserved
@@ -105,12 +120,20 @@ class LocationContext {
    */
   def getLocation(v: Ident): Location = identMap(v)
 
-  /** Pop callee-saved registers from the stack */
-  def restoreCalleeRegisters()(using instructionCtx: InstructionContext): Unit = {
-    for (r <- calleeSaved.reverse) {
+  private def pushLocs(regs: List[Location])(using instructionCtx: InstructionContext): Unit = {
+    for (r <- regs) {
+      instructionCtx.addInstruction(Push(r))
+    }
+  }
+
+  private def popLocs(regs: List[Location])(using instructionCtx: InstructionContext): Unit = {
+    for (r <- regs.reverse) {
       instructionCtx.addInstruction(Pop(r))
     }
   }
+
+  /** Pop callee-saved registers from the stack */
+  def restoreCalleeRegisters()(using instructionCtx: InstructionContext): Unit = popLocs(CalleeSaved)
 
   /** Move a value from one location to another
    *
@@ -134,44 +157,47 @@ class LocationContext {
    * @param data The helper data to use
    * @param op The operation to perform on the locations
   */
-  def regInstrN[A](locs: List[Location], data: A, op: (List[Register], A) => Instruction): Unit = ???
+  def regInstrN[A](locs: List[Location], data: A, op: (List[Register], A) => Instruction)(using
+      instructionCtx: InstructionContext
+  ): Unit =
+    val sizeDiff = locs.length - freeRegs.length
+    assert(sizeDiff - reservedRegs.length >= 0)
+    val regPushed = reservedRegs.take(sizeDiff.max(0)).toList
+    pushLocs(regPushed)
+    op(freeRegs.toList.map(_(W64)) ++ regPushed, data)
+    popLocs(regPushed)
 
   /** Perform some operation that forces the use of some register(s). These registers are saved and restored after the operation.
    *
    * @param regsToUse The registers modified by the operation
    * @param op The operation to perform
    */
-  def withFreeRegisters(regsToUse: List[Register], op: => Unit): Unit = ???
+  def withFreeRegisters(regsToUse: List[Register], op: => Unit)(using instructionCtx: InstructionContext): Unit = {
+    pushLocs(regsToUse)
+    op
+    popLocs(regsToUse)
+  }
 
   /** Saves caller registers and moves arguments to their intended registers/on the stack
     * 
     * @param argLocations The temporary locations of the arguments
     */
   def setUpCall(argLocations: List[Location])(using instructionCtx: InstructionContext): Unit = {
-    for (r <- callerSaved) {
-      Push(r)
-    }
-    for ((argLoc, argReg) <- argLocations.take(argRegs.length).zip(argRegs)) {
+    pushLocs(CallerSaved)
+    for ((argLoc, argReg) <- argLocations.take(ArgRegs.length).zip(ArgRegs)) {
       argLoc match {
-        case r: Register  => instructionCtx.addInstruction(Mov(argReg, r))
-        case p: Pointer   => instructionCtx.addInstruction(Mov(argReg, p))
+        case r: Register => instructionCtx.addInstruction(Mov(argReg, r))
+        case p: Pointer  => instructionCtx.addInstruction(Mov(argReg, p))
       }
     }
-    for (argLoc <- argLocations.drop(argRegs.length)) {
-      argLoc match {
-        case r: Register => instructionCtx.addInstruction(Push(r))
-        case p: Pointer  => instructionCtx.addInstruction(Push(p))
-      }
-    }
+    pushLocs(argLocations.drop(ArgRegs.length))
   }
 
   /** Restore caller registers and save result to a location
     * 
     * @return The location of the result
     */
-  def cleanUpCall()(using instructionCtx: InstructionContext): Location = 
-    for (r <- callerSaved.reverse) {
-      instructionCtx.addInstruction(Pop(r))
-    }
+  def cleanUpCall()(using instructionCtx: InstructionContext): Location =
+    popLocs(CallerSaved)
     RAX(W64)
 }
