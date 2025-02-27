@@ -422,34 +422,58 @@ class Translator {
         { (regOp1, locOp2) => SignedMul(Some(regOp1), locOp2, None) }
       ) // TODO: runtime error if over/underflow
 
-    case Mod(e1, e2) =>
+    case Mod(dividendExp, divisorExp) =>
+      // Move the divisor to the eventual destination of the result (first available location)
+      translateExpr(divisorExp)
       val modDest = locationCtx.reserveNext(typeToSize(IntType))
-      translateExpr(e2)
       // TODO: runtime error if divide by 0
-      val e1Dest = locationCtx.getNext(typeToSize(IntType))
-      translateExpr(e1)
+
+      // Move the dividend to the next available location
+      translateExpr(dividendExp)
+      val dividendDest = locationCtx.reserveNext(typeToSize(IntType))
+
+      // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
+      // so we need to ensure we don't clobber those registers
       locationCtx.withFreeRegisters(
         List(RAX(typeToSize(IntType)), RDI(typeToSize(IntType))), {
-          instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), e1Dest))
+          // Move the dividend to RAX
+          instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
+          // Perform the division
           instructionCtx.addInstruction(SignedDiv(modDest))
+          // Move the remainder to the destination
           locationCtx.movLocLoc(modDest, RDI(typeToSize(IntType)))
         }
       )
+
+      // Unreserve the locations
+      locationCtx.unreserveLast()
       locationCtx.unreserveLast()
 
-    case Div(e1, e2) =>
+    case Div(dividendExp, divisorExp) =>
+      // Move the divisor to the eventual destination of the result (first available location)
+      translateExpr(divisorExp)
       val divDest = locationCtx.reserveNext(typeToSize(IntType))
-      translateExpr(e2)
       // TODO: runtime error if divide by 0
-      val e1Dest = locationCtx.getNext(typeToSize(IntType))
-      translateExpr(e1)
+
+      // Move the dividend to the next available location
+      translateExpr(dividendExp)
+      val dividendDest = locationCtx.reserveNext(typeToSize(IntType))
+
+      // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
+      // so we need to ensure we don't clobber those registers
       locationCtx.withFreeRegisters(
         List(RAX(typeToSize(IntType)), RDI(typeToSize(IntType))), {
-          instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), e1Dest))
+          // Move the dividend to RAX
+          instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
+          // Perform the division
           instructionCtx.addInstruction(SignedDiv(divDest))
+          // Move the quotient to the destination
           locationCtx.movLocLoc(divDest, RAX(typeToSize(IntType)))
         }
       )
+
+      // Unreserve the locations
+      locationCtx.unreserveLast()
       locationCtx.unreserveLast()
 
     case TypedAdd(e1, e2) => binary(e1, e2, Add.apply) // TODO: runtime error if over/underflow
