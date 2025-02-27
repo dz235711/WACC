@@ -184,7 +184,23 @@ class LocationContext {
    * 
    * @param retVal The location of the return value
    */
-  def cleanUpFunc(retVal: Location): Unit = ???
+  def cleanUpFunc(retVal: Location)(using instructionCtx: InstructionContext): Unit = {
+    // 1. set return value
+    instructionCtx.addInstruction(Mov(ReturnReg, retVal))
+
+    // 2. reset the stack pointer
+    instructionCtx.addInstruction(Mov(StackPointer, BasePointer))
+
+    // 3. pop callee-saved registers
+    for (reg <- CalleeSaved.reverse)
+      instructionCtx.addInstruction(Pop(reg))
+
+    // 4. pop base pointer
+    instructionCtx.addInstruction(Pop(BasePointer))
+
+    // 5. return from function
+    instructionCtx.addInstruction(Ret(None))
+  }
 
   /** Saves caller registers and moves arguments to their intended registers/on the stack.
    * Run this just before calling a function.
