@@ -139,7 +139,7 @@ class x86Stringifier {
     * @example `RegImm(Reg(RAX), Imm(4))(W64)` -> `qword ptr [rax+4]`
     */
   private def stringifyPointer(pointer: Pointer): String =
-    s"${ptrSize(pointer.size)} ${{ stringifyPointerArithmetic(pointer) }}"
+    s"${ptrSize(pointer.size)} ${stringifyPointerArithmetic(pointer)}"
 
   /**
     * Converts pointer arithmetic into string representation (without a pointer size prefix)
