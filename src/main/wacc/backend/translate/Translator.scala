@@ -321,11 +321,11 @@ class Translator {
       val ptrLoc = locationCtx.cleanUpCall()
 
       // Move the pointer to the pair to the next available location
-      val pairLoc = locationCtx.reserveNext(W64)
+      val pairLoc = locationCtx.reserveNext(W64) // W64 because it's a pointer
       locationCtx.movLocLoc(pairLoc, ptrLoc)
 
       // Store the first element in the pair
-      val resultLoc1 = locationCtx.getNext(W64)
+      val resultLoc1 = locationCtx.getNext(typeToSize(t1))
       translateExpr(e1)
       locationCtx.regInstrN(
         List(pairLoc, resultLoc1),
@@ -333,7 +333,7 @@ class Translator {
       )
 
       // Store the second element in the pair
-      val resultLoc2 = locationCtx.getNext(W64)
+      val resultLoc2 = locationCtx.getNext(typeToSize(t2))
       translateExpr(e2)
       val offsetSnd: Immediate = PAIR_SIZE / 2 // offset to the second element from the start of the pair
       locationCtx.regInstrN(
