@@ -713,3 +713,282 @@ class Translator {
     locationCtx.unreserveLast()
   }
 }
+
+/** C library functions that might be used in the translator */
+sealed object Clib {
+
+  /**
+   * Creates a list of assembly instructions to define a string
+   * 
+   * @param label The label of the string constant
+   * @param string The string to define
+   * @return A list of assembly instructions that defines the string constant
+   */
+  private def createString(label: Label, string: String): List[Instruction] = List(
+    IntData(string.length),
+    DefineLabel(label),
+    Asciz(string),
+    Text
+  )
+
+  /**
+    * Creates a list of assembly instructions to define a read only string
+    * 
+    * @param label The label of the string constant
+    * @param string The string to define
+    * @return A list of assembly instructions that defines the read only string constant
+    */
+  private def createReadOnlyString(label: Label, string: String): List[Instruction] =
+    SectionReadOnlyData :: createString(label, string)
+
+  /**
+    * Creates a list of assembly instructions to define a function
+    * 
+    * @param label The label of the function
+    * @param body The body of the function
+    * @return A list of assembly instructions that defines the function, including the stack frame setup and teardown
+    */
+  private def createFunction(label: Label, body: List[Instruction]): List[Instruction] = List(
+    DefineLabel(label),
+    Push(RBP(W64)),
+    Mov(RBP(W64), RSP(W64))
+  ) ::: body ::: List(
+    Mov(RSP(W64), RBP(W64)),
+    Pop(RBP(W64)),
+    Ret(None)
+  )
+
+  // C library function labels
+  private val ClibExit = "exit@plt"
+  private val ClibFlush = "fflush@plt"
+  private val ClibFree = "free@plt"
+  private val ClibMalloc = "malloc@plt"
+  private val ClibPrintf = "printf@plt"
+  private val ClibPuts = "puts@plt"
+  private val ClibScanf = "scanf@plt"
+  
+  // ---- PRINT FUNCTIONS ----
+  private val IntFormatLabel = ".intFormat"
+  private val CharacterFormatLabel = ".charFormat"
+  private val StringFormatLabel = ".stringFormat"
+  private val PointerFormatLabel = ".pointerFormat"
+  private val printlnStrLabel = ".printlnStr"
+  
+  private val IntFormatSpecifier = "%d"
+  private val CharacterFormatSpecifier = "%c"
+  private val StringFormatSpecifier = "%.*s"
+  private val PointerFormatSpecifier = "%p"
+  private val printlnStr = ""
+  
+  val printiLabel = "_printi"
+  val printcLabel = "_printc"
+  val printsLabel = "_prints"
+  val printpLabel = "_printp"
+  val printlnLabel = "_println"
+  
+  /** Subroutine for printing an integer. */
+  val _printi = createReadOnlyString(IntFormatLabel, IntFormatSpecifier) ::: createFunction(
+    printiLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Mov(RSI(W32), RDI(W32)),
+      Lea(RDI(W64), RegImmPointer(RIP, IntFormatLabel)(W64)),
+      Mov(RAX(W8), 0),
+      Call(ClibPrintf),
+      Mov(RDI(W64), 0),
+      Call(ClibFlush)
+    )
+  )
+
+  /** Subroutine for printing a character. */
+  val _printc = createReadOnlyString(CharacterFormatLabel, CharacterFormatSpecifier) ::: createFunction(
+    printcLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Mov(RSI(W8), RDI(W8)),
+      Lea(RDI(W64), RegImmPointer(RIP, CharacterFormatLabel)(W64)),
+      Mov(RAX(W8), 0),
+      Call(ClibPrintf),
+      Mov(RDI(W64), 0),
+      Call(ClibFlush),
+      Mov(RSP(W64), RBP(W64))
+    )
+  )
+
+  /** Subroutine for printing a string. */
+  val _prints = createReadOnlyString(StringFormatLabel, StringFormatSpecifier) ::: createFunction(
+    printsLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Mov(RSI(W32), RegImmPointer(RDI(W64), -4)(W32)),
+      Lea(RDI(W64), RegImmPointer(RIP, StringFormatLabel)(W64)),
+      Mov(RAX(W8), 0),
+      Call(ClibPrintf),
+      Mov(RDI(W64), 0),
+      Call(ClibFlush)
+    )
+  )
+
+  /** Subroutine for printing a pair or an array. */
+  val _printp = createReadOnlyString(PointerFormatLabel, PointerFormatSpecifier) ::: createFunction(
+    printpLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Mov(RSI(W64), RDI(W64)),
+      Lea(RDI(W64), RegImmPointer(RIP, PointerFormatSpecifier)(W64)),
+      Mov(RAX(W8), 0),
+      Call(ClibPrintf),
+      Mov(RDI(W64), 0),
+      Call(ClibFlush)
+    )
+  )
+
+  /** Subroutine for printing a newline. */
+  private val _println = createReadOnlyString(printlnStrLabel, printlnStr) ::: createFunction(
+    printlnLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Lea(RDI(W64), RegImmPointer(RIP, printlnStrLabel)(W64)),
+      Call(ClibPuts),
+      Mov(RDI(W64), 0),
+      Call(ClibFlush)
+    )
+  )
+
+  // ---- READ FUNCTIONS ----
+  private val IntReadLabel = ".intRead"
+  private val CharacterReadLabel = ".charRead"
+  
+  private val IntReadSpecifier = "%d"
+  private val CharacterReadSpecifier = " %c"
+
+  val readiLabel = "_readi"
+  val readcLabel = "_readc"
+
+  /** Subroutine for reading an integer. */
+  private val _readi = createReadOnlyString(IntReadLabel, IntReadSpecifier) ::: createFunction(
+    readiLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Comment("Allocate space on the stack to store the read value"),
+      Sub(RSP(W64), 16),
+      Comment("Store original value in case of EOF"),
+      Mov(RegPointer(RSP(W64))(W32), RDI(W32)),
+      Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
+      Lea(RDI(W64), RegImmPointer(RIP, IntReadLabel)(W64)),
+      Mov(RAX(W8), 0),
+      Call(ClibScanf),
+      Mov(RAX(W32), RegPointer(RSP(W64))(W32)),
+      Add(RSP(W64), 16)
+    )
+  )
+
+  /** Subroutine for reading an character. */
+  private val _readc = createReadOnlyString(CharacterReadLabel, CharacterReadSpecifier) ::: createFunction(
+    readcLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Comment("Allocate space on the stack to store the read value"),
+      Sub(RSP(W64), 16),
+      Comment("Store original value in case of EOF"),
+      Mov(RegPointer(RSP(W64))(W8), RDI(W8)),
+      Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
+      Lea(RDI(W64), RegImmPointer(RIP, CharacterReadLabel)(W64)),
+      Mov(RAX(W8), 0),
+      Call(ClibScanf),
+      Mov(RAX(W8), RegPointer(RSP(W64))(W8)),
+      Add(RSP(W64), 16)
+    )
+  )
+
+  // ---- EXIT AND HEAP FUNCTIONS ----  
+  val exitLabel = "_exit"
+  val mallocLabel = "_malloc"
+  val freeLabel = "_free"
+  val freepairLabel = "_freepair"
+
+  /** Subroutine for exiting the program. */
+  private val _exit = createFunction(
+    exitLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Call(ClibExit)
+    )
+  )
+
+  /** Subroutine for allocating memory. Used for pairs and arrays. */
+  private val _malloc = createFunction(
+    mallocLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Call(ClibMalloc),
+      Compare(RAX(W64), 0),
+      JmpEqual(outOfMemoryLabel)
+    )
+  )
+
+  /** Subroutine for freeing array memory on the heap. */
+  private val _free = createFunction(
+    freeLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Call(ClibFree)
+    )
+  )
+
+  /** Subroutine for freeing pair memory on the heap. */
+  private val _freepair = createFunction(
+    freepairLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Compare(RDI(W64), 0),
+      JmpEqual(errNullLabel),
+      Call(ClibFree)
+    )
+  )
+
+
+  /// ---- ERRORS ----
+  private val outOfMemoryLabel = "_outOfMemory"
+  private val errNullLabel = "_errNull"
+  
+  private val OutOfMemoryStringLabel = ".outOfMemoryString"
+  private val NullPairStringLabel = ".nullPairString"
+
+  private val OutOfMemoryString = "fatal error: out of memory\n"
+  private val NullPairString = "fatal error: null pair dereferenced or freed\n"
+
+  /** Subroutine for an out of memory error. */
+  private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
+    DefineLabel(outOfMemoryLabel),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, OutOfMemoryStringLabel)(W64)),
+    Call(printsLabel),
+    Mov(RDI(W8), -1),
+    Call(ClibExit),
+    Ret(None)
+  )
+
+  /** Subroutine for a null pair error. */
+  private val _errNull = createReadOnlyString(NullPairStringLabel, NullPairString) ::: List(
+    DefineLabel(errNullLabel),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, NullPairStringLabel)(W64)),
+    Call(printsLabel),
+    Mov(RDI(W8), -1),
+    Call(ClibExit)
+  )
+}
