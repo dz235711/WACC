@@ -169,6 +169,7 @@ class x86Stringifier {
     * @return a string representation of the register
     */
   private def stringifyRegister(register: Register): String = register match {
+    case RIP    => "rip"
     case RAX(s) => prependSize(s, "ax", false)
     case RBX(s) => prependSize(s, "bx", false)
     case RCX(s) => prependSize(s, "cx", false)
