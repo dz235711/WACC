@@ -288,7 +288,7 @@ class Translator {
       es.zipWithIndex.foreach { (e, i) =>
         val expLoc = locationCtx.getNext(typeToSize(e.getType))
         translateExpr(e)
-        val offset: Immediate = i * typeToSize(e.getType).toBytes
+        val offset: Immediate = INT_SIZE + i * typeToSize(e.getType).toBytes
         locationCtx.regInstrN(
           List(ptrLoc, expLoc),
           { regs =>
