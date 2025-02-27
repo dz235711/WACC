@@ -144,8 +144,7 @@ class Translator {
           val hDest = getHeapLocation(h)
           locationCtx.regInstrN(
             List(hDest, resultLoc),
-            None,
-            { (regs, _) => Mov(RegPointer(regs(0))(typeToSize(l.getType)), regs(1)) }
+            { regs => Mov(RegPointer(regs(0))(typeToSize(l.getType)), regs(1)) }
           )
       }
 
@@ -282,20 +281,18 @@ class Translator {
       val ptrLoc: Location = locationCtx.cleanUpCall()
 
       // Store the size of the array and array elements
-      locationCtx.regInstrN[(Immediate, Size)](
+      locationCtx.regInstrN(
         List(ptrLoc),
-        Some((es.size, POINTER_SIZE)),
-        { (regs, data) => Mov(RegPointer(regs(0))(data._2), data._1) }
+        { regs => Mov(RegPointer(regs(0))(POINTER_SIZE), es.size) }
       )
       es.zipWithIndex.foreach { (e, i) =>
         val expLoc = locationCtx.getNext(typeToSize(e.getType))
         translateExpr(e)
         val offset: Immediate = i * typeToSize(e.getType).toBytes
-        locationCtx.regInstrN[(Immediate, Size)](
+        locationCtx.regInstrN(
           List(ptrLoc, expLoc),
-          Some((offset, typeToSize(e.getType))),
-          { (regs, data) =>
-            Mov(RegImmPointer(regs(0), data._1)(data._2), regs(1))
+          { regs =>
+            Mov(RegImmPointer(regs(0), offset)(typeToSize(e.getType)), regs(1))
           }
         )
       }
@@ -314,19 +311,17 @@ class Translator {
       // Store the pair elements
       val resultLoc1 = locationCtx.getNext(W64)
       translateExpr(e1)
-      locationCtx.regInstrN[Size](
+      locationCtx.regInstrN(
         List(ptrLoc, resultLoc1),
-        Some(typeToSize(t1)),
-        { (regs, size) => Mov(RegPointer(regs(0))(size), regs(1)) }
+        { regs => Mov(RegPointer(regs(0))(typeToSize(t1)), regs(1)) }
       )
 
       val resultLoc2 = locationCtx.getNext(W64)
       translateExpr(e2)
       val offsetSnd: Immediate = PAIR_SIZE / 2
-      locationCtx.regInstrN[(Immediate, Size)](
+      locationCtx.regInstrN(
         List(ptrLoc, resultLoc2),
-        Some((offsetSnd, typeToSize(t2))),
-        { (regs, data) => Mov(RegImmPointer(regs(0), data._1)(data._2), regs(1)) }
+        { regs => Mov(RegImmPointer(regs(0), offsetSnd)(typeToSize(t2)), regs(1)) }
       )
     case f @ Fst(_, ty) =>
       // Get the current location in the map of the Fst
@@ -337,8 +332,7 @@ class Translator {
 
       locationCtx.regInstrN(
         List(dest, fstLoc),
-        None,
-        { (regs, _) => Mov(regs(0), RegPointer(regs(1))(typeToSize(f.getType))) }
+        { regs => Mov(regs(0), RegPointer(regs(1))(typeToSize(f.getType))) }
       )
 
     case s @ Snd(_, ty) =>
@@ -350,8 +344,7 @@ class Translator {
 
       locationCtx.regInstrN(
         List(dest, fstLoc),
-        None,
-        { (regs, _) => Mov(regs(0), RegPointer(regs(1))(typeToSize(s.getType))) }
+        { regs => Mov(regs(0), RegPointer(regs(1))(typeToSize(s.getType))) }
       )
 
     case TypedCall(v, args, ty) =>
@@ -511,8 +504,7 @@ class Translator {
 
       locationCtx.regInstrN(
         List(dest, loc),
-        None,
-        { (regs, _) => Mov(regs(0), RegPointer(regs(1))(typeToSize(elem.getType))) }
+        { regs => Mov(regs(0), RegPointer(regs(1))(typeToSize(elem.getType))) }
       )
 
     case NestedExpr(e, ty) => translateExpr(e)
@@ -585,10 +577,9 @@ class Translator {
             // get the size of the type (for scaling)
             val tySize = typeToSize(nextTy).toBytes
 
-            locationCtx.regInstrN[Unit](
+            locationCtx.regInstrN(
               List(baseDest, indexDest),
-              None,
-              { (regs, _) =>
+              { regs =>
                 // baseDest = baseDest + indexDest * tySize + 4
                 Lea(regs(0), RegScaleRegImmPointer(regs(0), tySize, regs(1), 4)(typeToSize(nextTy)))
               }
