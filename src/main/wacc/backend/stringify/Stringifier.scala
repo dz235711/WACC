@@ -41,7 +41,7 @@ class x86Stringifier {
     case Halt                           => "hlt"
     case Push(src)                      => s"push ${stringifyOperand(src)}"
     case Pop(dest)                      => s"pop ${stringifyOperand(dest)}"
-    case Lea(dest, src)                 => s"lea ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
+    case Lea(dest, src)                 => s"lea ${stringifyOperand(dest)}, ${{ stringifyPointerArithmetic(src) }}"
     case DefineLabel(label)             => s"${stringifyOperand(label)}:"
     case Jmp(label)                     => s"jmp ${stringifyOperand(label)}"
     case JmpEqual(label)                => s"je ${stringifyOperand(label)}"
@@ -136,18 +136,33 @@ class x86Stringifier {
     *
     * @param pointer
     * @return a string representation of the pointer
+    * @example `RegImm(Reg(RAX), Imm(4))(W64)` -> `qword ptr [rax+4]`
     */
-  private def stringifyPointer(pointer: Pointer): String = s"${ptrSize(pointer.size)} ${pointer match {
-      case RegPointer(reg)           => s"[${stringifyOperand(reg)}]"
-      case RegImmPointer(reg, imm)   => s"[${stringifyOperand(reg)}+${stringifyOperand(imm)}]"
-      case RegRegPointer(reg1, reg2) => s"[${stringifyOperand(reg1)}+${stringifyOperand(reg2)}]"
+  private def stringifyPointer(pointer: Pointer): String =
+    s"${ptrSize(pointer.size)} ${stringifyPointerArithmetic(pointer)}"
+
+  /**
+    * Converts pointer arithmetic into string representation (without a pointer size prefix)
+    *
+    * @param pointer
+    * @return a string representation of the pointer arithmetic
+    * @example `RegImm(Reg(RAX), Imm(4))(W64)` -> `[rax+4]`
+    */
+  private def stringifyPointerArithmetic(pointer: Pointer): String = {
+    val arithmetic = pointer match {
+      case RegPointer(reg)           => s"${stringifyOperand(reg)}"
+      case RegImmPointer(reg, imm)   => s"${stringifyOperand(reg)}+${stringifyOperand(imm)}"
+      case RegRegPointer(reg1, reg2) => s"${stringifyOperand(reg1)}+${stringifyOperand(reg2)}"
       case RegScaleRegPointer(reg1, scale, reg2) =>
-        s"[${stringifyOperand(reg1)}+${stringifyOperand(scale)}*${stringifyOperand(reg2)}]"
+        s"${stringifyOperand(reg1)}+${stringifyOperand(scale)}*${stringifyOperand(reg2)}"
       case RegScaleRegImmPointer(reg1, scale, reg2, imm) =>
-        s"[${stringifyOperand(reg1)}+${stringifyOperand(scale)}*${stringifyOperand(reg2)}+${stringifyOperand(imm)}]"
+        s"${stringifyOperand(reg1)}+${stringifyOperand(scale)}*${stringifyOperand(reg2)}+${stringifyOperand(imm)}"
       case ScaleRegImmPointer(scale, reg, imm) =>
-        s"[${stringifyOperand(scale)}*${stringifyOperand(reg)}+${stringifyOperand(imm)}]"
-    }}"
+        s"${stringifyOperand(scale)}*${stringifyOperand(reg)}+${stringifyOperand(imm)}"
+    }
+
+    s"[$arithmetic]"
+  }
 
   /**
     * Converts a size into a string representation
@@ -169,6 +184,7 @@ class x86Stringifier {
     * @return a string representation of the register
     */
   private def stringifyRegister(register: Register): String = register match {
+    case RIP    => "rip"
     case RAX(s) => prependSize(s, "ax", false)
     case RBX(s) => prependSize(s, "bx", false)
     case RCX(s) => prependSize(s, "cx", false)
