@@ -151,14 +151,25 @@ class LocationContext {
    *
    * @param argLocations The temporary locations of the arguments
    */
-  def setUpCall(argLocations: List[Location]): Unit = ???
+  def setUpCall(argLocations: List[Location])(using instructionCtx: InstructionContext): Unit = {
+    pushLocs(CallerSaved)
+    for ((argLoc, argReg) <- argLocations.take(ArgRegs.length).zip(ArgRegs)) {
+      argLoc match {
+        case r: Register => instructionCtx.addInstruction(Mov(argReg, r))
+        case p: Pointer  => instructionCtx.addInstruction(Mov(argReg, p))
+      }
+    }
+    pushLocs(argLocations.drop(ArgRegs.length))
+  }
 
   /** Restore caller registers and save result to a location
    * Run this just after calling a function.
    *
    * @return The location of the result
    */
-  def cleanUpCall(): Location = ???
+  def cleanUpCall()(using instructionCtx: InstructionContext): Location =
+    popLocs(CallerSaved)
+    RAX(W64)
 
   /** Move a value from one location to another
    *
@@ -201,27 +212,4 @@ class LocationContext {
     op
     popLocs(regsToUse)
   }
-
-  /** Saves caller registers and moves arguments to their intended registers/on the stack
-    * 
-    * @param argLocations The temporary locations of the arguments
-    */
-  def setUpCall(argLocations: List[Location])(using instructionCtx: InstructionContext): Unit = {
-    pushLocs(CallerSaved)
-    for ((argLoc, argReg) <- argLocations.take(ArgRegs.length).zip(ArgRegs)) {
-      argLoc match {
-        case r: Register => instructionCtx.addInstruction(Mov(argReg, r))
-        case p: Pointer  => instructionCtx.addInstruction(Mov(argReg, p))
-      }
-    }
-    pushLocs(argLocations.drop(ArgRegs.length))
-  }
-
-  /** Restore caller registers and save result to a location
-    * 
-    * @return The location of the result
-    */
-  def cleanUpCall()(using instructionCtx: InstructionContext): Location =
-    popLocs(CallerSaved)
-    RAX(W64)
 }
