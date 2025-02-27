@@ -81,7 +81,7 @@ class LocationContext {
    * @param size The size of the location
    * @return The reserved location
    */
-  def reserveNext(size: Size): Location = {
+  def reserveNext(size: Size)(using instructionCtx: InstructionContext): Location = {
     if (freeRegs.nonEmpty) {
       val reg = freeRegs.remove(freeRegs.length - 1)
       reservedRegs += reg
@@ -89,14 +89,18 @@ class LocationContext {
     } else {
       val loc = RegImmPointer(RBP(W64), reservedStackLocs * PointerSize)(size)
       reservedStackLocs += 1
+      // decrement the stack pointer
+      instructionCtx.addInstruction(Sub(StackPointer, PointerSize))
       loc
     }
   }
 
   /** Move the getNext pointer to the last location */
-  def unreserveLast(): Unit = {
+  def unreserveLast()(using instructionCtx: InstructionContext): Unit = {
     if (reservedStackLocs > 0) {
       reservedStackLocs -= 1
+      // increment the stack pointer
+      instructionCtx.addInstruction(Add(StackPointer, PointerSize))
     } else {
       val reg = reservedRegs.remove(reservedRegs.length - 1)
       freeRegs += reg
@@ -108,7 +112,7 @@ class LocationContext {
    * @param v The identifier to associate with
    * @param size The size of the location
    */
-  def addLocation(v: Ident, size: Size): Unit = {
+  def addLocation(v: Ident, size: Size)(using instruction: InstructionContext): Unit = {
     val loc = reserveNext(size)
     identMap(v) = loc
   }
@@ -254,8 +258,18 @@ class LocationContext {
    * @return The location of the result
    */
   def cleanUpCall()(using instructionCtx: InstructionContext): Location =
+    // 1. Store result, taking into account reserved stack locations and caller-saved registers
+    val newRsp = RegImmPointer(RBP(W64), -PointerSize * (reservedStackLocs + CallerSaved.length))(W64)
+    instructionCtx.addInstruction(Mov(newRsp, ReturnReg))
+
+    // 2. Shift the stack pointer
+    instructionCtx.addInstruction(Mov(StackPointer, newRsp))
+
+    // 3. Restore caller registers
     popLocs(CallerSaved)
-    RAX(W64)
+
+    // 4. Return result location
+    newRsp
 
   /** Move a value from one location to another
    *
