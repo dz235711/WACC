@@ -297,32 +297,41 @@ class Translator {
         )
       }
     case NewPair(e1, e2, PairType(t1, t2)) =>
-      // Allocate memory for the pair
-      val tempSizeLocation = locationCtx.reserveNext(W32)
+      // Move the size of the pair to the next available location
+      val tempSizeLocation = locationCtx.getNext(W32)
       instructionCtx.addInstruction(tempSizeLocation match {
         case r: Register => Mov(r, PAIR_SIZE)
         case p: Pointer  => Mov(p, PAIR_SIZE)
       })
+
+      // Allocate memory for the pair and get the pointer to the pair
       locationCtx.setUpCall(List(tempSizeLocation))
-      locationCtx.unreserveLast()
       // TODO: clib malloc
       val ptrLoc = locationCtx.cleanUpCall()
 
-      // Store the pair elements
+      // Move the pointer to the pair to the next available location
+      val pairLoc = locationCtx.reserveNext(W64)
+      locationCtx.movLocLoc(pairLoc, ptrLoc)
+
+      // Store the first element in the pair
       val resultLoc1 = locationCtx.getNext(W64)
       translateExpr(e1)
       locationCtx.regInstrN(
-        List(ptrLoc, resultLoc1),
+        List(pairLoc, resultLoc1),
         { regs => Mov(RegPointer(regs(0))(typeToSize(t1)), regs(1)) }
       )
 
+      // Store the second element in the pair
       val resultLoc2 = locationCtx.getNext(W64)
       translateExpr(e2)
-      val offsetSnd: Immediate = PAIR_SIZE / 2
+      val offsetSnd: Immediate = PAIR_SIZE / 2 // offset to the second element from the start of the pair
       locationCtx.regInstrN(
-        List(ptrLoc, resultLoc2),
+        List(pairLoc, resultLoc2),
         { regs => Mov(RegImmPointer(regs(0), offsetSnd)(typeToSize(t2)), regs(1)) }
       )
+
+      // Unreserve the pair location
+      locationCtx.unreserveLast()
     case f @ Fst(_, ty) =>
       // Get the current location in the map of the Fst
       val fstLoc = getHeapLocation(f)
