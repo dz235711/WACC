@@ -76,8 +76,8 @@ case class ShiftLogicalRight(dest: Register | Pointer, count: Immediate) extends
 case class Test(src1: Register | Pointer, src2: Immediate | Register) extends Instruction
 case class Compare private (src1: Register | Pointer, src2: Immediate | Register | Pointer) extends Instruction
 object Compare {
-  def apply(dest: Pointer, src: Immediate | Register): Compare = new Compare(dest, src)
   def apply(dest: Register, src: Immediate | Register | Pointer): Compare = new Compare(dest, src)
+  def apply(dest: Pointer, src: Immediate | Register): Compare = new Compare(dest, src)
 }
 
 // Jump instructions
@@ -91,18 +91,25 @@ case class JmpLess(label: Label) extends Instruction
 case class JmpLessEqual(label: Label) extends Instruction
 case class JmpZero(label: Label) extends Instruction
 case class JmpNotZero(label: Label) extends Instruction
-case class JumpCarry(label: Label) extends Instruction
-case class JumpNotCarry(label: Label) extends Instruction
-case class JumpOverflow(label: Label) extends Instruction
-case class JumpNotOverflow(label: Label) extends Instruction
-case class JumpSign(label: Label) extends Instruction
-case class JumpNotSign(label: Label) extends Instruction
-case class JumpParity(label: Label) extends Instruction
-case class JumpNotParity(label: Label) extends Instruction
-case class JumpAbove(label: Label) extends Instruction
-case class JumpAboveEqual(label: Label) extends Instruction
-case class JumpBelow(label: Label) extends Instruction
-case class JumpBelowEqual(label: Label) extends Instruction
+case class JmpCarry(label: Label) extends Instruction
+case class JmpNotCarry(label: Label) extends Instruction
+case class JmpOverflow(label: Label) extends Instruction
+case class JmpNotOverflow(label: Label) extends Instruction
+case class JmpSign(label: Label) extends Instruction
+case class JmpNotSign(label: Label) extends Instruction
+case class JmpParity(label: Label) extends Instruction
+case class JmpNotParity(label: Label) extends Instruction
+case class JmpAbove(label: Label) extends Instruction
+case class JmpAboveEqual(label: Label) extends Instruction
+case class JmpBelow(label: Label) extends Instruction
+case class JmpBelowEqual(label: Label) extends Instruction
+
+// Byte set Instructions
+case class SetGreater(dest: Register | Pointer) extends Instruction
+case class SetGreaterEqual(dest: Register | Pointer) extends Instruction
+case class SetSmaller(dest: Register | Pointer) extends Instruction
+case class SetSmallerEqual(dest: Register | Pointer) extends Instruction
+case class SetEqual(dest: Register | Pointer) extends Instruction
 
 // Data transfer instructions
 case class Mov private (dest: Register | Pointer, src: Immediate | Register | Pointer) extends Instruction

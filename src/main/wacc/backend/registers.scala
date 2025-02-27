@@ -1,12 +1,15 @@
 package wacc
 
 enum Size {
-  case W8
-  case W16
-  case W32
-  case W64
-}
+  case W8, W16, W32, W64
 
+  def toBytes: Int = this match {
+    case W8  => 1
+    case W16 => 2
+    case W32 => 4
+    case W64 => 8
+  }
+}
 sealed trait Register {
   val width: Size
 }
