@@ -208,15 +208,24 @@ class LocationContext {
    * @param argLocations The temporary locations of the arguments
    */
   def setUpCall(argLocations: List[Location])(using instructionCtx: InstructionContext): Unit = {
-//    pushLocs(CallerSaved)
-//    for ((argLoc, argReg) <- argLocations.take(ArgRegs.length).zip(ArgRegs)) {
-//      argLoc match {
-//        case r: Register => instructionCtx.addInstruction(Mov(argReg, r))
-//        case p: Pointer  => instructionCtx.addInstruction(Mov(argReg, p))
-//      }
-//    }
-//    pushLocs(argLocations.drop(ArgRegs.length))
-//    basePointerOffset -= (argLocations.length - ArgRegs.length).max(0) * 64
+    // 1. Save caller registers
+    pushLocs(CallerSaved)
+
+    // 2. Move first 6 arguments to their intended registers
+    for ((argLoc, argReg) <- argLocations.take(ArgRegs.length).zip(ArgRegs)) {
+      argLoc match {
+        case r: Register => instructionCtx.addInstruction(Mov(argReg, r))
+        case p: Pointer  => instructionCtx.addInstruction(Mov(argReg, p))
+      }
+    }
+
+    // 3. Move remaining arguments to the stack
+    argLocations.drop(ArgRegs.length).zipWithIndex.foreach((argLoc, i) => {
+      val destLoc = RegImmPointer(RBP(W64), -POINTER_SIZE * (i + reservedStackLocs))(W64)
+      instructionCtx.addInstruction(Mov(RAX(W64), argLoc))
+      instructionCtx.addInstruction(Mov(destLoc, RAX(W64)))
+      reservedStackLocs += 1
+    })
   }
 
   /** Restore caller registers and save result to a location
