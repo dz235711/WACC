@@ -1,6 +1,6 @@
 package wacc
 
-import wacc.TypedAST.{Call as TypedCall, *}
+import wacc.TypedAST._
 import scala.collection.mutable.{ListBuffer, Map as MMap}
 import wacc.Size.*
 
@@ -132,8 +132,33 @@ class LocationContext {
     }
   }
 
-  /** Pop callee-saved registers from the stack */
-  def restoreCalleeRegisters()(using instructionCtx: InstructionContext): Unit = popLocs(CalleeSaved)
+  /** Set up stack frame, assign parameters a location and push callee-saved registers onto the stack.
+   * Run this at the start of a function.
+   * 
+   * @param params The parameters of the function
+  */
+  def setUpFunc(params: List[Ident]): Unit = ???
+
+  /** Reset stack pointer and pop callee-saved registers from the stack, and set up the return value.
+   * Run this at the end of a function just before returning.
+   * 
+   * @param retVal The location of the return value
+   */
+  def cleanUpFunc(retVal: Location): Unit = ???
+
+  /** Saves caller registers and moves arguments to their intended registers/on the stack.
+   * Run this just before calling a function.
+   *
+   * @param argLocations The temporary locations of the arguments
+   */
+  def setUpCall(argLocations: List[Location]): Unit = ???
+
+  /** Restore caller registers and save result to a location
+   * Run this just after calling a function.
+   *
+   * @return The location of the result
+   */
+  def cleanUpCall(): Location = ???
 
   /** Move a value from one location to another
    *
@@ -154,17 +179,16 @@ class LocationContext {
   /** Perform some operation that forces the use of n registers. 
    * 
    * @param locs The locations to use
-   * @param data The helper data to use
-   * @param op The operation to perform on the locations
+   * @param op The operation to perform on the locations as registers
   */
-  def regInstrN[A](locs: List[Location], data: A, op: (List[Register], A) => Instruction)(using
+  def regInstrN[A](locs: List[Location], op: List[Register] => Instruction)(using
       instructionCtx: InstructionContext
   ): Unit =
     val sizeDiff = locs.length - freeRegs.length
     assert(sizeDiff - reservedRegs.length >= 0)
     val regPushed = reservedRegs.take(sizeDiff.max(0)).toList
     pushLocs(regPushed)
-    op(freeRegs.toList.map(_(W64)) ++ regPushed, data)
+    op(freeRegs.toList.map(_(W64)) ++ regPushed)
     popLocs(regPushed)
 
   /** Perform some operation that forces the use of some register(s). These registers are saved and restored after the operation.

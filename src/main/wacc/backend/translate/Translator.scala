@@ -15,6 +15,8 @@ import wacc.Size.*
 
 import java.rmi.UnexpectedException
 
+type HeapLValue = Fst | Snd | ArrayElem
+
 // Agreement: a translate function will:
 // 1. put its result in the next available location at the time of its invocation
 // 2. unreserve any locations it reserves
@@ -61,23 +63,34 @@ class Translator {
 
   // Constants
   /** The size of a pair in bytes */
-  val PAIR_SIZE = 16
+  private val PAIR_SIZE = 16
 
   /** The size of a pointer */
-  val POINTER_SIZE = W64
+  private val POINTER_SIZE = W64
+
+  /** The size of an integer in bytes */
+  private val INT_SIZE = 4
 
   /** The value of NULL */
-  val NULL = 0
+  private val NULL = 0
 
   /** The value of TRUE */
-  val TRUE = 1
+  private val TRUE = 1
 
   /** The value of FALSE */
-  val FALSE = 0
+  private val FALSE = 0
+
+  /** The label for a user-defined function */
+  private val FUNCTION_LABEL = "wacc_func_"
 
   def translate(program: Program): List[Instruction] = {
     given translateCtx: InstructionContext = new InstructionContext()
     given locationCtx: LocationContext = new LocationContext()
+
+    // Translate all functions in the program
+    program.fs.foreach { f => translateFunction(f) }
+
+    // Translate the program body
     translateStmt(program.body)
     translateCtx.getInstructions
   }
@@ -97,40 +110,12 @@ class Translator {
     case _              => throw new UnexpectedException("Unexpected Error: Invalid type")
   }
 
-  /** Convert a number of bytes to a Size
-   *
-   * @param size The number of bytes
-   * @return The Size corresponding to the number of bytes
-   */
-  private def getSize(size: Int): Size = size match {
-    case 1 => W8
-    case 2 => W16
-    case 4 => W32
-    case 8 => W64
-    case _ => throw new RuntimeException("Invalid size")
-  }
-
-  /** Get the size of a semantic type in bytes
-   *
-   * @param ty The semantic type to get the size of
-   * @return The size of the semantic type in bytes
-   */
-  private def getTypeSize(ty: SemType): Int = ty match {
-    case IntType        => 4 // TODO: Magic number
-    case CharType       => 1
-    case BoolType       => 1
-    case StringType     => 8
-    case ArrayType(_)   => 8
-    case PairType(_, _) => 8
-    case _              => throw new RuntimeException("Invalid type")
-  }
-
   /** Generates a function name from an id
    * 
    * @param id The id (integer) to generate the function name
    * @return The function name
    */
-  private def getFunctionName(id: Int): String = s"wacc_func_$id"
+  private def getFunctionName(id: Int): String = s"$FUNCTION_LABEL$id"
 
   /** Translates a statement to a list of instructions
    *
@@ -147,10 +132,21 @@ class Translator {
       locationCtx.addLocation(v, dest)
 
     case Asgn(l, r) =>
-      val resultLoc = locationCtx.getNext(typeToSize(l.getType))
       translateRValue(r)
-      val dest = getLValue(l)
-      locationCtx.movLocLoc(resultLoc, dest)
+      val resultLoc = locationCtx.reserveNext(typeToSize(l.getType))
+
+      l match {
+        case id: Ident =>
+          val dest = locationCtx.getLocation(id)
+          locationCtx.movLocLoc(dest, resultLoc)
+
+        case h: HeapLValue =>
+          val hDest = getHeapLocation(h)
+          locationCtx.regInstrN(
+            List(hDest, resultLoc),
+            { regs => Mov(RegPointer(regs(0))(typeToSize(l.getType)), regs(1)) }
+          )
+      }
 
     case Read(l) =>
       locationCtx.setUpCall(List())
@@ -182,8 +178,7 @@ class Translator {
       locationCtx.cleanUpCall()
 
     case Return(e) =>
-      unary(e, { l => instructionCtx.addInstruction(Mov(RAX(typeToSize(e.getType)), l)) })
-      locationCtx.restoreCalleeRegisters()
+      unary(e, locationCtx.cleanUpFunc)
       instructionCtx.addInstruction(Ret(None))
 
     case Exit(e) =>
@@ -191,7 +186,7 @@ class Translator {
       translateExpr(e)
 
       // Call exit
-      instructionCtx.addInstruction(Mov(RDI(W8), dest))
+      locationCtx.setUpCall(List(dest))
     // TODO: clib exit
 
     case Print(e) =>
@@ -272,97 +267,106 @@ class Translator {
   ): Unit = value match {
     case ArrayLiter(es, ty) =>
       // Calculate size needed for the array
-      val typeSize = getTypeSize(ty)
-      val size = 4 + (es.size * typeSize) // 4 bytes for the size of the array
+      val size = (typeToSize(ty).toBytes * es.size) + INT_SIZE
 
-      // Allocate memory for the array
-      val tempSizeLocation = locationCtx.reserveNext(W32)
+      // Allocate memory for the array and get the pointer to the array
+      val tempSizeLocation = locationCtx.getNext(W32)
       instructionCtx.addInstruction(tempSizeLocation match {
         case r: Register => Mov(r, size)
         case p: Pointer  => Mov(p, size)
       })
       locationCtx.setUpCall(List(tempSizeLocation))
-      locationCtx.unreserveLast()
       // TODO: clib malloc
       val ptrLoc: Location = locationCtx.cleanUpCall()
 
-      // Store the size of the array and array elements
-      locationCtx.regInstrN[(Immediate, Size)](
-        List(ptrLoc),
-        (es.size, POINTER_SIZE),
-        { (regs, data) => Mov(RegPointer(regs(0))(data._2), data._1) }
+      // TODO: runtime error if malloc fails
+
+      // Move the pointer to the array to the next available location
+      val arrayLoc = locationCtx.reserveNext(W64)
+      locationCtx.movLocLoc(arrayLoc, ptrLoc)
+
+      // Store the size of the array
+      locationCtx.regInstrN(
+        List(arrayLoc),
+        { regs => Mov(RegPointer(regs(0))(POINTER_SIZE), es.size) }
       )
+
+      // Store the elements in the array
       es.zipWithIndex.foreach { (e, i) =>
         val expLoc = locationCtx.getNext(typeToSize(e.getType))
         translateExpr(e)
-        val offset: Immediate = i * typeSize
-        locationCtx.regInstrN[(Immediate, Size)](
-          List(ptrLoc, expLoc),
-          (offset, typeToSize(e.getType)),
-          { (regs, data) =>
-            Mov(RegImmPointer(regs(0), data._1)(data._2), regs(1))
+        val offset: Immediate = INT_SIZE + i * typeToSize(e.getType).toBytes
+        locationCtx.regInstrN(
+          List(arrayLoc, expLoc),
+          { regs =>
+            Mov(RegImmPointer(regs(0), offset)(typeToSize(e.getType)), regs(1))
           }
         )
       }
-    case NewPair(e1, e2, PairType(t1, t2)) =>
-      // Find the sizes of the pair elements
-      val type1Size = getTypeSize(t1)
-      val type2Size = getTypeSize(t2)
 
-      // Allocate memory for the pair
-      val tempSizeLocation = locationCtx.reserveNext(W32)
+      // Unreserve the array location
+      locationCtx.unreserveLast()
+
+    case NewPair(e1, e2, PairType(t1, t2)) =>
+      // Move the size of the pair to the next available location
+      val tempSizeLocation = locationCtx.getNext(W32)
       instructionCtx.addInstruction(tempSizeLocation match {
         case r: Register => Mov(r, PAIR_SIZE)
         case p: Pointer  => Mov(p, PAIR_SIZE)
       })
+
+      // Allocate memory for the pair and get the pointer to the pair
       locationCtx.setUpCall(List(tempSizeLocation))
-      locationCtx.unreserveLast()
       // TODO: clib malloc
       val ptrLoc = locationCtx.cleanUpCall()
 
-      // Store the pair elements
-      val resultLoc1 = locationCtx.getNext(W64)
+      // Move the pointer to the pair to the next available location
+      val pairLoc = locationCtx.reserveNext(W64) // W64 because it's a pointer
+      locationCtx.movLocLoc(pairLoc, ptrLoc)
+
+      // Store the first element in the pair
+      val resultLoc1 = locationCtx.getNext(typeToSize(t1))
       translateExpr(e1)
-      locationCtx.regInstrN[Size](
-        List(ptrLoc, resultLoc1),
-        typeToSize(t1),
-        { (regs, size) => Mov(RegPointer(regs(0))(size), regs(1)) }
+      locationCtx.regInstrN(
+        List(pairLoc, resultLoc1),
+        { regs => Mov(RegPointer(regs(0))(typeToSize(t1)), regs(1)) }
       )
 
-      val resultLoc2 = locationCtx.getNext(W64)
+      // Store the second element in the pair
+      val resultLoc2 = locationCtx.getNext(typeToSize(t2))
       translateExpr(e2)
-      val offsetSnd: Immediate = PAIR_SIZE / 2
-      locationCtx.regInstrN[(Immediate, Size)](
-        List(ptrLoc, resultLoc2),
-        (offsetSnd, typeToSize(t2)),
-        { (regs, data) => Mov(RegImmPointer(regs(0), data._1)(data._2), regs(1)) }
+      val offsetSnd: Immediate = PAIR_SIZE / 2 // offset to the second element from the start of the pair
+      locationCtx.regInstrN(
+        List(pairLoc, resultLoc2),
+        { regs => Mov(RegImmPointer(regs(0), offsetSnd)(typeToSize(t2)), regs(1)) }
       )
+
+      // Unreserve the pair location
+      locationCtx.unreserveLast()
     case f @ Fst(_, ty) =>
       // Get the current location in the map of the Fst
-      val fstLoc = getLValue(f)
-      // Check this isn't null
-      instructionCtx.addInstruction(fstLoc match {
-        case r: Register => Compare(r, NULL)
-        case p: Pointer  => Compare(p, NULL)
-      })
-      instructionCtx.addInstruction(JmpEqual("fst_null_error"))
+      val fstLoc = getHeapLocation(f)
 
       // Move this into the expected result location
-      val resultLoc = locationCtx.getNext(typeToSize(ty))
-      locationCtx.movLocLoc(resultLoc, fstLoc)
+      val dest = locationCtx.getNext(typeToSize(ty))
+
+      locationCtx.regInstrN(
+        List(dest, fstLoc),
+        { regs => Mov(regs(0), RegPointer(regs(1))(typeToSize(f.getType))) }
+      )
+
     case s @ Snd(_, ty) =>
       // Get the current location in the map of the Snd
-      val sndLoc = getLValue(s)
-      // Check this isn't null
-      instructionCtx.addInstruction(sndLoc match {
-        case r: Register => Compare(r, NULL)
-        case p: Pointer  => Compare(p, NULL)
-      })
-      instructionCtx.addInstruction(JmpEqual("snd_null_error"))
+      val fstLoc = getHeapLocation(s)
 
       // Move this into the expected result location
-      val resultLoc = locationCtx.getNext(typeToSize(ty))
-      locationCtx.movLocLoc(resultLoc, sndLoc)
+      val dest = locationCtx.getNext(typeToSize(ty))
+
+      locationCtx.regInstrN(
+        List(dest, fstLoc),
+        { regs => Mov(regs(0), RegPointer(regs(1))(typeToSize(s.getType))) }
+      )
+
     case TypedCall(v, args, ty) =>
       // Translate arguments into temporary locations
       val argLocations: List[Location] = args.map { arg =>
@@ -381,6 +385,7 @@ class Translator {
       // Restore caller-save registers
       locationCtx.cleanUpCall()
     case e: Expr => translateExpr(e)
+    case _       => throw new UnexpectedException("Unexpected Error: Invalid RValue")
   }
 
   /** Translates an expression. The result of the expression is stored in the next available location at the time of
@@ -417,34 +422,58 @@ class Translator {
         { (regOp1, locOp2) => SignedMul(Some(regOp1), locOp2, None) }
       ) // TODO: runtime error if over/underflow
 
-    case Mod(e1, e2) =>
+    case Mod(dividendExp, divisorExp) =>
+      // Move the divisor to the eventual destination of the result (first available location)
+      translateExpr(divisorExp)
       val modDest = locationCtx.reserveNext(typeToSize(IntType))
-      translateExpr(e2)
       // TODO: runtime error if divide by 0
-      val e1Dest = locationCtx.getNext(typeToSize(IntType))
-      translateExpr(e1)
+
+      // Move the dividend to the next available location
+      translateExpr(dividendExp)
+      val dividendDest = locationCtx.reserveNext(typeToSize(IntType))
+
+      // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
+      // so we need to ensure we don't clobber those registers
       locationCtx.withFreeRegisters(
         List(RAX(typeToSize(IntType)), RDI(typeToSize(IntType))), {
-          instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), e1Dest))
+          // Move the dividend to RAX
+          instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
+          // Perform the division
           instructionCtx.addInstruction(SignedDiv(modDest))
+          // Move the remainder to the destination
           locationCtx.movLocLoc(modDest, RDI(typeToSize(IntType)))
         }
       )
+
+      // Unreserve the locations
+      locationCtx.unreserveLast()
       locationCtx.unreserveLast()
 
-    case Div(e1, e2) =>
+    case Div(dividendExp, divisorExp) =>
+      // Move the divisor to the eventual destination of the result (first available location)
+      translateExpr(divisorExp)
       val divDest = locationCtx.reserveNext(typeToSize(IntType))
-      translateExpr(e2)
       // TODO: runtime error if divide by 0
-      val e1Dest = locationCtx.getNext(typeToSize(IntType))
-      translateExpr(e1)
+
+      // Move the dividend to the next available location
+      translateExpr(dividendExp)
+      val dividendDest = locationCtx.reserveNext(typeToSize(IntType))
+
+      // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
+      // so we need to ensure we don't clobber those registers
       locationCtx.withFreeRegisters(
         List(RAX(typeToSize(IntType)), RDI(typeToSize(IntType))), {
-          instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), e1Dest))
+          // Move the dividend to RAX
+          instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
+          // Perform the division
           instructionCtx.addInstruction(SignedDiv(divDest))
+          // Move the quotient to the destination
           locationCtx.movLocLoc(divDest, RAX(typeToSize(IntType)))
         }
       )
+
+      // Unreserve the locations
+      locationCtx.unreserveLast()
       locationCtx.unreserveLast()
 
     case TypedAdd(e1, e2) => binary(e1, e2, Add.apply) // TODO: runtime error if over/underflow
@@ -514,13 +543,34 @@ class Translator {
       locationCtx.movLocLoc(dest, loc)
 
     case elem: ArrayElem =>
-      val dest = locationCtx.reserveNext(typeToSize(elem.getType))
-      val loc = getLValue(elem)
-      locationCtx.movLocLoc(dest, loc)
-      locationCtx.unreserveLast()
+      val loc = getHeapLocation(elem)
+      val dest = locationCtx.getNext(typeToSize(elem.getType))
+
+      locationCtx.regInstrN(
+        List(dest, loc),
+        { regs => Mov(regs(0), RegPointer(regs(1))(typeToSize(elem.getType))) }
+      )
 
     case NestedExpr(e, ty) => translateExpr(e)
   }
+
+  /** Translates a function.
+    *
+    * @param f The function to translate
+    */
+  private def translateFunction(
+      f: Func
+  )(using instructionCtx: InstructionContext, locationCtx: LocationContext): Unit =
+    // Define the function label
+    instructionCtx.addInstruction(DefineLabel(getFunctionName(f.v.id)))
+
+    // Set up stack frame and save callee-save registers
+    locationCtx.setUpFunc(f.params)
+
+    // Translate the function body
+    translateStmt(f.body)
+    // Restoration of callee-save registers and stack frame clean up handled by Return, since all function
+    // bodies are returning blocks
 
   /** Compare two expressions and set the result of the comparison in the next available location at the time of
    * invocation.
@@ -541,12 +591,85 @@ class Translator {
     instructionCtx.addInstruction(setter(dest))
     locationCtx.unreserveLast()
 
-  /** Calculate and return the location of an LValue.
+  /** Get the location of an LValue that is stored on the heap
    *
-   * @param l The LValue to calculate the location of
-   * @return The location of the LValue, which can e.g. be written into or read from directly
+   * @param l The LValue to get the location of
+   * @return The location of the pointer to the LValue
    */
-  private def getLValue(l: LValue): Location = ???
+  private def getHeapLocation(l: HeapLValue)(using
+      instructionCtx: InstructionContext,
+      locationCtx: LocationContext
+  ): Location = l match {
+
+    case elem @ ArrayElem(v, es, ty) =>
+      // move the base address of the array to the next available location
+      // reserve the base address of the array
+      val baseDest = locationCtx.reserveNext(typeToSize(v.getType))
+      val baseLoc = locationCtx.getLocation(v)
+      locationCtx.movLocLoc(baseDest, baseLoc)
+
+      // Calculate the final location
+      es.foldLeft(v.getType) { (tyAcc, e) =>
+        tyAcc match {
+          case ArrayType(nextTy) =>
+            // evaluate the index
+            translateExpr(e)
+            val indexDest = locationCtx.getNext(typeToSize(e.getType))
+
+            // TODO: runtime error if index out of bounds
+
+            // get the size of the type (for scaling)
+            val tySize = typeToSize(nextTy).toBytes
+
+            locationCtx.regInstrN(
+              List(baseDest, indexDest),
+              { regs =>
+                // baseDest = baseDest + indexDest * tySize + INT_SIZE
+                Lea(regs(0), RegScaleRegImmPointer(regs(0), tySize, regs(1), INT_SIZE)(typeToSize(nextTy)))
+              }
+            )
+            nextTy
+          case _ => throw new RuntimeException("Invalid type")
+        }
+      }
+
+      locationCtx.unreserveLast()
+
+      // Return the final location
+      baseDest
+
+    case Fst(l, ty) =>
+      // Get the location of the pointer to the pair
+      val pairPtrLoc = l match {
+        case id: Ident     => locationCtx.getLocation(id)
+        case h: HeapLValue => getHeapLocation(h)
+      }
+      // TODO: runtime error if null
+
+      pairPtrLoc
+
+    case snd @ Snd(l, ty) =>
+      // Get the location of the pointer to the pair
+      val pairPtrLoc = l match {
+        case id: Ident     => locationCtx.getLocation(id)
+        case h: HeapLValue => getHeapLocation(h)
+      }
+      // TODO: runtime error if null
+
+      // Calculate the location of the second element
+      val sndDest = locationCtx.getNext(typeToSize(PairType(?, ty)))
+      locationCtx.movLocLoc(sndDest, pairPtrLoc)
+
+      // add the offset to the pointer
+      val offset = PAIR_SIZE / 2
+      locationCtx.regInstr(
+        sndDest,
+        None,
+        { (reg, _) => Lea(reg, RegImmPointer(reg, offset)(typeToSize(ty))) }
+      )
+
+      sndDest
+  }
 
   /** Translate a unary operation and store the result in the next available location at the time of invocation.
    *
