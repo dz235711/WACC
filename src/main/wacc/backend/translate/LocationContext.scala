@@ -38,11 +38,10 @@ class LocationContext {
     R13.apply,
     R14.apply,
     R15.apply,
-    // last 6 registers are caller-saved registers, in order
+    // last registers are caller-saved registers, in order
     R9.apply,
     R8.apply,
     RCX.apply,
-    RDX.apply,
     RSI.apply,
     RDI.apply
   )
@@ -61,11 +60,12 @@ class LocationContext {
 
   // Register constants
   private val ReturnReg = RAX(W64)
+  private val EmptyRegs = List(RAX(W64), RDX(W64)) // never used as a location
   private val StackPointer = RSP(W64)
   private val BasePointer = RBP(W64)
   private val ArgRegs = List(RDI(W64), RSI(W64), RDX(W64), RCX(W64), R8(W64), R9(W64))
   private val CalleeSaved = List(RBX(W64), R12(W64), R13(W64), R14(W64), R15(W64))
-  private val CallerSaved = List(RAX(W64), RCX(W64), RDX(W64), RSI(W64), RDI(W64), R8(W64), R9(W64), R10(W64), R11(W64))
+  private val CallerSaved = List(RCX(W64), RSI(W64), RDI(W64), R8(W64), R9(W64), R10(W64), R11(W64))
 
   /** Get the next location to use, without actually using it
    *
@@ -109,7 +109,7 @@ class LocationContext {
 
   /** Reserve and associate the next free location with an identifier
    *
-   * @param v The identifier to associate with
+   * @param v    The identifier to associate with
    * @param size The size of the location
    */
   def addLocation(v: Ident, size: Size)(using instruction: InstructionContext): Unit = {
@@ -136,9 +136,9 @@ class LocationContext {
 
   /** Set up stack frame, assign parameters a location and push callee-saved registers onto the stack.
    * Run this at the start of a function.
-   * 
+   *
    * @param params The parameters of the function
-  */
+   */
   def setUpFunc(params: List[Ident])(using instructionCtx: InstructionContext): Unit =
     // params are stored in caller-saved registers in order, then on the stack
 
@@ -176,15 +176,15 @@ class LocationContext {
         // This is because there's the return address, old base pointer, and callee-saved registers on the stack above
         // the current base pointer
         val currLoc = RegImmPointer(RBP(W64), -PointerSize * (index + CalleeSaved.length + 2))(W64)
-        instructionCtx.addInstruction(Mov(RAX(W64), currLoc))
-        instructionCtx.addInstruction(Mov(destLoc, RAX(W64)))
+        instructionCtx.addInstruction(Mov(EmptyRegs.head, currLoc))
+        instructionCtx.addInstruction(Mov(destLoc, EmptyRegs.head))
         reservedStackLocs += 1
         identMap(id) = destLoc
       })
 
   /** Reset stack pointer and pop callee-saved registers from the stack, and set up the return value.
    * Run this at the end of a function just before returning.
-   * 
+   *
    * @param retVal The location of the return value
    */
   def cleanUpFunc(retVal: Location)(using instructionCtx: InstructionContext): Unit = {
@@ -274,7 +274,7 @@ class LocationContext {
   /** Move a value from one location to another
    *
    * @param dest The destination location
-   * @param src The source location
+   * @param src  The source location
    */
   def movLocLoc(dest: Location, src: Location)(using instructionCtx: InstructionContext): Unit =
     dest match {
@@ -283,43 +283,52 @@ class LocationContext {
         src match {
           case srcR: Register => instructionCtx.addInstruction(Mov(destP, srcR))
           case srcP: Pointer =>
-            instructionCtx.addInstruction(Mov(RAX(W64), srcP))
-            instructionCtx.addInstruction(Mov(destP, RAX(W64)))
+            instructionCtx.addInstruction(Mov(EmptyRegs.head, srcP))
+            instructionCtx.addInstruction(Mov(destP, EmptyRegs.head))
         }
     }
 
-  /** Perform some operation that forces the use of a register.
-   * This is useful for operations that require a register as an operand, but you only have 2 locations.
+  /** Perform some operation that forces the use of 1 register.
+   * This is useful for operations that require a register as an operand, but you only have a location.
    *
    * @param loc1 The first location
-   * @param loc2 The second location/operand
-   * @param op The operation to perform on the two locations, where the first location is guaranteed to be a register
+   * @param op   The operation to perform on the two locations, where the first location is guaranteed to be a register
    */
-  def regInstr[Op2](loc1: Location, loc2: Op2, op: (Register, Op2) => Instruction): Unit = ???
+  def regInstr1(loc1: Location, op: Register => Instruction)(using instructionCtx: InstructionContext): Unit =
+    // Move the location to a register, perform the operation, then move the result back
+    instructionCtx.addInstruction(Mov(EmptyRegs.head, loc1))
+    instructionCtx.addInstruction(op(EmptyRegs.head))
+    instructionCtx.addInstruction(loc1 match {
+      case r: Register => Mov(r, EmptyRegs.head)
+      case p: Pointer  => Mov(p, EmptyRegs.head)
+    })
 
-  /** Perform some operation that forces the use of n registers. 
-   * 
-   * @param locs The locations to use
-   * @param op The operation to perform on the locations as registers
-  */
-  def regInstrN[A](locs: List[Location], op: List[Register] => Instruction)(using
-      instructionCtx: InstructionContext
-  ): Unit = ???
-//    val sizeDiff = locs.length - freeRegs.length
-//    assert(sizeDiff - reservedRegs.length >= 0)
-//    val regPushed = reservedRegs.take(sizeDiff.max(0)).toList
-//    pushLocs(regPushed)
-//    op(freeRegs.toList.map(_(W64)) ++ regPushed)
-//    popLocs(regPushed)
-
-  /** Perform some operation that forces the use of some register(s). These registers are saved and restored after the operation.
+  /** Perform some operation that forces the use of 2 registers.
+   * This is useful for operations that require 2 registers as an operands, but you only have a location.
    *
-   * @param regsToUse The registers modified by the operation
-   * @param op The operation to perform
+   * @param loc1 The first location
+   * @param loc2 The second location
+   * @param op   The operation to perform on the locations as registers
    */
-  def withFreeRegisters(regsToUse: List[Register], op: => Unit)(using instructionCtx: InstructionContext): Unit = {
-    pushLocs(regsToUse)
-    op
-    popLocs(regsToUse)
-  }
+  def regInstr2(loc1: Location, loc2: Location, op: (Register, Register) => Instruction)(using
+      instructionCtx: InstructionContext
+  ): Unit =
+    // Move the locations to registers, perform the operation, then move the results back
+    instructionCtx.addInstruction(Mov(EmptyRegs(0), loc1))
+    instructionCtx.addInstruction(Mov(EmptyRegs(1), loc2))
+    instructionCtx.addInstruction(op(EmptyRegs(0), EmptyRegs(1)))
+    instructionCtx.addInstruction(loc1 match {
+      case r: Register => Mov(r, EmptyRegs(0))
+      case p: Pointer  => Mov(p, EmptyRegs(0))
+    })
+    instructionCtx.addInstruction(loc2 match {
+      case r: Register => Mov(r, EmptyRegs(1))
+      case p: Pointer  => Mov(p, EmptyRegs(1))
+    })
+
+  /** Perform some operation that forces the use of division registers (rax, rdx). They are guaranteed to be free.
+   *
+   * @param op The operation to perform on the division registers
+   */
+  def withDivRegisters(op: => Unit): Unit = op // We've guaranteed that the division registers are free
 }
