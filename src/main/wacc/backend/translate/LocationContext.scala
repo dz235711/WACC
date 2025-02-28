@@ -32,18 +32,17 @@ class LocationContext {
   /** Free registers */
   private val freeRegs: mutable.ListBuffer[Size => Register] = mutable.ListBuffer(
     RBX.apply,
+    RCX.apply,
+    RDI.apply,
+    RSI.apply,
+    R8.apply,
+    R9.apply,
     R10.apply,
     R11.apply,
     R12.apply,
     R13.apply,
     R14.apply,
-    R15.apply,
-    // last registers are caller-saved registers, in order
-    R9.apply,
-    R8.apply,
-    RCX.apply,
-    RSI.apply,
-    RDI.apply
+    R15.apply
   )
 
   /** The size of a pointer in bytes */
@@ -63,9 +62,9 @@ class LocationContext {
   private val EmptyRegs = List(RAX(W64), RDX(W64)) // never used as a location
   private val StackPointer = RSP(W64)
   private val BasePointer = RBP(W64)
-  private val ArgRegs = List(RDI(W64), RSI(W64), RDX(W64), RCX(W64), R8(W64), R9(W64))
-  private val CalleeSaved = List(RBX(W64), R12(W64), R13(W64), R14(W64), R15(W64))
-  private val CallerSaved = List(RCX(W64), RSI(W64), RDI(W64), R8(W64), R9(W64), R10(W64), R11(W64))
+  private val ArgRegs = List(RDI.apply, RSI.apply, RDX.apply, RCX.apply, R8.apply, R9.apply)
+  private val CalleeSaved = List(RBX.apply, R12.apply, R13.apply, R14.apply, R15.apply)
+  private val CallerSaved = List(RCX.apply, RSI.apply, RDI.apply, R8.apply, R9.apply, R10.apply, R11.apply)
 
   /** Get the next location to use, without actually using it
    *
@@ -124,62 +123,61 @@ class LocationContext {
    */
   def getLocation(v: Ident): Location = identMap(v)
 
-  private def pushLocs(regs: List[Location])(using instructionCtx: InstructionContext): Unit = {
+  private def pushLocs(regs: List[Size => Register])(using instructionCtx: InstructionContext): Unit = {
     for (r <- regs)
-      instructionCtx.addInstruction(Push(r))
+      instructionCtx.addInstruction(Push(r(W64)))
   }
 
-  private def popLocs(regs: List[Location])(using instructionCtx: InstructionContext): Unit = {
+  private def popLocs(regs: List[Size => Register])(using instructionCtx: InstructionContext): Unit = {
     for (r <- regs.reverse)
-      instructionCtx.addInstruction(Pop(r))
+      instructionCtx.addInstruction(Pop(r(W64)))
   }
 
   /** Set up stack frame, assign parameters a location and push callee-saved registers onto the stack.
-   * Run this at the start of a function.
    *
+   * @note Run this at the start of a function.
    * @param params The parameters of the function
    */
   def setUpFunc(params: List[Ident])(using instructionCtx: InstructionContext): Unit =
-    // params are stored in caller-saved registers in order, then on the stack
-
     // 1. push base pointer
     instructionCtx.addInstruction(Push(BasePointer))
 
-    // 2. decrement stack pointer by number of callee-saved registers
-    instructionCtx.addInstruction(Sub(StackPointer, CalleeSaved.length * PointerSize))
+    // 2. save callee-saved registers
+    pushLocs(CalleeSaved)
 
-    // 3. save callee-saved registers
-    for (reg <- CalleeSaved)
-      instructionCtx.addInstruction(Push(reg))
-
-    // 4. set up base pointer
+    // 3. set up base pointer
     instructionCtx.addInstruction(Mov(BasePointer, StackPointer))
 
-    // 5. assign parameters a location
+    // 4. assign parameters a location
 
-    // For the first 6 parameters, assign them to the first 6 registers manually, removing them from freeRegs
+    // For the first 6 parameters, assign them to the first 6 argument registers manually, removing them from freeRegs
     params
-      .take(ArgRegs.length)
-      .foreach(id => {
-        val reg = freeRegs.remove(freeRegs.length - 1)(typeToSize(id.getType))
-        identMap(id) = reg
+      .zip(ArgRegs)
+      .foreach((id, reg) => {
+        reg match {
+          case rdx: RDX =>
+            // rdx is used for division, so we need to keep it free
+            // move it to the first caller-saved register instead
+            instructionCtx.addInstruction(Mov(CallerSaved.head(W64), rdx))
+
+            freeRegs -= CallerSaved.head
+            identMap(id) = CallerSaved.head(typeToSize(id.getType))
+          case r =>
+            // move the parameter to the register
+            freeRegs -= r
+            identMap(id) = r(typeToSize(id.getType))
+        }
       })
 
-    // For the rest, move them into our stack frame, incrementing reservedStackLocs, using rax as a temporary register
+    // For the remaining parameters, assign them to the next available locations
     params
       .drop(ArgRegs.length)
       .zipWithIndex
       .foreach((id, index) => {
-        val destLoc = RegImmPointer(RBP(W64), reservedStackLocs * PointerSize)(typeToSize(id.getType))
-
-        // The parameter is at rbp - 8 * (index + CalleeSaved.length + 2)
-        // This is because there's the return address, old base pointer, and callee-saved registers on the stack above
-        // the current base pointer
-        val currLoc = RegImmPointer(RBP(W64), -PointerSize * (index + CalleeSaved.length + 2))(W64)
-        instructionCtx.addInstruction(Mov(EmptyRegs.head, currLoc))
-        instructionCtx.addInstruction(Mov(destLoc, EmptyRegs.head))
-        reservedStackLocs += 1
-        identMap(id) = destLoc
+        val destLoc = getNext(typeToSize(id.getType))
+        val currLoc = RegImmPointer(BasePointer, PointerSize * (index + CalleeSaved.length + 2))(W64)
+        movLocLoc(destLoc, currLoc)
+        addLocation(id, typeToSize(id.getType))
       })
 
   /** Reset stack pointer and pop callee-saved registers from the stack, and set up the return value.
@@ -222,13 +220,13 @@ class LocationContext {
 
             instructionCtx.addInstruction(
               Mov(
-                argReg,
+                argReg(W64),
                 RegImmPointer(StackPointer, PointerSize * (CallerSaved.length - CallerSaved.indexOf(r)))(r.width)
               )
             )
           else
-            instructionCtx.addInstruction(Mov(argReg, r))
-        case p: Pointer => instructionCtx.addInstruction(Mov(argReg, p))
+            instructionCtx.addInstruction(Mov(argReg(r.width), r))
+        case p: Pointer => instructionCtx.addInstruction(Mov(argReg(p.size), p))
       }
     }
 
@@ -259,7 +257,7 @@ class LocationContext {
    */
   def cleanUpCall()(using instructionCtx: InstructionContext): Location =
     // 1. Store result, taking into account reserved stack locations and caller-saved registers
-    val newRsp = RegImmPointer(RBP(W64), -PointerSize * (reservedStackLocs + CallerSaved.length))(W64)
+    val newRsp = RegImmPointer(BasePointer, -PointerSize * (reservedStackLocs + CallerSaved.length))(W64)
     instructionCtx.addInstruction(Mov(newRsp, ReturnReg))
 
     // 2. Shift the stack pointer
