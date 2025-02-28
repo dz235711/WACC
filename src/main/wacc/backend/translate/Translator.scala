@@ -80,6 +80,12 @@ class Translator {
   /** The value of FALSE */
   private val FALSE = 0
 
+  /** The minimum value of a char */
+  private val MIN_CHAR = 0
+
+  /** The maximum value of a char */
+  private val MAX_CHAR = 127
+
   /** The label for a user-defined function */
   private val FUNCTION_LABEL = "wacc_func_"
 
@@ -459,7 +465,16 @@ class Translator {
 
     case Chr(e) =>
       val chrDest = locationCtx.reserveNext(typeToSize(CharType))
-      unary(e, { l => locationCtx.movLocLoc(chrDest, l) })
+      unary(
+        e,
+        { l =>
+          locationCtx.regInstr1(l, { reg => Compare(reg, MIN_CHAR) })
+          instructionCtx.addInstruction(JmpLessEqual(Clib.errBadCharLabel))
+          locationCtx.regInstr1(l, { reg => Compare(reg, MAX_CHAR) })
+          instructionCtx.addInstruction(JmpGreaterEqual(Clib.errBadCharLabel))
+          locationCtx.movLocLoc(chrDest, l)
+        }
+      )
       locationCtx.unreserveLast()
 
     case Mult(e1, e2) =>
@@ -1046,16 +1061,19 @@ object Clib {
   val errNullLabel = "_errNull"
   val errDivZeroLabel = "_errDivZero"
   val errOverflowLabel = "_errOverflow"
+  val errBadCharLabel = "_errBadChar"
 
   private val OutOfMemoryStringLabel = ".outOfMemoryString"
   private val NullPairStringLabel = ".nullPairString"
   private val DivZeroStringLabel = ".divZeroString"
   private val OverflowStringLabel = ".overflowString"
+  private val BadCharStringLabel = ".badCharString"
 
   private val OutOfMemoryString = "fatal error: out of memory\n"
   private val NullPairString = "fatal error: null pair dereferenced or freed\n"
   private val DivZeroString = "fatal error: division or modulo by zero\n"
   private val OverflowString = "fatal error: integer overflow or underflow occurred\n"
+  private val BadCharString = "fatal error: int %d is not ascii character 0-127\n"
 
   /** Subroutine for an out of memory error. */
   private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
@@ -1098,6 +1116,20 @@ object Clib {
     And(RSP(W64), -16),
     Lea(RDI(W64), RegImmPointer(RIP, OverflowStringLabel)(W64)),
     Call(printsLabel),
+    Mov(RDI(W8), -1),
+    Call(ClibExit)
+  )
+
+  /** Subroutine for a bad character error. */
+  private val _errBadChar = createReadOnlyString(BadCharStringLabel, BadCharString) ::: List(
+    DefineLabel(errBadCharLabel),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, BadCharStringLabel)(W64)),
+    Mov(RAX(W8), 0),
+    Call(ClibPrintf),
+    Mov(RDI(W64), 0),
+    Call(ClibFlush),
     Mov(RDI(W8), -1),
     Call(ClibExit)
   )
