@@ -127,9 +127,8 @@ class Translator {
     case Skip => instructionCtx.addInstruction(Nop)
 
     case Decl(v, r) =>
-      val dest = locationCtx.getNext(typeToSize(v.getType))
       translateRValue(r)
-      locationCtx.addLocation(v, dest)
+      locationCtx.addLocation(v, typeToSize(v.getType))
 
     case Asgn(l, r) =>
       translateRValue(r)
@@ -142,9 +141,10 @@ class Translator {
 
         case h: HeapLValue =>
           val hDest = getHeapLocation(h)
-          locationCtx.regInstrN(
-            List(hDest, resultLoc),
-            { regs => Mov(RegPointer(regs(0))(typeToSize(l.getType)), regs(1)) }
+          locationCtx.regInstr2(
+            hDest,
+            resultLoc,
+            { (reg1, reg2) => Mov(RegPointer(reg1)(typeToSize(l.getType)), reg2) }
           )
       }
 
@@ -166,7 +166,7 @@ class Translator {
       unary(
         e,
         { l =>
-          locationCtx.regInstr(l, NULL, { Compare(_, _) })
+          locationCtx.regInstr1(l, { Compare(_, NULL) })
           instructionCtx.addInstruction(JmpEqual("free_null_error"))
 
           // Call free
@@ -286,9 +286,9 @@ class Translator {
       locationCtx.movLocLoc(arrayLoc, ptrLoc)
 
       // Store the size of the array
-      locationCtx.regInstrN(
-        List(arrayLoc),
-        { regs => Mov(RegPointer(regs(0))(POINTER_SIZE), es.size) }
+      locationCtx.regInstr1(
+        arrayLoc,
+        { reg => Mov(RegPointer(reg)(POINTER_SIZE), es.size) }
       )
 
       // Store the elements in the array
@@ -296,10 +296,11 @@ class Translator {
         val expLoc = locationCtx.getNext(typeToSize(e.getType))
         translateExpr(e)
         val offset: Immediate = INT_SIZE + i * typeToSize(e.getType).toBytes
-        locationCtx.regInstrN(
-          List(arrayLoc, expLoc),
-          { regs =>
-            Mov(RegImmPointer(regs(0), offset)(typeToSize(e.getType)), regs(1))
+        locationCtx.regInstr2(
+          arrayLoc,
+          expLoc,
+          { (reg1, reg2) =>
+            Mov(RegImmPointer(reg1, offset)(typeToSize(e.getType)), reg2)
           }
         )
       }
@@ -327,18 +328,20 @@ class Translator {
       // Store the first element in the pair
       val resultLoc1 = locationCtx.getNext(typeToSize(t1))
       translateExpr(e1)
-      locationCtx.regInstrN(
-        List(pairLoc, resultLoc1),
-        { regs => Mov(RegPointer(regs(0))(typeToSize(t1)), regs(1)) }
+      locationCtx.regInstr2(
+        pairLoc,
+        resultLoc1,
+        { (reg1, reg2) => Mov(RegPointer(reg1)(typeToSize(t1)), reg2) }
       )
 
       // Store the second element in the pair
       val resultLoc2 = locationCtx.getNext(typeToSize(t2))
       translateExpr(e2)
       val offsetSnd: Immediate = PAIR_SIZE / 2 // offset to the second element from the start of the pair
-      locationCtx.regInstrN(
-        List(pairLoc, resultLoc2),
-        { regs => Mov(RegImmPointer(regs(0), offsetSnd)(typeToSize(t2)), regs(1)) }
+      locationCtx.regInstr2(
+        pairLoc,
+        resultLoc2,
+        { (reg1, reg2) => Mov(RegImmPointer(reg1, offsetSnd)(typeToSize(t2)), reg2) }
       )
 
       // Unreserve the pair location
@@ -350,9 +353,10 @@ class Translator {
       // Move this into the expected result location
       val dest = locationCtx.getNext(typeToSize(ty))
 
-      locationCtx.regInstrN(
-        List(dest, fstLoc),
-        { regs => Mov(regs(0), RegPointer(regs(1))(typeToSize(f.getType))) }
+      locationCtx.regInstr2(
+        dest,
+        fstLoc,
+        { (reg1, reg2) => Mov(reg1, RegPointer(reg2)(typeToSize(f.getType))) }
       )
 
     case s @ Snd(_, ty) =>
@@ -362,9 +366,10 @@ class Translator {
       // Move this into the expected result location
       val dest = locationCtx.getNext(typeToSize(ty))
 
-      locationCtx.regInstrN(
-        List(dest, fstLoc),
-        { regs => Mov(regs(0), RegPointer(regs(1))(typeToSize(s.getType))) }
+      locationCtx.regInstr2(
+        dest,
+        fstLoc,
+        { (reg1, reg2) => Mov(reg1, RegPointer(reg2)(typeToSize(s.getType))) }
       )
 
     case TypedCall(v, args, ty) =>
@@ -376,14 +381,16 @@ class Translator {
       }
       // Save caller-save registers and set up arguments
       locationCtx.setUpCall(argLocations)
-      // Free argument temp locations
-      argLocations.foreach { _ =>
-        locationCtx.unreserveLast()
-      }
       // Call the function
       instructionCtx.addInstruction(Call(getFunctionName(v.id)))
       // Restore caller-save registers
       locationCtx.cleanUpCall()
+
+      // Free argument temp locations
+      argLocations.foreach { _ =>
+        locationCtx.unreserveLast()
+      }
+
     case e: Expr => translateExpr(e)
     case _       => throw new UnexpectedException("Unexpected Error: Invalid RValue")
   }
@@ -434,7 +441,7 @@ class Translator {
 
       // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
       // so we need to ensure we don't clobber those registers
-      locationCtx.withFreeRegisters(
+      locationCtx.withDivRegisters(
         List(RAX(typeToSize(IntType)), RDI(typeToSize(IntType))), {
           // Move the dividend to RAX
           instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
@@ -461,7 +468,7 @@ class Translator {
 
       // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
       // so we need to ensure we don't clobber those registers
-      locationCtx.withFreeRegisters(
+      locationCtx.withDivRegisters(
         List(RAX(typeToSize(IntType)), RDI(typeToSize(IntType))), {
           // Move the dividend to RAX
           instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
@@ -528,7 +535,7 @@ class Translator {
 
       // Load the address of the string into the destination
       val stringPointer: Pointer = RegImmPointer(RIP, label)(typeToSize(StringType))
-      locationCtx.regInstr(dest, stringPointer, { (regOp1: Register, locOp2: Pointer) => Lea(regOp1, locOp2) })
+      locationCtx.regInstr1(dest, { Lea(_, stringPointer) })
 
     case PairLiter =>
       val dest = locationCtx.getNext(typeToSize(PairType(?, ?)))
@@ -546,9 +553,10 @@ class Translator {
       val loc = getHeapLocation(elem)
       val dest = locationCtx.getNext(typeToSize(elem.getType))
 
-      locationCtx.regInstrN(
-        List(dest, loc),
-        { regs => Mov(regs(0), RegPointer(regs(1))(typeToSize(elem.getType))) }
+      locationCtx.regInstr2(
+        dest,
+        loc,
+        { (reg1, reg2) => Mov(reg1, RegPointer(reg2)(typeToSize(elem.getType))) }
       )
 
     case NestedExpr(e, ty) => translateExpr(e)
@@ -587,7 +595,7 @@ class Translator {
     translateExpr(e1)
     val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
     translateExpr(e2)
-    locationCtx.regInstr(dest, e2Dest, { (regOp1, locOp2) => Compare(regOp1, locOp2) })
+    locationCtx.regInstr1(dest, { reg => Compare(reg, e2Dest) })
     instructionCtx.addInstruction(setter(dest))
     locationCtx.unreserveLast()
 
@@ -621,11 +629,12 @@ class Translator {
             // get the size of the type (for scaling)
             val tySize = typeToSize(nextTy).toBytes
 
-            locationCtx.regInstrN(
-              List(baseDest, indexDest),
-              { regs =>
+            locationCtx.regInstr2(
+              baseDest,
+              indexDest,
+              { (reg1, reg2) =>
                 // baseDest = baseDest + indexDest * tySize + INT_SIZE
-                Lea(regs(0), RegScaleRegImmPointer(regs(0), tySize, regs(1), INT_SIZE)(typeToSize(nextTy)))
+                Lea(reg1, RegScaleRegImmPointer(reg1, tySize, reg2, INT_SIZE)(typeToSize(nextTy)))
               }
             )
             nextTy
@@ -662,10 +671,9 @@ class Translator {
 
       // add the offset to the pointer
       val offset = PAIR_SIZE / 2
-      locationCtx.regInstr(
+      locationCtx.regInstr1(
         sndDest,
-        None,
-        { (reg, _) => Lea(reg, RegImmPointer(reg, offset)(typeToSize(ty))) }
+        { reg => Lea(reg, RegImmPointer(reg, offset)(typeToSize(ty))) }
       )
 
       sndDest
@@ -709,7 +717,7 @@ class Translator {
     val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
     if check2.isDefined then check2.get(dest, e2Dest)
     translateExpr(e2)
-    locationCtx.regInstr(dest, e2Dest, { (regOp1, locOp2) => instr(regOp1, locOp2) })
+    locationCtx.regInstr1(dest, { reg => instr(reg, e2Dest) })
     locationCtx.unreserveLast()
   }
 }
