@@ -107,7 +107,7 @@ class ProgramTester(path: String) {
     val command =
       val bashCmd = s"echo -e \"$input\" | ./test"
       if sys.env.get("USE_DOCKER").contains("true") then dockerCommand("timeout 1s " + bashCmd)
-      else pBuilder.command("timeout", "1s", bashCmd)
+      else pBuilder.command("bash", "-c", s"timeout 1s $bashCmd")
     // Feed input to the process
     val process = command.start()
 
