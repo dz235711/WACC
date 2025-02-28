@@ -6,21 +6,36 @@ type Operand = Register | Pointer | Immediate | String
 
 class x86Stringifier {
 
-  /**
-    * Converts a list of instructions into a string representation
-    *
-    * @param instructions
-    * @return a string representation of the instructions
-    */
-  def stringify(instructions: List[Instruction]): String = {
-    instructions
+  /** Convert string literals and assembly IR to an x86-64 assembly string
+   *
+   * @param strings The list of label to string literal tuples
+   * @param instructions The list of assembly IR instructions
+   * @return The x86-64 assembly string
+   */
+  def stringify(strings: List[(Label, String)], instructions: List[Instruction]): String = {
+    // TODO: Use string builder
+    (List(
+      NoPrefixSyntax,
+      GlobalMain,
+      SectionReadOnlyData
+    ) ++
+      strings.flatMap((string, label) => {
+        List(
+          Comment(s"String literal $label is $string"),
+          IntData(string.length),
+          DefineLabel(label),
+          Asciz(string)
+        )
+      }) ++
+      List(Text, DefineLabel("main")) ++
+      instructions)
       .map(instr => {
         // we first convert the instruction to a string
         val translated = stringifyInstr(instr)
 
         // we then add indentation if the instruction is not a label
         if (translated.startsWith(".") || translated.endsWith(":")) translated
-        else s"${" " * INDENTATION_SIZE}translated"
+        else s"${" " * INDENTATION_SIZE}$translated"
       })
       .mkString("\n")
   }
@@ -91,7 +106,7 @@ class x86Stringifier {
     case SectionReadOnlyData   => ".section .rodata"
     case Text                  => ".text"
     case IntData(value)        => s".int $value"
-    case Asciz(string)         => s".asciz $string"
+    case Asciz(string)         => s".asciz \"$string\""
     case SetGreater(dest)      => s"setg ${stringifyOperand(dest)}"
     case SetGreaterEqual(dest) => s"setge ${stringifyOperand(dest)}"
     case SetSmaller(dest)      => s"setl ${stringifyOperand(dest)}"

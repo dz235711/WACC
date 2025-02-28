@@ -7,9 +7,9 @@ package wacc
  * @return Output of the backend - ASM code as a string
  */
 def runBackend(program: TypedAST.Program, verbose: Boolean): String = {
-  val asmCode = Translator().translate(program)
-  printVerboseInfo(verbose, "ASM IR", asmCode.map(i => "\t" + i.toString).mkString("\n"), Console.CYAN)
-  val output = x86Stringifier().stringify(asmCode)
+  val (strings, asmInstrs) = Translator().translate(program)
+  printVerboseInfo(verbose, "ASM IR", asmInstrs.map(i => "\t" + i.toString).mkString("\n"), Console.CYAN)
+  val output = x86Stringifier().stringify(strings, asmInstrs)
   printVerboseInfo(verbose, "Output", output, Console.GREEN)
   output
 }
