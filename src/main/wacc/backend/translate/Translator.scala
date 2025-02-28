@@ -857,7 +857,8 @@ class Translator {
       instructionCtx.addLibraryFunction(Clib.errArrBoundsLabel)
 
       // Calculate the final location
-      es.foldLeft(v.getType) { (tyAcc, e) =>
+      es.zipWithIndex.foldLeft(v.getType) { (tyAcc, eWithIndex) =>
+        val (e, i) = eWithIndex
         tyAcc match {
           case ArrayType(nextTy) =>
             // evaluate the index
@@ -882,16 +883,26 @@ class Translator {
             // get the size of the type (for scaling)
             val tySize = typeToSize(nextTy).toBytes
 
+            
+
             locationCtx.regInstr2(
               baseDest,
               indexDest,
               { (reg1, reg2) =>
                 // baseDest = baseDest + indexDest * tySize + INT_SIZE
-                Lea(
-                  reg1(POINTER_SIZE),
-                  RegScaleRegImmPointer(reg1(POINTER_SIZE), tySize, reg2(POINTER_SIZE), INT_SIZE)(typeToSize(nextTy))
-                )
-              }
+                if i != es.length - 1 then
+                    Mov(
+                      reg1(POINTER_SIZE),
+                      RegScaleRegImmPointer(reg1(POINTER_SIZE), tySize, reg2(POINTER_SIZE), INT_SIZE)(POINTER_SIZE)
+                    )
+                else
+                  // If the next type is not an array, we are at the last element of the array
+                  // so we don't need to scale the index
+                  Lea(
+                    reg1(POINTER_SIZE),
+                    RegScaleRegImmPointer(reg1(POINTER_SIZE), tySize, reg2(POINTER_SIZE), INT_SIZE)(typeToSize(nextTy))
+                  )
+                }
             )
             nextTy
           case _ => throw new RuntimeException("Invalid type")

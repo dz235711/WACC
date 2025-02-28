@@ -12,5 +12,6 @@ begin
   int[] b = [3,4];
   int[][] c = [a,b] ;
   println c[0][2] ;
-  println c[1][0]
+  println c[1][0] ;
+  int[] d = c[0]
 end
