@@ -203,8 +203,9 @@ class Translator {
       unary(
         e,
         { l =>
+          // Check for runtime error
           locationCtx.regInstr1(l, { Compare(_, NULL) })
-          instructionCtx.addInstruction(JmpEqual("free_null_error"))
+          instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
           // Call free
           locationCtx.setUpCall(List(l))
@@ -481,7 +482,7 @@ class Translator {
       // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
       // so we need to ensure we don't clobber those registers
       locationCtx.withDivRegisters(
-        List(RAX(typeToSize(IntType)), RDX(typeToSize(IntType))), {
+        {
           // Move the dividend to RAX
           instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
           // Perform the division
@@ -692,7 +693,13 @@ class Translator {
         case id: Ident     => locationCtx.getLocation(id)
         case h: HeapLValue => getHeapLocation(h)
       }
-      // TODO: runtime error if null
+
+      // Check for null pair runtime error
+      locationCtx.regInstr1(
+        pairPtrLoc,
+        { reg => Compare(RegPointer(reg)(POINTER_SIZE), NULL) }
+      )
+      instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
       pairPtrLoc
 
@@ -702,7 +709,13 @@ class Translator {
         case id: Ident     => locationCtx.getLocation(id)
         case h: HeapLValue => getHeapLocation(h)
       }
-      // TODO: runtime error if null
+
+      // Check for null pair runtime error
+      locationCtx.regInstr1(
+        pairPtrLoc,
+        { reg => Compare(RegPointer(reg)(POINTER_SIZE), NULL) }
+      )
+      instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
       // Calculate the location of the second element
       val sndDest = locationCtx.getNext(typeToSize(PairType(?, ty)))
@@ -1007,7 +1020,7 @@ object Clib {
 
   /// ---- ERRORS ----
   private val outOfMemoryLabel = "_outOfMemory"
-  private val errNullLabel = "_errNull"
+  val errNullLabel = "_errNull"
 
   private val OutOfMemoryStringLabel = ".outOfMemoryString"
   private val NullPairStringLabel = ".nullPairString"
