@@ -27,6 +27,8 @@ sealed class InstructionContext {
   private val stringCtx = new ListContext[(String, Label)]()
   private var stringCounter = 0
 
+  private var whileLoopCounter = 0
+
   /** Stores library functions in a set to prevent duplicates. */
   private val libFunctions: mutable.Set[List[Instruction]] = mutable.Set()
 
@@ -37,6 +39,10 @@ sealed class InstructionContext {
   def getStringLabel: Label =
     stringCounter += 1
     s".L.str$stringCounter"
+
+  def getWhileLoopId: Int =
+    whileLoopCounter += 1
+    whileLoopCounter
 
   /** Get the the strings and list of instructions
    * 
@@ -342,8 +348,8 @@ class Translator {
       instructionCtx.addInstruction(DefineLabel(endLabel))
 
     case While(cond, body) =>
-      val startLabel = s"while_start_${cond.hashCode().abs}"
-      val endLabel = s"while_end_${cond.hashCode().abs}"
+      val startLabel = s"while_start_${instructionCtx.getWhileLoopId}"
+      val endLabel = s"while_end_${instructionCtx.getWhileLoopId}"
 
       instructionCtx.addInstruction(DefineLabel(startLabel))
       branch(startLabel, endLabel, cond, body)
