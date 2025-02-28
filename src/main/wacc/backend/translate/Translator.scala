@@ -469,13 +469,13 @@ class Translator {
       // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
       // so we need to ensure we don't clobber those registers
       locationCtx.withFreeRegisters(
-        List(RAX(typeToSize(IntType)), RDI(typeToSize(IntType))), {
+        List(RAX(typeToSize(IntType)), RDX(typeToSize(IntType))), {
           // Move the dividend to RAX
           instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
           // Perform the division
           instructionCtx.addInstruction(SignedDiv(modDest))
           // Move the remainder to the destination
-          locationCtx.movLocLoc(modDest, RDI(typeToSize(IntType)))
+          locationCtx.movLocLoc(modDest, RDX(typeToSize(IntType)))
         }
       )
 
@@ -496,7 +496,7 @@ class Translator {
       // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
       // so we need to ensure we don't clobber those registers
       locationCtx.withFreeRegisters(
-        List(RAX(typeToSize(IntType)), RDI(typeToSize(IntType))), {
+        List(RAX(typeToSize(IntType)), RDX(typeToSize(IntType))), {
           // Move the dividend to RAX
           instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
           // Perform the division
