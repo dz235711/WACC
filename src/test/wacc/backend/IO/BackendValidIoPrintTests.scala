@@ -14,13 +14,13 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute multipleStringsAssignment.wacc" taggedAs Backend in pending /*{
+  it should "execute multipleStringsAssignment.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "multipleStringsAssignment.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  } */
+  }
 
   it should "execute print-backspace.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "print-backspace.wacc")

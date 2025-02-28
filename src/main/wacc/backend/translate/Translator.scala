@@ -104,6 +104,9 @@ class Translator {
   /** The label for a user-defined function */
   private val FUNCTION_LABEL = "wacc_func_"
 
+  /** The number of if statements so each jump label is unique */
+  private var ifCounter = 0
+
   def translate(program: Program): (List[(String, Label)], List[Instruction]) = {
     given translateCtx: InstructionContext = new InstructionContext()
     given locationCtx: LocationContext = new LocationContext()
@@ -340,8 +343,9 @@ class Translator {
       locationCtx.cleanUpCall(None)
 
     case If(cond, s1, s2) =>
-      val falseLabel = s"if_false_${cond.hashCode().abs}"
-      val endLabel = s"if_end_${cond.hashCode().abs}"
+      val falseLabel = s"if_false_${ifCounter}"
+      val endLabel = s"if_end_${ifCounter}"
+      ifCounter += 1
 
       branch(endLabel, falseLabel, cond, s1)
       translateStmt(s2)
