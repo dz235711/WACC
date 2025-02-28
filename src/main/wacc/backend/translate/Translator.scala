@@ -560,7 +560,18 @@ class Translator {
   private def translateExpr(
       expr: TypedAST.Expr
   )(using instructionCtx: InstructionContext, locationCtx: LocationContext): Unit = expr match {
-    case TypedNot(e) => unary(e, { l => instructionCtx.addInstruction(Not(l)) })
+    case TypedNot(e) =>
+      unary(
+        e,
+        { l =>
+          instructionCtx.addInstruction(Not(l))
+          // Truncate the new value to 1-bit
+          l match {
+            case r: Register => instructionCtx.addInstruction(And(r, 1))
+            case p: Pointer  => instructionCtx.addInstruction(And(p, 1))
+          }
+        }
+      )
     case Negate(e) =>
       unary(e, { l => instructionCtx.addInstruction(Neg(l)) })
 
