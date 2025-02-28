@@ -148,18 +148,52 @@ class Translator {
           )
       }
 
-    case Read(l) =>
-      locationCtx.setUpCall(List())
-      // TODO: clib read
-      // val (funName, size) = l.getType match {
-      //   case IntType  => ("read_int", typeToSize(IntType))
-      //   case CharType => ("read_char", typeToSize(CharType))
-      //   case _        => throw new RuntimeException("Unexpected Error: Invalid type for read")
-      // }
-      // instructionCtx.addInstruction(Call(funName))
-      // val dest = getLValue(l)
-      // instructionCtx.addInstruction(Mov(RAX(size), dest))
+    case Read(id: Ident) =>
+      // Move the original value to RDI in case the read fails
+      locationCtx.setUpCall(List(locationCtx.getLocation(id)))
+      // Fetch the correct read label
+      val readLabel = id.getType match {
+        case IntType  => Clib.readiLabel // TODO: Set correct flags.
+        case CharType => Clib.readcLabel
+        case _        => throw new RuntimeException("Unexpected Error: Invalid type for read")
+      }
+      // Call the read function
+      instructionCtx.addInstruction(Call(readLabel))
+
+      val idDest = locationCtx.getLocation(id)
+      instructionCtx.addInstruction(idDest match {
+        case r: Register => Mov(r, RAX(typeToSize(id.getType)))
+        case p: Pointer  => Mov(p, RAX(typeToSize(id.getType)))
+      })
       locationCtx.cleanUpCall()
+
+    case Read(h: HeapLValue) =>
+      val readParamLoc = locationCtx.getNext(typeToSize(h.getType))
+      val pointerLoc = getHeapLocation(h)
+      locationCtx.regInstrN(
+        List(readParamLoc, pointerLoc),
+        { regs => Mov(regs(0), RegPointer(regs(1))(typeToSize(h.getType))) }
+      )
+
+      // Move the original value to RDI in case the read fails
+      locationCtx.setUpCall(List(readParamLoc))
+      // Fetch the correct read label
+      val readLabel = h.getType match {
+        case IntType  => Clib.readiLabel // TODO: Set correct flags.
+        case CharType => Clib.readcLabel
+        case _        => throw new RuntimeException("Unexpected Error: Invalid type for read")
+      }
+      // Call the read function
+      instructionCtx.addInstruction(Call(readLabel))
+
+      // Clean up and save the result.
+      val resultLoc = locationCtx.cleanUpCall()
+
+      // Move the result into the original location.
+      locationCtx.regInstrN(
+        List(pointerLoc, resultLoc),
+        { regs => Mov(RegPointer(regs(0))(typeToSize(h.getType)), regs(1)) }
+      )
 
     case Free(e) =>
       // Check for null
