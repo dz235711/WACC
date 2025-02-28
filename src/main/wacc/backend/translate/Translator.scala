@@ -859,10 +859,10 @@ class Translator {
       // Check for null pair runtime error
       instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errNullLabel)
-      locationCtx.regInstr1(
-        pairPtrLoc,
-        { reg => Compare(RegPointer(reg)(POINTER_SIZE), NULL) }
-      )
+      pairPtrLoc match {
+        case r: Register => instructionCtx.addInstruction(Compare(r, NULL))
+        case p: Pointer  => instructionCtx.addInstruction(Compare(p, NULL))
+      }
       instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
       pairPtrLoc
@@ -877,10 +877,10 @@ class Translator {
       // Check for null pair runtime error
       instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errNullLabel)
-      locationCtx.regInstr1(
-        pairPtrLoc,
-        { reg => Compare(RegPointer(reg)(POINTER_SIZE), NULL) }
-      )
+      pairPtrLoc match {
+        case r: Register => instructionCtx.addInstruction(Compare(r, NULL))
+        case p: Pointer  => instructionCtx.addInstruction(Compare(p, NULL))
+      }
       instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
       // Calculate the location of the second element
