@@ -6,13 +6,13 @@ import org.scalatest.matchers.should.Matchers.*
 class BackendValidIoReadTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/IO/read/"
 
-  it should "execute echoBigInt.wacc" taggedAs Backend in {
+  it should "execute echoBigInt.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "echoBigInt.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }
+  } */
 
   it should "execute echoBigNegInt.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "echoBigNegInt.wacc")

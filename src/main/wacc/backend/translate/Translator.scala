@@ -168,7 +168,7 @@ class Translator {
           locationCtx.regInstr2(
             hDest,
             resultLoc,
-            { (reg1, reg2) => Mov(RegPointer(reg1)(typeToSize(l.getType)), reg2) }
+            { (reg1, reg2) => Mov(RegPointer(reg1(POINTER_SIZE))(typeToSize(l.getType)), reg2(typeToSize(l.getType))) }
           )
       }
 
@@ -203,7 +203,7 @@ class Translator {
       locationCtx.regInstr2(
         readParamLoc,
         pointerLoc,
-        { (reg1, reg2) => Mov(reg1, RegPointer(reg2)(typeToSize(h.getType))) }
+        { (reg1, reg2) => Mov(reg1(typeToSize(h.getType)), RegPointer(reg2(POINTER_SIZE))(typeToSize(h.getType))) }
       )
 
       // Move the original value to RDI in case the read fails
@@ -231,7 +231,7 @@ class Translator {
       locationCtx.regInstr2(
         pointerLoc,
         resultLoc,
-        { (reg1, reg2) => Mov(RegPointer(reg1)(typeToSize(h.getType)), reg2) }
+        { (reg1, reg2) => Mov(RegPointer(reg1(POINTER_SIZE))(typeToSize(h.getType)), reg2(typeToSize(h.getType))) }
       )
 
     case Free(e) =>
@@ -429,7 +429,7 @@ class Translator {
           arrayLoc,
           expLoc,
           { (reg1, reg2) =>
-            Mov(RegImmPointer(reg1, offset)(typeToSize(e.getType)), reg2)
+            Mov(RegImmPointer(reg1(POINTER_SIZE), offset)(typeToSize(e.getType)), reg2(typeToSize(e.getType)))
           }
         )
       }
@@ -464,7 +464,7 @@ class Translator {
       locationCtx.regInstr2(
         pairLoc,
         resultLoc1,
-        { (reg1, reg2) => Mov(RegPointer(reg1)(typeToSize(t1)), reg2) }
+        { (reg1, reg2) => Mov(RegPointer(reg1(POINTER_SIZE))(typeToSize(t1)), reg2(typeToSize(t1))) }
       )
 
       // Store the second element in the pair
@@ -474,7 +474,7 @@ class Translator {
       locationCtx.regInstr2(
         pairLoc,
         resultLoc2,
-        { (reg1, reg2) => Mov(RegImmPointer(reg1, offsetSnd)(typeToSize(t2)), reg2) }
+        { (reg1, reg2) => Mov(RegImmPointer(reg1(POINTER_SIZE), offsetSnd)(typeToSize(t2)), reg2(typeToSize(t2))) }
       )
 
       // Unreserve the pair location
@@ -489,7 +489,7 @@ class Translator {
       locationCtx.regInstr2(
         dest,
         fstLoc,
-        { (reg1, reg2) => Mov(reg1, RegPointer(reg2)(typeToSize(f.getType))) }
+        { (reg1, reg2) => Mov(reg1(typeToSize(ty)), RegPointer(reg2(POINTER_SIZE))(typeToSize(ty))) }
       )
 
     case s @ Snd(_, ty) =>
@@ -502,7 +502,7 @@ class Translator {
       locationCtx.regInstr2(
         dest,
         fstLoc,
-        { (reg1, reg2) => Mov(reg1, RegPointer(reg2)(typeToSize(s.getType))) }
+        { (reg1, reg2) => Mov(reg1(typeToSize(ty)), RegPointer(reg2(POINTER_SIZE))(typeToSize(ty))) }
       )
 
     case TypedCall(v, args, ty) =>
@@ -731,7 +731,9 @@ class Translator {
       locationCtx.regInstr2(
         dest,
         loc,
-        { (reg1, reg2) => Mov(reg1, RegPointer(reg2)(typeToSize(elem.getType))) }
+        { (reg1, reg2) =>
+          Mov(reg1(typeToSize(elem.getType)), RegPointer(reg2(POINTER_SIZE))(typeToSize(elem.getType)))
+        }
       )
 
     case NestedExpr(e, ty) => translateExpr(e)
@@ -810,7 +812,9 @@ class Translator {
             locationCtx.regInstr2(
               indexDest,
               baseDest,
-              { (indexReg, sizeReg) => Compare(indexReg, RegPointer(sizeReg)(typeToSize(IntType))) }
+              { (indexReg, sizeReg) =>
+                Compare(indexReg(typeToSize(e.getType)), RegPointer(sizeReg(POINTER_SIZE))(typeToSize(IntType)))
+              }
             )
             instructionCtx.addInstruction(JmpGreaterEqual(Clib.errArrBoundsLabel))
 
@@ -822,7 +826,10 @@ class Translator {
               indexDest,
               { (reg1, reg2) =>
                 // baseDest = baseDest + indexDest * tySize + INT_SIZE
-                Lea(reg1, RegScaleRegImmPointer(reg1, tySize, reg2, INT_SIZE)(typeToSize(nextTy)))
+                Lea(
+                  reg1(POINTER_SIZE),
+                  RegScaleRegImmPointer(reg1(POINTER_SIZE), tySize, reg2(POINTER_SIZE), INT_SIZE)(typeToSize(nextTy))
+                )
               }
             )
             nextTy
@@ -1167,12 +1174,12 @@ object Clib {
   private val BadCharStringLabel = ".badCharString"
   private val ArrBoundsStringLabel = ".arrBoundsString"
 
-  private val OutOfMemoryString = "fatal error: out of memory\n"
-  private val NullPairString = "fatal error: null pair dereferenced or freed\n"
-  private val DivZeroString = "fatal error: division or modulo by zero\n"
-  private val OverflowString = "fatal error: integer overflow or underflow occurred\n"
-  private val BadCharString = "fatal error: int %d is not ascii character 0-127\n"
-  private val ArrBoundsString = "fatal error: array index out of bounds\n"
+  private val OutOfMemoryString = "fatal error: out of memory"
+  private val NullPairString = "fatal error: null pair dereferenced or freed"
+  private val DivZeroString = "fatal error: division or modulo by zero"
+  private val OverflowString = "fatal error: integer overflow or underflow occurred"
+  private val BadCharString = "fatal error: int %d is not ascii character 0-127"
+  private val ArrBoundsString = "fatal error: array index out of bounds"
 
   /** Subroutine for an out of memory error. */
   private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(

@@ -313,29 +313,32 @@ class LocationContext {
    * @param loc2 The second location
    * @param op   The operation to perform on the locations as registers
    */
-  def regInstr2(loc1: Location, loc2: Location, op: (Register, Register) => Instruction)(using
+  def regInstr2(loc1: Location, loc2: Location, op: (Size => Register, Size => Register) => Instruction)(using
       instructionCtx: InstructionContext
   ): Unit =
-    val emptyReg1 = EmptyRegs.head(loc1 match {
+    val emptyReg1 = EmptyRegs.head
+    val emptyReg2 = EmptyRegs.last
+
+    val loc1Size = loc1 match {
       case r: Register => r.width
       case p: Pointer  => p.size
-    })
-    val emptyReg2 = EmptyRegs.head(loc2 match {
+    }
+    val loc2Size = loc2 match {
       case r: Register => r.width
       case p: Pointer  => p.size
-    })
+    }
 
     // Move the locations to registers, perform the operation, then move the results back
-    instructionCtx.addInstruction(Mov(emptyReg1, loc1))
-    instructionCtx.addInstruction(Mov(emptyReg2, loc2))
+    instructionCtx.addInstruction(Mov(emptyReg1(loc1Size), loc1))
+    instructionCtx.addInstruction(Mov(emptyReg2(loc2Size), loc2))
     instructionCtx.addInstruction(op(emptyReg1, emptyReg2))
     instructionCtx.addInstruction(loc1 match {
-      case r: Register => Mov(r, emptyReg1)
-      case p: Pointer  => Mov(p, emptyReg1)
+      case r: Register => Mov(r, emptyReg1(loc1Size))
+      case p: Pointer  => Mov(p, emptyReg1(loc1Size))
     })
     instructionCtx.addInstruction(loc2 match {
-      case r: Register => Mov(r, emptyReg2)
-      case p: Pointer  => Mov(p, emptyReg2)
+      case r: Register => Mov(r, emptyReg2(loc2Size))
+      case p: Pointer  => Mov(p, emptyReg2(loc2Size))
     })
 
   /** Perform some operation that forces the use of division registers (rax, rdx). They are guaranteed to be free.
