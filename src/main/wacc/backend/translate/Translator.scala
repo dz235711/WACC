@@ -14,6 +14,7 @@ import wacc.RenamedAST.{?, KnownType, SemType}
 import wacc.Size.*
 
 import java.rmi.UnexpectedException
+import os.size
 
 type HeapLValue = Fst | Snd | ArrayElem
 
@@ -85,6 +86,9 @@ class Translator {
 
   /** The maximum value of a char */
   private val MAX_CHAR = 127
+
+  /** The minimum value for an array to be indexed */
+  private val MIN_ARR_SIZE = 0
 
   /** The label for a user-defined function */
   private val FUNCTION_LABEL = "wacc_func_"
@@ -705,7 +709,18 @@ class Translator {
             translateExpr(e)
             val indexDest = locationCtx.getNext(typeToSize(e.getType))
 
-            // TODO: runtime error if index out of bounds
+            // Check if the index is out of bounds runtime error
+            instructionCtx.addInstruction(indexDest match {
+              case r: Register => Compare(r, MIN_ARR_SIZE)
+              case p: Pointer  => Compare(p, MIN_ARR_SIZE)
+            })
+            instructionCtx.addInstruction(JmpLess(Clib.errArrBoundsLabel))
+            locationCtx.regInstr2(
+              indexDest,
+              baseDest,
+              { (indexReg, sizeReg) => Compare(indexReg, RegPointer(sizeReg)(typeToSize(IntType))) }
+            )
+            instructionCtx.addInstruction(JmpGreaterEqual(Clib.errArrBoundsLabel))
 
             // get the size of the type (for scaling)
             val tySize = typeToSize(nextTy).toBytes
@@ -1065,18 +1080,21 @@ object Clib {
   val errDivZeroLabel = "_errDivZero"
   val errOverflowLabel = "_errOverflow"
   val errBadCharLabel = "_errBadChar"
+  val errArrBoundsLabel = "_errArrBounds"
 
   private val OutOfMemoryStringLabel = ".outOfMemoryString"
   private val NullPairStringLabel = ".nullPairString"
   private val DivZeroStringLabel = ".divZeroString"
   private val OverflowStringLabel = ".overflowString"
   private val BadCharStringLabel = ".badCharString"
+  private val ArrBoundsStringLabel = ".arrBoundsString"
 
   private val OutOfMemoryString = "fatal error: out of memory\n"
   private val NullPairString = "fatal error: null pair dereferenced or freed\n"
   private val DivZeroString = "fatal error: division or modulo by zero\n"
   private val OverflowString = "fatal error: integer overflow or underflow occurred\n"
   private val BadCharString = "fatal error: int %d is not ascii character 0-127\n"
+  private val ArrBoundsString = "fatal error: array index out of bounds\n"
 
   /** Subroutine for an out of memory error. */
   private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
@@ -1129,6 +1147,20 @@ object Clib {
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
     Lea(RDI(W64), RegImmPointer(RIP, BadCharStringLabel)(W64)),
+    Mov(RAX(W8), 0),
+    Call(ClibPrintf),
+    Mov(RDI(W64), 0),
+    Call(ClibFlush),
+    Mov(RDI(W8), -1),
+    Call(ClibExit)
+  )
+
+  /** Subroutine for an array bounds error. */
+  private val _errArrBounds = createReadOnlyString(ArrBoundsStringLabel, ArrBoundsString) ::: List(
+    DefineLabel(errArrBoundsLabel),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, ArrBoundsStringLabel)(W64)),
     Mov(RAX(W8), 0),
     Call(ClibPrintf),
     Mov(RDI(W64), 0),
