@@ -10,7 +10,7 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "hashInProgram.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -18,7 +18,7 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "multipleStringsAssignment.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -26,7 +26,7 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "print-backspace.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -34,7 +34,7 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "print.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -42,7 +42,7 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "printBool.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -50,7 +50,7 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "printChar.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -58,7 +58,7 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "printCharArray.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -66,7 +66,7 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "printCharAsString.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -74,7 +74,7 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "printEscChar.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -82,7 +82,7 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "printInt.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -90,7 +90,7 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "println.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 

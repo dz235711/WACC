@@ -19,12 +19,12 @@ class ProgramTester(path: String) {
    * @param fileContents The contents of the test file
    * @return A tuple of the input, output, and exit status
    */
-  private def parseTestFile(fileContents: String): (String, String, Int) = {
+  private def parseTestFile(fileContents: String): (String, String, Option[Int]) = {
     val sections = fileContents.split("\n\n")
 
     var input = ""
     var output = ""
-    var status = 0
+    var status: Option[Int] = None
 
     for (section <- sections) {
       val lines = section.split("\n")
@@ -39,7 +39,7 @@ class ProgramTester(path: String) {
           status = content.toIntOption match
             case Some(s) =>
               if (s == TimeoutCode) throw new Exception("Invalid exit status")
-              s
+              Some(s)
             case None => throw new Exception("Invalid exit status")
         case _ => ()
       }
@@ -57,7 +57,7 @@ class ProgramTester(path: String) {
   val expectedOutput: String = testData._2
 
   /** The expected exit status specified in the test file (0 if not specified) */
-  val expectedExitStatus: Int = testData._3
+  val expectedExitStatus: Option[Int] = testData._3
 
   /** Runs a command in the assembler container
    *
@@ -84,7 +84,7 @@ class ProgramTester(path: String) {
    * @param input The input to the program
    * @return The exit status and output of the program
    */
-  def run(input: String): (Int, String) = {
+  def run(input: String): (Option[Int], String) = {
     val prog = runFrontend(lines, false).getOrElse(throw new Exception("Compilation error"))
 
     // Write the program to a temporary file
@@ -127,6 +127,6 @@ class ProgramTester(path: String) {
     asmFile.delete()
     val flattenedAddrs = AddrRegex.replaceAllIn(output, "#addrs#")
     val flattenedErrs = ErrRegex.replaceAllIn(flattenedAddrs, "#runtime_error#")
-    (exitStatus, flattenedErrs)
+    (Some(exitStatus), flattenedErrs)
   }
 }

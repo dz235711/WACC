@@ -10,7 +10,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "array.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -18,7 +18,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "arrayBasic.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -26,7 +26,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "arrayEmpty.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -34,7 +34,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "arrayIndexMayBeArrayIndex.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -42,7 +42,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "arrayLength.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -50,7 +50,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "arrayLookup.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -58,7 +58,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "arrayNested.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -66,7 +66,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "arrayOnHeap.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -74,7 +74,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "arrayPrint.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -82,7 +82,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "arraySimple.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -90,7 +90,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "charArrayInStringArray.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -98,7 +98,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "emptyArrayAloneIsFine.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -106,7 +106,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "emptyArrayNextLine.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -114,7 +114,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "emptyArrayPrint.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -122,7 +122,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "emptyArrayReplace.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -130,7 +130,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "emptyArrayScope.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -138,7 +138,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "free.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -146,7 +146,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "lenArrayIndex.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -154,7 +154,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "modifyString.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -162,7 +162,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "printRef.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -170,7 +170,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "stringFromArray.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 

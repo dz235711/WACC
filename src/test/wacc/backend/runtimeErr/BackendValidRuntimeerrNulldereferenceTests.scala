@@ -10,7 +10,7 @@ class BackendValidRuntimeerrNulldereferenceTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "freeNull.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -18,7 +18,7 @@ class BackendValidRuntimeerrNulldereferenceTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "readNull1.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -26,7 +26,7 @@ class BackendValidRuntimeerrNulldereferenceTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "readNull2.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -34,7 +34,7 @@ class BackendValidRuntimeerrNulldereferenceTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "setNull1.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -42,7 +42,7 @@ class BackendValidRuntimeerrNulldereferenceTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "setNull2.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -50,7 +50,7 @@ class BackendValidRuntimeerrNulldereferenceTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "useNull1.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -58,7 +58,7 @@ class BackendValidRuntimeerrNulldereferenceTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "useNull2.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 

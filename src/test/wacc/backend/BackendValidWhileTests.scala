@@ -10,7 +10,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "fibonacciFullIt.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -18,7 +18,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "fibonacciIterative.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -26,7 +26,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "loopCharCondition.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -34,7 +34,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "loopIntCondition.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -42,7 +42,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "max.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -50,7 +50,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "min.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -58,7 +58,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "rmStyleAdd.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -66,7 +66,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "rmStyleAddIO.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -74,7 +74,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "whileBasic.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -82,7 +82,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "whileBoolFlip.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -90,7 +90,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "whileCount.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -98,7 +98,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "whileFalse.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 

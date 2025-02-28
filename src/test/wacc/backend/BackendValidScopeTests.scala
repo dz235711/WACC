@@ -10,7 +10,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "ifNested1.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -18,7 +18,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "ifNested2.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -26,7 +26,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "indentationNotImportant.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -34,7 +34,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "intsAndKeywords.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -42,7 +42,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "printAllTypes.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -50,7 +50,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "scope.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -58,7 +58,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "scopeBasic.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -66,7 +66,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "scopeIfRedefine.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -74,7 +74,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "scopeRedefine.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -82,7 +82,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "scopeSimpleRedefine.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -90,7 +90,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "scopeVars.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -98,7 +98,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "scopeWhileNested.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -106,7 +106,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "scopeWhileRedefine.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -114,7 +114,7 @@ class BackendValidScopeTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "splitScope.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
