@@ -72,7 +72,7 @@ class LocationContext {
    * @return The next location to use
    */
   def getNext(size: Size): Location =
-    if (freeRegs.nonEmpty) freeRegs.head(size)
+    if (freeRegs.nonEmpty) freeRegs.last(size)
     else RegImmPointer(BasePointer, reservedStackLocs * PointerSize)(size)
 
   /** Get the location to use and reserve it
