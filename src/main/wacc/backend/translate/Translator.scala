@@ -845,121 +845,143 @@ class Translator {
   private def getHeapLocation(l: HeapLValue)(using
       instructionCtx: InstructionContext,
       locationCtx: LocationContext
-  ): Location = l match {
+  ): Location = {
+    l match {
+      case elem @ ArrayElem(v, es, ty) =>
+        // move the base address of the array to the next available location
+        // reserve the base address of the array
+        val baseDest = locationCtx.reserveNext(typeToSize(v.getType))
+        val baseLoc = locationCtx.getLocation(v)
+        locationCtx.movLocLoc(baseDest, baseLoc)
 
-    case elem @ ArrayElem(v, es, ty) =>
-      // move the base address of the array to the next available location
-      // reserve the base address of the array
-      val baseDest = locationCtx.reserveNext(typeToSize(v.getType))
-      val baseLoc = locationCtx.getLocation(v)
-      locationCtx.movLocLoc(baseDest, baseLoc)
+        instructionCtx.addLibraryFunction(Clib.errArrBoundsLabel)
 
-      instructionCtx.addLibraryFunction(Clib.errArrBoundsLabel)
+        // Calculate the final location
+        es.zipWithIndex.foldLeft(v.getType) { (tyAcc, eWithIndex) =>
+          val (e, i) = eWithIndex
+          tyAcc match {
+            case ArrayType(nextTy) =>
+              // evaluate the index
+              translateExpr(e)
+              val indexDest = locationCtx.getNext(typeToSize(e.getType))
 
-      // Calculate the final location
-      es.zipWithIndex.foldLeft(v.getType) { (tyAcc, eWithIndex) =>
-        val (e, i) = eWithIndex
-        tyAcc match {
-          case ArrayType(nextTy) =>
-            // evaluate the index
-            translateExpr(e)
-            val indexDest = locationCtx.getNext(typeToSize(e.getType))
+              // Check if the index is out of bounds runtime error
+              instructionCtx.addInstruction(indexDest match {
+                case r: Register => Compare(r, MIN_ARR_SIZE)
+                case p: Pointer  => Compare(p, MIN_ARR_SIZE)
+              })
+              instructionCtx.addInstruction(JmpLess(Clib.errArrBoundsLabel))
+              locationCtx.regInstr2(
+                indexDest,
+                baseDest,
+                { (indexReg, sizeReg) =>
+                  Compare(indexReg(typeToSize(e.getType)), RegPointer(sizeReg(POINTER_SIZE))(typeToSize(IntType)))
+                }
+              )
+              instructionCtx.addInstruction(JmpGreaterEqual(Clib.errArrBoundsLabel))
 
-            // Check if the index is out of bounds runtime error
-            instructionCtx.addInstruction(indexDest match {
-              case r: Register => Compare(r, MIN_ARR_SIZE)
-              case p: Pointer  => Compare(p, MIN_ARR_SIZE)
-            })
-            instructionCtx.addInstruction(JmpLess(Clib.errArrBoundsLabel))
-            locationCtx.regInstr2(
-              indexDest,
-              baseDest,
-              { (indexReg, sizeReg) =>
-                Compare(indexReg(typeToSize(e.getType)), RegPointer(sizeReg(POINTER_SIZE))(typeToSize(IntType)))
-              }
-            )
-            instructionCtx.addInstruction(JmpGreaterEqual(Clib.errArrBoundsLabel))
+              // get the size of the type (for scaling)
+              val tySize = typeToSize(nextTy).toBytes
 
-            // get the size of the type (for scaling)
-            val tySize = typeToSize(nextTy).toBytes
-
-            
-
-            locationCtx.regInstr2(
-              baseDest,
-              indexDest,
-              { (reg1, reg2) =>
-                // baseDest = baseDest + indexDest * tySize + INT_SIZE
-                if i != es.length - 1 then
+              locationCtx.regInstr2(
+                baseDest,
+                indexDest,
+                { (reg1, reg2) =>
+                  // baseDest = baseDest + indexDest * tySize + INT_SIZE
+                  if i != es.length - 1 then
                     Mov(
                       reg1(POINTER_SIZE),
                       RegScaleRegImmPointer(reg1(POINTER_SIZE), tySize, reg2(POINTER_SIZE), INT_SIZE)(POINTER_SIZE)
                     )
-                else
-                  // If the next type is not an array, we are at the last element of the array
-                  // so we don't need to scale the index
-                  Lea(
-                    reg1(POINTER_SIZE),
-                    RegScaleRegImmPointer(reg1(POINTER_SIZE), tySize, reg2(POINTER_SIZE), INT_SIZE)(typeToSize(nextTy))
-                  )
+                  else
+                    // If the next type is not an array, we are at the last element of the array
+                    // so we don't need to scale the index
+                    Lea(
+                      reg1(POINTER_SIZE),
+                      RegScaleRegImmPointer(reg1(POINTER_SIZE), tySize, reg2(POINTER_SIZE), INT_SIZE)(
+                        typeToSize(nextTy)
+                      )
+                    )
                 }
-            )
-            nextTy
-          case _ => throw new RuntimeException("Invalid type")
+              )
+              nextTy
+            case _ => throw new RuntimeException("Invalid type")
+          }
         }
-      }
 
-      locationCtx.unreserveLast()
+        locationCtx.unreserveLast()
 
-      // Return the final location
-      baseDest
+        // Return the final location
+        baseDest
 
-    case Fst(l, ty) =>
-      // Get the location of the pointer to the pair
-      val pairPtrLoc = l match {
-        case id: Ident     => locationCtx.getLocation(id)
-        case h: HeapLValue => getHeapLocation(h)
-      }
+      case Fst(l, ty) =>
+        // Get the location of the pointer to the pair
+        val pairPtrLoc = l match {
+          case id: Ident     => locationCtx.getLocation(id)
+          case h: HeapLValue => getHeapLocation(h)
+        }
 
-      // Check for null pair runtime error
-      instructionCtx.addLibraryFunction(Clib.printsLabel)
-      instructionCtx.addLibraryFunction(Clib.errNullLabel)
-      pairPtrLoc match {
-        case r: Register => instructionCtx.addInstruction(Compare(r, NULL))
-        case p: Pointer  => instructionCtx.addInstruction(Compare(p, NULL))
-      }
-      instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
+        // Check for null pair runtime error
+        instructionCtx.addLibraryFunction(Clib.printsLabel)
+        instructionCtx.addLibraryFunction(Clib.errNullLabel)
+        pairPtrLoc match {
+          case r: Register => instructionCtx.addInstruction(Compare(r, NULL))
+          case p: Pointer  => instructionCtx.addInstruction(Compare(p, NULL))
+        }
+        instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
-      pairPtrLoc
+        l match {
+          case id: Ident =>
+            locationCtx.regInstr1(
+              pairPtrLoc,
+              { reg => Lea(reg(POINTER_SIZE), RegPointer(reg(POINTER_SIZE))(typeToSize(ty))) }
+            )
+          case _ =>
+            locationCtx.regInstr1(
+              pairPtrLoc,
+              { reg => Mov(reg(POINTER_SIZE), RegPointer(reg(POINTER_SIZE))(POINTER_SIZE)) }
+            )
+        }
 
-    case snd @ Snd(l, ty) =>
-      // Get the location of the pointer to the pair
-      val pairPtrLoc = l match {
-        case id: Ident     => locationCtx.getLocation(id)
-        case h: HeapLValue => getHeapLocation(h)
-      }
+        pairPtrLoc
 
-      // Check for null pair runtime error
-      instructionCtx.addLibraryFunction(Clib.printsLabel)
-      instructionCtx.addLibraryFunction(Clib.errNullLabel)
-      pairPtrLoc match {
-        case r: Register => instructionCtx.addInstruction(Compare(r, NULL))
-        case p: Pointer  => instructionCtx.addInstruction(Compare(p, NULL))
-      }
-      instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
+      case snd @ Snd(l, ty) =>
+        // Get the location of the pointer to the pair
+        val pairPtrLoc = l match {
+          case id: Ident     => locationCtx.getLocation(id)
+          case h: HeapLValue => getHeapLocation(h)
+        }
 
-      // Calculate the location of the second element
-      val sndDest = locationCtx.getNext(typeToSize(PairType(?, ty)))
-      locationCtx.movLocLoc(sndDest, pairPtrLoc)
+        // Check for null pair runtime error
+        instructionCtx.addLibraryFunction(Clib.printsLabel)
+        instructionCtx.addLibraryFunction(Clib.errNullLabel)
+        pairPtrLoc match {
+          case r: Register => instructionCtx.addInstruction(Compare(r, NULL))
+          case p: Pointer  => instructionCtx.addInstruction(Compare(p, NULL))
+        }
+        instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
-      // add the offset to the pointer
-      val offset = PAIR_SIZE / 2
-      locationCtx.regInstr1(
-        sndDest,
-        { reg => Lea(reg(POINTER_SIZE), RegImmPointer(reg(POINTER_SIZE), offset)(typeToSize(ty))) }
-      )
+        // Calculate the location of the second element
+        val sndDest = locationCtx.getNext(typeToSize(PairType(?, ty)))
+        locationCtx.movLocLoc(sndDest, pairPtrLoc)
 
-      sndDest
+        // add the offset to the pointer
+        val offset = PAIR_SIZE / 2
+        l match {
+          case id: Ident =>
+            locationCtx.regInstr1(
+              sndDest,
+              { reg => Lea(reg(POINTER_SIZE), RegImmPointer(reg(POINTER_SIZE), offset)(typeToSize(ty))) }
+            )
+          case _ =>
+            locationCtx.regInstr1(
+              sndDest,
+              { reg => Mov(reg(POINTER_SIZE), RegImmPointer(reg(POINTER_SIZE), offset)(POINTER_SIZE)) }
+            )
+        }
+
+        sndDest
+    }
   }
 
   /** Translate a unary operation and store the result in the next available location at the time of invocation.

@@ -70,21 +70,21 @@ class BackendValidPairsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute nestedPairLeftAssign.wacc" taggedAs Debug in pending /* {
+  it should "execute nestedPairLeftAssign.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "nestedPairLeftAssign.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  } */
+  }
 
-  it should "execute nestedPairRightExtract.wacc" taggedAs Debug in pending /*{
+  it should "execute nestedPairRightExtract.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "nestedPairRightExtract.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  } */
+  }*/
 
   it should "execute null.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "null.wacc")
@@ -94,7 +94,7 @@ class BackendValidPairsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute pairExchangeArrayOk.wacc" taggedAs Debug in {
+  it should "execute pairExchangeArrayOk.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "pairExchangeArrayOk.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
@@ -102,13 +102,13 @@ class BackendValidPairsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute pairarray.wacc" taggedAs Debug in pending /* {
+  it should "execute pairarray.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "pairarray.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  } */
+  }*/
 
   it should "execute printNull.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "printNull.wacc")
