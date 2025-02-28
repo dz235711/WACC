@@ -146,15 +146,18 @@ class Translator {
    * @param t The semantic type to convert
    * @return The size of the semantic type
    */
-  private def typeToSize(t: SemType): Size = t match {
-    case IntType        => W32
-    case BoolType       => W8
-    case CharType       => W8
-    case StringType     => W64
-    case ArrayType(_)   => W64
-    case PairType(_, _) => W64
-    case _              => throw new UnexpectedException("Unexpected Error: Invalid type")
-  }
+  private def typeToSize(t: SemType): Size =
+    t match {
+      case IntType        => W32
+      case BoolType       => W8
+      case CharType       => W8
+      case StringType     => W64
+      case ArrayType(_)   => W64
+      case PairType(_, _) => W64
+      // In the case of an unkown type, we know that we are in a pair element,
+      // so we can just move the whole 8 bytes.
+      case ? => W64
+    }
 
   /** Generates a function name from an id
    * 
@@ -515,15 +518,15 @@ class Translator {
 
     case s @ Snd(_, ty) =>
       // Get the current location in the map of the Snd
-      val fstLoc = getHeapLocation(s)
+      val sndLoc = getHeapLocation(s)
 
       // Move this into the expected result location
       val dest = locationCtx.getNext(typeToSize(ty))
 
       locationCtx.regInstr2(
+        sndLoc,
         dest,
-        fstLoc,
-        { (reg1, reg2) => Mov(reg1(typeToSize(ty)), RegPointer(reg2(POINTER_SIZE))(typeToSize(ty))) }
+        { (reg1, reg2) => Mov(reg2(typeToSize(ty)), RegPointer(reg1(POINTER_SIZE))(typeToSize(ty))) }
       )
 
     case TypedCall(v, args, ty) =>
