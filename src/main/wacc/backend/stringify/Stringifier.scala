@@ -48,7 +48,7 @@ class x86Stringifier {
   /**
     * Converts an instruction into a string representation
     *
-    * @param instr
+    * @param instr The instruction to convert to a string
     * @return a string representation of the instruction
     */
   private def stringifyInstr(
@@ -57,7 +57,7 @@ class x86Stringifier {
     case Mov(dest, src)                 => s"mov ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
     case Movzx(dest, src)               => s"movzx ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
     case Call(label)                    => s"call ${stringifyOperand(label)}"
-    case Ret(imm)                       => s"ret${stringifyOperand(imm, prefix = " ")}"
+    case Ret(imm)                       => s"ret${stringifyOptionalOperand(imm, prefix = " ")}"
     case Nop                            => "nop"
     case Halt                           => "hlt"
     case Push(src)                      => s"push ${stringifyOperand(src)}"
@@ -103,7 +103,7 @@ class x86Stringifier {
     case SignedDiv(src)                 => s"idiv ${stringifyOperand(src)}"
     case Mul(src)                       => s"mul ${stringifyOperand(src)}"
     case SignedMul(dest, src1, src2) =>
-      s"imul ${stringifyOperand(dest, postfix = ", ")}${stringifyOperand(src1)}${stringifyOperand(src2, prefix = ", ")}"
+      s"imul ${stringifyOptionalOperand(dest, postfix = ", ")}${stringifyOperand(src1)}${stringifyOptionalOperand(src2, prefix = ", ")}"
     case Neg(dest)             => s"neg ${stringifyOperand(dest)}"
     case Not(dest)             => s"not ${stringifyOperand(dest)}"
     case Sub(dest, src)        => s"sub ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
@@ -122,14 +122,14 @@ class x86Stringifier {
   }
 
   /**
-    * Converts an operand into a string representation iff it is defined
+    * Converts an optional operand into a string representation iff it is defined, with a prefix and postfix
     *
-    * @param operand
-    * @param prefix
-    * @param postfix
+    * @param operand The operand to convert
+    * @param prefix The prefix to add to the operand string
+    * @param postfix The postfix to add to the operand string
     * @return a string representation of the operand
     */
-  private def stringifyOperand(
+  private def stringifyOptionalOperand(
       operand: Option[Operand],
       prefix: String = "",
       postfix: String = ""
@@ -141,9 +141,7 @@ class x86Stringifier {
   /**
     * Converts an operand into a string representation
     *
-    * @param operand
-    * @param prefix
-    * @param postfix
+    * @param operand The operand to convert
     * @return a string representation of the operand
     */
   private def stringifyOperand(operand: Operand): String = operand match {
@@ -156,7 +154,7 @@ class x86Stringifier {
   /**
     * Converts a pointer into a string representation
     *
-    * @param pointer
+    * @param pointer The pointer to stringify
     * @return a string representation of the pointer
     * @example `RegImm(Reg(RAX), Imm(4))(W64)` -> `qword ptr [rax+4]`
     */
@@ -176,7 +174,7 @@ class x86Stringifier {
   /**
     * Converts pointer arithmetic into string representation (without a pointer size prefix)
     *
-    * @param pointer
+    * @param pointer The pointer to stringify
     * @return a string representation of the pointer arithmetic
     * @example `RegImm(Reg(RAX), Imm(4))(W64)` -> `[rax+4]`
     */
@@ -199,7 +197,7 @@ class x86Stringifier {
   /**
     * Converts a size into a string representation
     *
-    * @param size
+    * @param size The Size to convert
     * @return a string representation of the size as a ptr
     */
   private def ptrSize(size: Size): String = s"${size match {
@@ -212,7 +210,7 @@ class x86Stringifier {
   /**
     * Converts a register into a string representation
     *
-    * @param register
+    * @param register The register to stringify
     * @return a string representation of the register
     */
   private def stringifyRegister(register: Register): String = register match {
@@ -238,15 +236,15 @@ class x86Stringifier {
   /**
     * Prepends a size to a register
     *
-    * @param size
-    * @param register
-    * @param keepTail
+    * @param size The size to prepend
+    * @param register The register onto which the size should be prepended
+    * @param keepTail Whether the tail of the size register should be kept (defaults to true)
     * @return the register with the size prepended
     */
   private def prependSize(size: Size, register: String, keepTail: Boolean = true): String = size match {
     /* Some registers, like RAX converts to AL whilst ones like RSI converts to SIL and therefore for RSI we keep the
      * tail ('I') whilst we chop the 'X' off RAX */
-    case W8  => s"${(if keepTail then register else register.slice(0, register.length - 1))}l"
+    case W8  => s"${if keepTail then register else register.slice(0, register.length - 1)}l"
     case W16 => register
     case W32 => s"e$register"
     case W64 => s"r$register"
@@ -255,8 +253,8 @@ class x86Stringifier {
   /**
     * Appends a size to a register
     *
-    * @param size
-    * @param register
+    * @param size The size to append
+    * @param register The register onto which the size is appended
     * @return the register with the size appended
     */
   private def appendSize(size: Size, register: String): String = size match {
