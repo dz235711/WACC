@@ -269,12 +269,12 @@ class Translator {
 
       // Check for null
       unary(
-        e, {
-          l =>
-            // Check for runtime error
-            instructionCtx.addLibraryFunction(Clib.printsLabel)
+        e,
+        { l =>
+          // Check for runtime error
+          instructionCtx.addLibraryFunction(Clib.printsLabel)
           instructionCtx.addLibraryFunction(Clib.errNullLabel)
-          locationCtx.regInstr1(l, { Compare(_, NULL) })
+          locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), NULL) })
           instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
           // Call free
@@ -432,13 +432,13 @@ class Translator {
       val ptrLoc: Location = locationCtx.cleanUpCall(Some(typeToSize(ArrayType(eTy))))
 
       // Move the pointer to the array to the next available location
-      val arrayLoc = locationCtx.reserveNext(W64)
+      val arrayLoc = locationCtx.reserveNext(POINTER_SIZE)
       locationCtx.movLocLoc(arrayLoc, ptrLoc)
 
       // Store the size of the array
       locationCtx.regInstr1(
         arrayLoc,
-        { reg => Mov(RegPointer(reg)(POINTER_SIZE), es.size) }
+        { reg => Mov(RegPointer(reg(POINTER_SIZE))(POINTER_SIZE), es.size) }
       )
 
       // Store the elements in the array
@@ -592,8 +592,10 @@ class Translator {
         case _ => throw new RuntimeException("Unexpected Error: Invalid expression for Len")
 
     case Ord(e) =>
+      val ordDestExtended = locationCtx.getNext(typeToSize(IntType))
       val ordDest = locationCtx.reserveNext(typeToSize(CharType))
       unary(e, { l => locationCtx.movLocLoc(ordDest, l) })
+      locationCtx.regInstr1(ordDestExtended, { reg => Movzx(reg(typeToSize(IntType)), reg(typeToSize(CharType))) })
       locationCtx.unreserveLast()
 
     case Chr(e) =>
@@ -602,9 +604,9 @@ class Translator {
       unary(
         e,
         { l =>
-          locationCtx.regInstr1(l, { reg => Compare(reg, MIN_CHAR) })
+          locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), MIN_CHAR) })
           instructionCtx.addInstruction(JmpLessEqual(Clib.errBadCharLabel))
-          locationCtx.regInstr1(l, { reg => Compare(reg, MAX_CHAR) })
+          locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), MAX_CHAR) })
           instructionCtx.addInstruction(JmpGreaterEqual(Clib.errBadCharLabel))
           locationCtx.movLocLoc(chrDest, l)
         }
@@ -633,7 +635,7 @@ class Translator {
       instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
       locationCtx.regInstr1(
         modDest,
-        { reg => Compare(reg, 0) }
+        { reg => Compare(reg(typeToSize(IntType)), 0) }
       )
       instructionCtx.addInstruction(JmpEqual(Clib.errDivZeroLabel))
 
@@ -670,7 +672,7 @@ class Translator {
       instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
       locationCtx.regInstr1(
         divDest,
-        { reg => Compare(reg, 0) }
+        { reg => Compare(reg(typeToSize(IntType)), 0) }
       )
       instructionCtx.addInstruction(JmpEqual(Clib.errDivZeroLabel))
 
@@ -761,7 +763,7 @@ class Translator {
 
       // Load the address of the string into the destination
       val stringPointer: Pointer = RegImmPointer(RIP, label)(typeToSize(StringType))
-      locationCtx.regInstr1(dest, { Lea(_, stringPointer) })
+      locationCtx.regInstr1(dest, { reg => Lea(reg(POINTER_SIZE), stringPointer) })
 
     case PairLiter =>
       val dest = locationCtx.getNext(typeToSize(PairType(?, ?)))
@@ -824,7 +826,7 @@ class Translator {
     val dest = locationCtx.reserveNext(typeToSize(e1.getType))
     translateExpr(e2)
     val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
-    locationCtx.regInstr1(dest, { reg => Compare(reg, e2Dest) })
+    locationCtx.regInstr1(dest, { reg => Compare(reg(typeToSize(e2.getType)), e2Dest) })
     // Move dest to a 1-byte location so that the setter can set the correct byte
     locationCtx.unreserveLast()
     val destByte = locationCtx.getNext(W8)
@@ -938,7 +940,7 @@ class Translator {
       val offset = PAIR_SIZE / 2
       locationCtx.regInstr1(
         sndDest,
-        { reg => Lea(reg, RegImmPointer(reg, offset)(typeToSize(ty))) }
+        { reg => Lea(reg(POINTER_SIZE), RegImmPointer(reg(POINTER_SIZE), offset)(typeToSize(ty))) }
       )
 
       sndDest
@@ -982,7 +984,7 @@ class Translator {
     val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
     if check2.isDefined then check2.get(dest, e2Dest)
     translateExpr(e2)
-    locationCtx.regInstr1(dest, { reg => instr(reg, e2Dest) })
+    locationCtx.regInstr1(dest, { reg => instr(reg(typeToSize(e2.getType)), e2Dest) })
     locationCtx.unreserveLast()
   }
 }

@@ -55,6 +55,7 @@ class x86Stringifier {
       instr: Instruction
   ): String = instr match {
     case Mov(dest, src)                 => s"mov ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
+    case Movzx(dest, src)               => s"movzx ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
     case Call(label)                    => s"call ${stringifyOperand(label)}"
     case Ret(imm)                       => s"ret${stringifyOperand(imm, prefix = " ")}"
     case Nop                            => "nop"

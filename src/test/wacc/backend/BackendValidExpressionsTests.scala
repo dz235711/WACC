@@ -30,7 +30,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute boolExpr1.wacc" taggedAs Debug in {
+  it should "execute boolExpr1.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "boolExpr1.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
@@ -318,13 +318,13 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute ordAndchrExpr.wacc" taggedAs Backend in pending /*{
+  it should "execute ordAndchrExpr.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "ordAndchrExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute plusExpr.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "plusExpr.wacc")

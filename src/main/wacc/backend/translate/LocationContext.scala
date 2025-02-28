@@ -300,18 +300,19 @@ class LocationContext {
    * @param loc1 The first location
    * @param op   The operation to perform on the two locations, where the first location is guaranteed to be a register
    */
-  def regInstr1(loc1: Location, op: (Register) => Instruction)(using instructionCtx: InstructionContext): Unit =
-    val emptyReg = EmptyRegs.head(loc1 match {
+  def regInstr1(loc1: Location, op: (Size => Register) => Instruction)(using instructionCtx: InstructionContext): Unit =
+    val emptyReg = EmptyRegs.head
+    val loc1Size = loc1 match {
       case r: Register => r.width
       case p: Pointer  => p.size
-    })
+    }
 
     // Move the location to a register, perform the operation, then move the result back
-    instructionCtx.addInstruction(Mov(emptyReg, loc1))
+    instructionCtx.addInstruction(Mov(emptyReg(loc1Size), loc1))
     instructionCtx.addInstruction(op(emptyReg))
     instructionCtx.addInstruction(loc1 match {
-      case r: Register => Mov(r, emptyReg)
-      case p: Pointer  => Mov(p, emptyReg)
+      case r: Register => Mov(r, emptyReg(loc1Size))
+      case p: Pointer  => Mov(p, emptyReg(loc1Size))
     })
 
   /** Perform some operation that forces the use of 2 registers.
