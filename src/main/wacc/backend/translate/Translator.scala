@@ -252,6 +252,7 @@ class Translator {
         e,
         { l =>
           // Check for runtime error
+          instructionCtx.addLibraryFunction(Clib.errNullLabel)
           locationCtx.regInstr1(l, { Compare(_, NULL) })
           instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
@@ -528,6 +529,7 @@ class Translator {
       unary(e, { l => instructionCtx.addInstruction(Neg(l)) })
 
       // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
     case Len(e) =>
       val lenDest =
@@ -545,6 +547,7 @@ class Translator {
       unary(
         e,
         { l =>
+          instructionCtx.addLibraryFunction(Clib.errBadCharLabel)
           locationCtx.regInstr1(l, { reg => Compare(reg, MIN_CHAR) })
           instructionCtx.addInstruction(JmpLessEqual(Clib.errBadCharLabel))
           locationCtx.regInstr1(l, { reg => Compare(reg, MAX_CHAR) })
@@ -562,6 +565,7 @@ class Translator {
       )
 
       // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
     case Mod(dividendExp, divisorExp) =>
@@ -570,6 +574,7 @@ class Translator {
       val modDest = locationCtx.reserveNext(typeToSize(IntType))
 
       // Check for division by zero runtime error
+      instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
       locationCtx.regInstr1(
         modDest,
         { reg => Compare(reg, 0) }
@@ -603,6 +608,7 @@ class Translator {
       val divDest = locationCtx.reserveNext(typeToSize(IntType))
 
       // Check for division by zero runtime error
+      instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
       locationCtx.regInstr1(
         divDest,
         { reg => Compare(reg, 0) }
@@ -634,12 +640,14 @@ class Translator {
       binary(e1, e2, Add.apply)
 
       // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
     case TypedSub(e1, e2) =>
       binary(e1, e2, Sub.apply)
 
       // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
     case Greater(e1, e2) => cmpExp(e1, e2, SetGreater.apply)
@@ -771,6 +779,8 @@ class Translator {
       val baseLoc = locationCtx.getLocation(v)
       locationCtx.movLocLoc(baseDest, baseLoc)
 
+      instructionCtx.addLibraryFunction(Clib.errArrBoundsLabel)
+
       // Calculate the final location
       es.foldLeft(v.getType) { (tyAcc, e) =>
         tyAcc match {
@@ -821,6 +831,7 @@ class Translator {
       }
 
       // Check for null pair runtime error
+      instructionCtx.addLibraryFunction(Clib.errNullLabel)
       locationCtx.regInstr1(
         pairPtrLoc,
         { reg => Compare(RegPointer(reg)(POINTER_SIZE), NULL) }
@@ -837,6 +848,7 @@ class Translator {
       }
 
       // Check for null pair runtime error
+      instructionCtx.addLibraryFunction(Clib.errNullLabel)
       locationCtx.regInstr1(
         pairPtrLoc,
         { reg => Compare(RegPointer(reg)(POINTER_SIZE), NULL) }
@@ -1287,6 +1299,10 @@ object Clib {
     freeLabel -> _free,
     freepairLabel -> _freepair,
     outOfMemoryLabel -> _outOfMemory,
-    errNullLabel -> _errNull
+    errNullLabel -> _errNull,
+    errDivZeroLabel -> _errDivZero,
+    errOverflowLabel -> _errOverflow,
+    errBadCharLabel -> _errBadChar,
+    errArrBoundsLabel -> _errArrBounds
   )
 }
