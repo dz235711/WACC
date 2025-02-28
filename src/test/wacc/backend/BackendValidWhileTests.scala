@@ -22,21 +22,21 @@ class BackendValidWhileTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute loopCharCondition.wacc" taggedAs Backend in pending /*{
+  it should "execute loopCharCondition.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "loopCharCondition.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
-  it should "execute loopIntCondition.wacc" taggedAs Backend in pending /*{
+  it should "execute loopIntCondition.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "loopIntCondition.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute max.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "max.wacc")

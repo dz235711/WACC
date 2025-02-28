@@ -15,6 +15,7 @@ import wacc.Size.*
 
 import java.rmi.UnexpectedException
 import scala.collection.mutable
+import java.util.regex.Pattern
 
 type HeapLValue = Fst | Snd | ArrayElem
 
@@ -60,7 +61,19 @@ sealed class InstructionContext {
    * 
    * @param string The string to add
    */
-  def addString(string: String, label: Label): Unit = stringCtx.add((string.replace("\\", "\\\\"), label))
+  def addString(string: String, label: Label): Unit = 
+    val p = Pattern.compile("\"|\'|\\\\")
+    val m = p.matcher(string)
+    val sb = new StringBuffer()
+    while (m.find()) {
+      m.group() match {
+        case "\\" => m.appendReplacement(sb, "\\\\")
+        case "\"" => m.appendReplacement(sb, "\\\\\"")
+        case "\'" => m.appendReplacement(sb, "\\\\\'")
+      }
+    }
+    m.appendTail(sb)
+    stringCtx.add(sb.toString(), label)
 
   /** Add a library function to the list of instructions
     *

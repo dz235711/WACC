@@ -81,7 +81,7 @@ object lexer {
       ),
       escapeSequences = EscapeDesc.plain.copy(
         mapping = Map("0" -> 0x00, "b" -> 0x08, "t" -> 0x09, "n" -> 0x0a, "f" -> 0x0c, "r" -> 0x0d),
-        literals = Set('"', '\'', '\\')
+        literals = Set('\"', '\'', '\\')
       )
     ),
     numericDesc = NumericDesc.plain.copy(
