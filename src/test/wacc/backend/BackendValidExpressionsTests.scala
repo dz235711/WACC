@@ -10,7 +10,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "andExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -18,7 +18,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "andOverOrExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -26,7 +26,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "boolCalc.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -34,7 +34,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "boolExpr1.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -42,7 +42,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "charComparisonExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -50,7 +50,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "divExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -58,7 +58,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "equalsExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -66,7 +66,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "equalsOverAnd.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -74,7 +74,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "equalsOverBool.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -82,7 +82,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "equalsOverOr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -90,7 +90,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "greaterEqExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -98,7 +98,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "greaterExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -106,7 +106,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "intCalc.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -114,7 +114,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "intExpr1.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -122,7 +122,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "lessCharExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -130,7 +130,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "lessEqExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -138,7 +138,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "lessExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -146,7 +146,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "longExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -154,7 +154,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "longExpr2.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -162,7 +162,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "longExpr3.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -170,7 +170,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "longSplitExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -178,7 +178,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "longSplitExpr2.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -186,7 +186,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "minusExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -194,7 +194,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "minusMinusExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -202,7 +202,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "minusNoWhitespaceExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -210,7 +210,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "minusPlusExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -218,7 +218,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "modExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -226,7 +226,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "multExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -234,7 +234,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "multNoWhitespaceExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -242,7 +242,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "negBothDiv.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -250,7 +250,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "negBothMod.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -258,7 +258,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "negDividendDiv.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -266,7 +266,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "negDividendMod.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -274,7 +274,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "negDivisorDiv.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -282,7 +282,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "negDivisorMod.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -290,7 +290,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "negExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -298,7 +298,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "notExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -306,7 +306,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "notequalsExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -314,7 +314,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "orExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -322,7 +322,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "ordAndchrExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -330,7 +330,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "plusExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -338,7 +338,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "plusMinusExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -346,7 +346,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "plusNoWhitespaceExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -354,7 +354,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "plusPlusExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -362,7 +362,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "sequentialCount.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -370,7 +370,7 @@ class BackendValidExpressionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "stringEqualsExpr.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 

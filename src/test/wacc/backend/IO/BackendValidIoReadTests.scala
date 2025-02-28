@@ -10,7 +10,7 @@ class BackendValidIoReadTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "echoBigInt.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -18,7 +18,7 @@ class BackendValidIoReadTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "echoBigNegInt.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -26,7 +26,7 @@ class BackendValidIoReadTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "echoChar.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -34,7 +34,7 @@ class BackendValidIoReadTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "echoInt.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -42,7 +42,7 @@ class BackendValidIoReadTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "echoNegInt.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -50,7 +50,7 @@ class BackendValidIoReadTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "echoPuncChar.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -58,7 +58,7 @@ class BackendValidIoReadTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "read.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -66,7 +66,7 @@ class BackendValidIoReadTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "readAtEof.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 

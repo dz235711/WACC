@@ -10,7 +10,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "argScopeCanBeShadowed.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -18,7 +18,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "asciiTable.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -26,7 +26,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "functionDeclaration.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -34,7 +34,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "functionDoubleReturn.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -42,7 +42,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "functionIfReturns.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -50,7 +50,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "functionManyArguments.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -58,7 +58,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "functionMultiReturns.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -66,7 +66,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "functionReturnPair.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -74,7 +74,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "functionSimple.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -82,7 +82,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "functionSimpleLoop.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -90,7 +90,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "functionUpdateParameter.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -98,7 +98,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "incFunction.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -106,7 +106,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "lotsOfLocals.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -114,7 +114,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "manyArgumentsChar.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -122,7 +122,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "manyArgumentsInt.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -130,7 +130,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "negFunction.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -138,7 +138,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "punning.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -146,7 +146,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "sameArgName.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -154,7 +154,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "sameArgName2.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -162,7 +162,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "sameNameAsVar.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -170,7 +170,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "usesArgumentWhilstMakingArgument.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 

@@ -10,7 +10,7 @@ class BackendValidRuntimeerrDividebyzeroTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "divZero.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -18,7 +18,7 @@ class BackendValidRuntimeerrDividebyzeroTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "divideByZero.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 
@@ -26,7 +26,7 @@ class BackendValidRuntimeerrDividebyzeroTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "modByZero.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }*/
 

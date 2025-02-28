@@ -10,7 +10,7 @@ class BackendValidBasicExitTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "exit-1.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
 
@@ -18,7 +18,7 @@ class BackendValidBasicExitTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "exitBasic.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(Some(exitStatus))
     output shouldBe programTester.expectedOutput
   }
 
@@ -26,7 +26,7 @@ class BackendValidBasicExitTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "exitBasic2.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
 
@@ -34,7 +34,7 @@ class BackendValidBasicExitTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "exitWrap.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
 

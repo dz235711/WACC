@@ -54,9 +54,7 @@ sealed class InstructionContext {
    * 
    * @param string The string to add
    */
-  def addString(string: String, label: Label): Unit =
-    println(string)
-    stringCtx.add((string.replace("\\", "\\\\"), label))
+  def addString(string: String, label: Label): Unit = stringCtx.add((string.replace("\\", "\\\\"), label))
 
   /** Add a library function to the list of instructions
     *
