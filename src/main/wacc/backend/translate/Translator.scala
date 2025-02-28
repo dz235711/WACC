@@ -450,8 +450,11 @@ class Translator {
       expr: TypedAST.Expr
   )(using instructionCtx: InstructionContext, locationCtx: LocationContext): Unit = expr match {
     case TypedNot(e) => unary(e, { l => instructionCtx.addInstruction(Not(l)) })
-    case Negate(e)   => unary(e, { l => instructionCtx.addInstruction(Neg(l)) })
+    case Negate(e) =>
+      unary(e, { l => instructionCtx.addInstruction(Neg(l)) })
 
+      // Check for under/overflow runtime error
+      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
     case Len(e) =>
       val lenDest =
         locationCtx.reserveNext(typeToSize(IntType)) // we want to move the size of the array to this location
