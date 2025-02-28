@@ -60,7 +60,7 @@ sealed class InstructionContext {
     *
     * @param funcBody The body of the library function to be added
     */
-  def addLibraryFunction(funcBody: List[Instruction]): Unit = libFunctions.add(funcBody)
+  def addLibraryFunction(funcLabel: Label): Unit = Clib.labelToFunc(funcLabel)
 
   def getLibraryFunctions: Set[List[Instruction]] = libFunctions.toSet
 }
@@ -168,11 +168,11 @@ class Translator {
       // Fetch the correct read label
       val readLabel = id.getType match {
         case IntType => {
-          instructionCtx.addLibraryFunction(Clib._readi)
+          instructionCtx.addLibraryFunction(Clib.readiLabel)
           Clib.readiLabel
         }
         case CharType => {
-          instructionCtx.addLibraryFunction(Clib._readc)
+          instructionCtx.addLibraryFunction(Clib.readcLabel)
           Clib.readcLabel
         }
         case _ => throw new RuntimeException("Unexpected Error: Invalid type for read")
@@ -202,11 +202,11 @@ class Translator {
       // TODO: Factor out duplication
       val readLabel = h.getType match {
         case IntType => {
-          instructionCtx.addLibraryFunction(Clib._readi)
+          instructionCtx.addLibraryFunction(Clib.readiLabel)
           Clib.readiLabel
         }
         case CharType => {
-          instructionCtx.addLibraryFunction(Clib._readc)
+          instructionCtx.addLibraryFunction(Clib.readcLabel)
           Clib.readcLabel
         }
         case _ => throw new RuntimeException("Unexpected Error: Invalid type for read")
@@ -227,11 +227,12 @@ class Translator {
     case Free(e) =>
       val freeLabel = e.getType match {
         case PairType(_, _) => {
-          instructionCtx.addLibraryFunction(Clib._freepair)
+          instructionCtx.addLibraryFunction(Clib.freepairLabel)
+          instructionCtx.addLibraryFunction(Clib.errNullLabel)
           Clib.freepairLabel
         }
         case ArrayType(_) => {
-          instructionCtx.addLibraryFunction(Clib._free)
+          instructionCtx.addLibraryFunction(Clib.freeLabel)
           Clib.freeLabel
         }
         case _ => throw new UnexpectedException("Invalid type")
@@ -256,7 +257,7 @@ class Translator {
       instructionCtx.addInstruction(Ret(None))
 
     case Exit(e) =>
-      instructionCtx.addLibraryFunction(Clib._exit)
+      instructionCtx.addLibraryFunction(Clib.exitLabel)
 
       val dest = locationCtx.getNext(typeToSize(e.getType))
       translateExpr(e)
@@ -274,27 +275,27 @@ class Translator {
       locationCtx.setUpCall(List(dest))
       val printLabel = e.getType match {
         case IntType => {
-          instructionCtx.addLibraryFunction(Clib._printi)
+          instructionCtx.addLibraryFunction(Clib.printiLabel)
           Clib.printiLabel
         }
         case CharType => {
-          instructionCtx.addLibraryFunction(Clib._printc)
+          instructionCtx.addLibraryFunction(Clib.printcLabel)
           Clib.printcLabel
         }
         case BoolType => {
-          instructionCtx.addLibraryFunction(Clib._printb)
+          instructionCtx.addLibraryFunction(Clib.printbLabel)
           Clib.printbLabel
         }
         case StringType => {
-          instructionCtx.addLibraryFunction(Clib._prints)
+          instructionCtx.addLibraryFunction(Clib.printsLabel)
           Clib.printsLabel
         }
         case ArrayType(_) => {
-          instructionCtx.addLibraryFunction(Clib._printp)
+          instructionCtx.addLibraryFunction(Clib.printpLabel)
           Clib.printpLabel
         }
         case PairType(_, _) => {
-          instructionCtx.addLibraryFunction(Clib._printp)
+          instructionCtx.addLibraryFunction(Clib.printpLabel)
           Clib.printpLabel
         }
         case _ => throw new RuntimeException("Invalid type")
@@ -303,7 +304,7 @@ class Translator {
       locationCtx.cleanUpCall()
 
     case PrintLn(e) =>
-      instructionCtx.addLibraryFunction(Clib._println)
+      instructionCtx.addLibraryFunction(Clib.printlnLabel)
       // Print the expression
       translateStmt(Print(e))
 
@@ -370,7 +371,8 @@ class Translator {
       locationCtx: LocationContext
   ): Unit = value match {
     case ArrayLiter(es, ty) =>
-      instructionCtx.addLibraryFunction(Clib._malloc)
+      instructionCtx.addLibraryFunction(Clib.mallocLabel)
+      instructionCtx.addLibraryFunction(Clib.outOfMemoryLabel)
 
       // Calculate size needed for the array
       val size = (typeToSize(ty).toBytes * es.size) + INT_SIZE
@@ -413,7 +415,8 @@ class Translator {
       locationCtx.unreserveLast()
 
     case NewPair(e1, e2, PairType(t1, t2)) =>
-      instructionCtx.addLibraryFunction(Clib._malloc)
+      instructionCtx.addLibraryFunction(Clib.mallocLabel)
+      instructionCtx.addLibraryFunction(Clib.outOfMemoryLabel)
 
       // Move the size of the pair to the next available location
       val tempSizeLocation = locationCtx.getNext(W32)
@@ -908,7 +911,7 @@ object Clib {
   val printlnLabel = "_println"
 
   /** Subroutine for printing an integer. */
-  val _printi = createReadOnlyString(IntFormatLabel, IntFormatSpecifier) ::: createFunction(
+  private val _printi = createReadOnlyString(IntFormatLabel, IntFormatSpecifier) ::: createFunction(
     printiLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -923,7 +926,7 @@ object Clib {
   )
 
   /** Subroutine for printing a character. */
-  val _printc = createReadOnlyString(CharacterFormatLabel, CharacterFormatSpecifier) ::: createFunction(
+  private val _printc = createReadOnlyString(CharacterFormatLabel, CharacterFormatSpecifier) ::: createFunction(
     printcLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -941,7 +944,7 @@ object Clib {
   private val boolBranchFalse = "_printbFalse"
   private val boolBranchTrue = "_printbTrue"
 
-  val _printb = createReadOnlyString(falseLabel, falseStr)
+  private val _printb = createReadOnlyString(falseLabel, falseStr)
     ::: createReadOnlyString(trueLabel, trueStr)
     ::: createReadOnlyString(boolStrLabel, boolStr)
     ::: createFunction(
@@ -966,7 +969,7 @@ object Clib {
     )
 
   /** Subroutine for printing a string. */
-  val _prints = createReadOnlyString(StringFormatLabel, StringFormatSpecifier) ::: createFunction(
+  private val _prints = createReadOnlyString(StringFormatLabel, StringFormatSpecifier) ::: createFunction(
     printsLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -981,7 +984,7 @@ object Clib {
   )
 
   /** Subroutine for printing a pair or an array. */
-  val _printp = createReadOnlyString(PointerFormatLabel, PointerFormatSpecifier) ::: createFunction(
+  private val _printp = createReadOnlyString(PointerFormatLabel, PointerFormatSpecifier) ::: createFunction(
     printpLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -996,7 +999,7 @@ object Clib {
   )
 
   /** Subroutine for printing a newline. */
-  val _println = createReadOnlyString(printlnStrLabel, printlnStr) ::: createFunction(
+  private val _println = createReadOnlyString(printlnStrLabel, printlnStr) ::: createFunction(
     printlnLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -1019,7 +1022,7 @@ object Clib {
   val readcLabel = "_readc"
 
   /** Subroutine for reading an integer. */
-  val _readi = createReadOnlyString(IntReadLabel, IntReadSpecifier) ::: createFunction(
+  private val _readi = createReadOnlyString(IntReadLabel, IntReadSpecifier) ::: createFunction(
     readiLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -1038,7 +1041,7 @@ object Clib {
   )
 
   /** Subroutine for reading an character. */
-  val _readc = createReadOnlyString(CharacterReadLabel, CharacterReadSpecifier) ::: createFunction(
+  private val _readc = createReadOnlyString(CharacterReadLabel, CharacterReadSpecifier) ::: createFunction(
     readcLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -1063,7 +1066,7 @@ object Clib {
   val freepairLabel = "_freepair"
 
   /** Subroutine for exiting the program. */
-  val _exit = createFunction(
+  private val _exit = createFunction(
     exitLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -1073,7 +1076,7 @@ object Clib {
   )
 
   /** Subroutine for allocating memory. Used for pairs and arrays. */
-  val _malloc = createFunction(
+  private val _malloc = createFunction(
     mallocLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -1085,7 +1088,7 @@ object Clib {
   )
 
   /** Subroutine for freeing array memory on the heap. */
-  val _free = createFunction(
+  private val _free = createFunction(
     freeLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -1095,7 +1098,7 @@ object Clib {
   )
 
   /** Subroutine for freeing pair memory on the heap. */
-  val _freepair = createFunction(
+  private val _freepair = createFunction(
     freepairLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
@@ -1107,8 +1110,8 @@ object Clib {
   )
 
   /// ---- ERRORS ----
-  private val outOfMemoryLabel = "_outOfMemory"
-  private val errNullLabel = "_errNull"
+  val outOfMemoryLabel = "_outOfMemory"
+  val errNullLabel = "_errNull"
 
   private val OutOfMemoryStringLabel = ".outOfMemoryString"
   private val NullPairStringLabel = ".nullPairString"
@@ -1117,7 +1120,7 @@ object Clib {
   private val NullPairString = "fatal error: null pair dereferenced or freed\n"
 
   /** Subroutine for an out of memory error. */
-  val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
+  private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
     DefineLabel(outOfMemoryLabel),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
@@ -1129,7 +1132,7 @@ object Clib {
   )
 
   /** Subroutine for a null pair error. */
-  val _errNull = createReadOnlyString(NullPairStringLabel, NullPairString) ::: List(
+  private val _errNull = createReadOnlyString(NullPairStringLabel, NullPairString) ::: List(
     DefineLabel(errNullLabel),
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
@@ -1137,5 +1140,22 @@ object Clib {
     Call(printsLabel),
     Mov(RDI(W8), -1),
     Call(ClibExit)
+  )
+
+  val labelToFunc: Map[Label, List[Instruction]] = Map(
+    printiLabel -> _printi,
+    printcLabel -> _printc,
+    printbLabel -> _printb,
+    printsLabel -> _prints,
+    printpLabel -> _printp,
+    printlnLabel -> _println,
+    readiLabel -> _readi,
+    readcLabel -> _readc,
+    exitLabel -> _exit,
+    mallocLabel -> _malloc,
+    freeLabel -> _free,
+    freepairLabel -> _freepair,
+    outOfMemoryLabel -> _outOfMemory,
+    errNullLabel -> _errNull
   )
 }
