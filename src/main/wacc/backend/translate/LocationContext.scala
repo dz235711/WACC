@@ -139,6 +139,8 @@ class LocationContext {
    * @param params The parameters of the function
    */
   def setUpFunc(params: List[Ident])(using instructionCtx: InstructionContext): Unit =
+    instructionCtx.addInstruction(Comment("Setting up function"))
+
     // 1. push base pointer
     instructionCtx.addInstruction(Push(BasePointer))
 
@@ -180,12 +182,16 @@ class LocationContext {
         addLocation(id, typeToSize(id.getType))
       })
 
+    instructionCtx.addInstruction(Comment("Function set up complete"))
+
   /** Reset stack pointer and pop callee-saved registers from the stack, and set up the return value.
    *
    * @note Run this at the end of a function just before returning.
    * @param retVal The location of the return value
    */
   def cleanUpFunc(retVal: Location)(using instructionCtx: InstructionContext): Unit = {
+    instructionCtx.addInstruction(Comment("Cleaning up function"))
+
     // 1. set return value
     instructionCtx.addInstruction(Mov(ReturnReg, retVal))
 
@@ -200,6 +206,8 @@ class LocationContext {
 
     // 5. return from function
     instructionCtx.addInstruction(Ret(None))
+
+    instructionCtx.addInstruction(Comment("Function clean up complete"))
   }
 
   /** Saves caller registers and moves arguments to their intended registers/on the stack.
@@ -208,6 +216,8 @@ class LocationContext {
    * @param argLocations The temporary locations of the arguments
    */
   def setUpCall(argLocations: List[Location])(using instructionCtx: InstructionContext): Unit = {
+    instructionCtx.addInstruction(Comment("Setting up function call"))
+
     // 1. Save caller registers
     pushLocs(CallerSaved)
 
@@ -238,6 +248,8 @@ class LocationContext {
         case p: Pointer => instructionCtx.addInstruction(Push(p))
       }
     }
+
+    instructionCtx.addInstruction(Comment("Function call set up complete"))
   }
 
   /** Restore caller registers and save result to a location
@@ -246,6 +258,8 @@ class LocationContext {
    * @return The location of the result
    */
   def cleanUpCall()(using instructionCtx: InstructionContext): Location =
+    instructionCtx.addInstruction(Comment("Cleaning up function call"))
+
     // 1. Shift the stack pointer
     instructionCtx.addInstruction(
       Mov(StackPointer, RegImmPointer(BasePointer, PointerSize * (reservedStackLocs + CallerSaved.length))(W64))
@@ -253,6 +267,8 @@ class LocationContext {
 
     // 2. Restore caller registers
     popLocs(CallerSaved)
+
+    instructionCtx.addInstruction(Comment("Function call clean up complete"))
 
     // 3. Return result location
     ReturnReg

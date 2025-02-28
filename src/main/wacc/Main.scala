@@ -93,7 +93,8 @@ def main(args: Array[String]): Unit = {
       // Run the backend
       val assembly = runBackend(program, verbose)
       // Output the assembly file
-      writeFile(path.get.split("/").last, assembly)
+      val filename = path.get.split("/").last.split("\\.").head + ".s"
+      writeFile(filename, assembly)
       exit(0)
     case Left((status, output)) =>
       // Print output msg or errors to output stream
