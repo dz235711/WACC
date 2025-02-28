@@ -62,6 +62,7 @@ class x86Stringifier {
     case Push(src)                      => s"push ${stringifyOperand(src)}"
     case Pop(dest)                      => s"pop ${stringifyOperand(dest)}"
     case Lea(dest, src)                 => s"lea ${stringifyOperand(dest)}, ${{ stringifyPointerArithmetic(src) }}"
+    case Cdq                            => "cdq"
     case DefineLabel(label)             => s"${stringifyOperand(label)}:"
     case Jmp(label)                     => s"jmp ${stringifyOperand(label)}"
     case JmpEqual(label)                => s"je ${stringifyOperand(label)}"

@@ -6,7 +6,7 @@ import org.scalatest.matchers.should.Matchers.*
 class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/function/simple_functions/"
 
-  it should "execute argScopeCanBeShadowed.wacc" taggedAs Backend in  {
+  it should "execute argScopeCanBeShadowed.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "argScopeCanBeShadowed.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 

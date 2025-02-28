@@ -120,6 +120,7 @@ object Mov {
 case class Push(src: Register | Pointer | Immediate) extends Instruction
 case class Pop(dest: Register | Pointer) extends Instruction
 case class Lea(dest: Register, src: Pointer) extends Instruction
+object Cdq extends Instruction
 
 // Control transfer instructions
 case class Call(label: Label) extends Instruction

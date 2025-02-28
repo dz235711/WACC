@@ -61,7 +61,7 @@ sealed class InstructionContext {
    * 
    * @param string The string to add
    */
-  def addString(string: String, label: Label): Unit = 
+  def addString(string: String, label: Label): Unit =
     val p = Pattern.compile("\"|\'|\\\\")
     val m = p.matcher(string)
     val sb = new StringBuffer()
@@ -628,8 +628,10 @@ class Translator {
       // so we need to ensure we don't clobber those registers
       locationCtx.withDivRegisters(
         {
-          // Move the dividend to RAX
+          // Move the dividend to EAX
           instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
+          // Sign extend EAX into RDX
+          instructionCtx.addInstruction(Cdq)
           // Perform the division
           instructionCtx.addInstruction(SignedDiv(modDest))
           // Move the remainder to the destination
@@ -663,8 +665,10 @@ class Translator {
       // so we need to ensure we don't clobber those registers
       locationCtx.withDivRegisters(
         List(RAX(typeToSize(IntType)), RDX(typeToSize(IntType))), {
-          // Move the dividend to RAX
+          // Move the dividend to EAX
           instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
+          // Sign extend EAX into RDX
+          instructionCtx.addInstruction(Cdq)
           // Perform the division
           instructionCtx.addInstruction(SignedDiv(divDest))
           // Move the quotient to the destination
