@@ -234,6 +234,7 @@ class Translator {
       val freeLabel = e.getType match {
         case PairType(_, _) => {
           instructionCtx.addLibraryFunction(Clib.freepairLabel)
+          instructionCtx.addLibraryFunction(Clib.printsLabel)
           instructionCtx.addLibraryFunction(Clib.errNullLabel)
           Clib.freepairLabel
         }
@@ -246,9 +247,10 @@ class Translator {
 
       // Check for null
       unary(
-        e,
-        { l =>
-          // Check for runtime error
+        e, {
+          l =>
+            // Check for runtime error
+            instructionCtx.addLibraryFunction(Clib.printsLabel)
           instructionCtx.addLibraryFunction(Clib.errNullLabel)
           locationCtx.regInstr1(l, { Compare(_, NULL) })
           instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
@@ -537,6 +539,7 @@ class Translator {
       unary(e, { l => instructionCtx.addInstruction(Neg(l)) })
 
       // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
     case Len(e) =>
@@ -573,6 +576,7 @@ class Translator {
       )
 
       // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
@@ -582,6 +586,7 @@ class Translator {
       val modDest = locationCtx.reserveNext(typeToSize(IntType))
 
       // Check for division by zero runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
       locationCtx.regInstr1(
         modDest,
@@ -616,6 +621,7 @@ class Translator {
       val divDest = locationCtx.reserveNext(typeToSize(IntType))
 
       // Check for division by zero runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
       locationCtx.regInstr1(
         divDest,
@@ -648,6 +654,7 @@ class Translator {
       binary(e1, e2, Add.apply)
 
       // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
@@ -655,6 +662,7 @@ class Translator {
       binary(e1, e2, Sub.apply)
 
       // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
@@ -849,6 +857,7 @@ class Translator {
       }
 
       // Check for null pair runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errNullLabel)
       locationCtx.regInstr1(
         pairPtrLoc,
@@ -866,6 +875,7 @@ class Translator {
       }
 
       // Check for null pair runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errNullLabel)
       locationCtx.regInstr1(
         pairPtrLoc,
