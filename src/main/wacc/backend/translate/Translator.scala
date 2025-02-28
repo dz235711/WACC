@@ -320,10 +320,8 @@ class Translator {
         case p: Pointer  => Mov(p, size)
       })
       locationCtx.setUpCall(List(tempSizeLocation))
-      // TODO: clib malloc
+      instructionCtx.addInstruction(Call(Clib.mallocLabel))
       val ptrLoc: Location = locationCtx.cleanUpCall()
-
-      // TODO: runtime error if malloc fails
 
       // Move the pointer to the array to the next available location
       val arrayLoc = locationCtx.reserveNext(W64)
@@ -362,7 +360,7 @@ class Translator {
 
       // Allocate memory for the pair and get the pointer to the pair
       locationCtx.setUpCall(List(tempSizeLocation))
-      // TODO: clib malloc
+      instructionCtx.addInstruction(Call(Clib.mallocLabel))
       val ptrLoc = locationCtx.cleanUpCall()
 
       // Move the pointer to the pair to the next available location
