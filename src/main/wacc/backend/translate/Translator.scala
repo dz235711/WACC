@@ -1073,7 +1073,7 @@ object Clib {
       List(
         Comment("Align stack to 16 bytes for external calls"),
         And(RSP(W64), -16),
-        Compare(RDI(W8), 0),
+        Test(RDI(W8), 1),
         JmpNotEqual(boolBranchTrue),
         Lea(RDX(W64), RegImmPointer(RIP, falseLabel)(W64)),
         Jmp(boolBranchFalse),
