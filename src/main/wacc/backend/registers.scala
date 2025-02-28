@@ -10,6 +10,34 @@ enum Size {
     case W64 => 8
   }
 }
+
+/**  The program counter register. */
+val INSTRUCTION_POINTER = RIP
+
+/** The stack pointer register. */
+val STACK_POINTER = RSP
+
+/** The base pointer register. */
+val BASE_POINTER = RBP
+
+/** The register for the 1st function argument. */
+val ARG_1 = RDI
+
+/** The register for the 2nd function argument. */
+val ARG_2 = RSI
+
+/** The register for the 3rd function argument. */
+val ARG_3 = RDX
+
+/** The register for the return value. */
+val RETURN = RAX
+
+/** Th quotient register for division. */
+val QUOT_REG = RAX
+
+/** The remainder register for division. */
+val REM_REG = RDX
+
 sealed trait Register {
   val width: Size
 }

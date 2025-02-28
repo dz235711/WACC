@@ -133,8 +133,8 @@ class Translator {
     translateStmt(program.body)
 
     // Return 0 from main body
-    translateCtx.addInstruction(Mov(RAX(W64), 0))
-    translateCtx.addInstruction(Pop(RBP(W64)))
+    translateCtx.addInstruction(Mov(RETURN(W64), 0))
+    translateCtx.addInstruction(Pop(BASE_POINTER(W64)))
     translateCtx.addInstruction(Ret(None))
 
     // Translate all functions in the program
@@ -656,15 +656,15 @@ class Translator {
       val dividendDest = locationCtx.reserveNext(typeToSize(IntType))
 
       val resultReg = op match
-        case _: Div => RAX.apply
-        case _: Mod => RDX.apply
+        case _: Div => QUOT_REG.apply
+        case _: Mod => REM_REG.apply
 
       // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
       // so we need to ensure we don't clobber those registers
       locationCtx.withDivRegisters(
-        List(RAX(typeToSize(IntType)), RDX(typeToSize(IntType))), {
+        List(QUOT_REG(typeToSize(IntType)), REM_REG(typeToSize(IntType))), {
           // Move the dividend to EAX
-          instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
+          instructionCtx.addInstruction(Mov(QUOT_REG(typeToSize(IntType)), dividendDest))
           // Sign extend EAX into RDX
           instructionCtx.addInstruction(Cdq)
           // Perform the division
@@ -741,7 +741,7 @@ class Translator {
       val dest = locationCtx.getNext(typeToSize(StringType))
 
       // Load the address of the string into the destination
-      val stringPointer: Pointer = RegImmPointer(RIP, label)(typeToSize(StringType))
+      val stringPointer: Pointer = RegImmPointer(INSTRUCTION_POINTER, label)(typeToSize(StringType))
       locationCtx.regInstr1(dest, { reg => Lea(reg(POINTER_SIZE), stringPointer) })
 
     case PairLiter =>
@@ -1006,11 +1006,11 @@ object Clib {
     */
   private def createFunction(label: Label, body: List[Instruction]): List[Instruction] = List(
     DefineLabel(label),
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64))
+    Push(BASE_POINTER(W64)),
+    Mov(BASE_POINTER(W64), STACK_POINTER(W64))
   ) ::: body ::: List(
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
+    Mov(STACK_POINTER(W64), BASE_POINTER(W64)),
+    Pop(BASE_POINTER(W64)),
     Ret(None)
   )
 
@@ -1054,12 +1054,12 @@ object Clib {
     printiLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Mov(RSI(W32), RDI(W32)),
-      Lea(RDI(W64), RegImmPointer(RIP, IntFormatLabel)(W64)),
-      Mov(RAX(W8), 0),
+      And(STACK_POINTER(W64), -16),
+      Mov(ARG_2(W32), ARG_1(W32)),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, IntFormatLabel)(W64)),
+      Mov(RETURN(W8), 0),
       Call(ClibPrintf),
-      Mov(RDI(W64), 0),
+      Mov(ARG_1(W64), 0),
       Call(ClibFlush)
     )
   )
@@ -1069,12 +1069,12 @@ object Clib {
     printcLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Mov(RSI(W8), RDI(W8)),
-      Lea(RDI(W64), RegImmPointer(RIP, CharacterFormatLabel)(W64)),
-      Mov(RAX(W8), 0),
+      And(STACK_POINTER(W64), -16),
+      Mov(ARG_2(W8), ARG_1(W8)),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, CharacterFormatLabel)(W64)),
+      Mov(RETURN(W8), 0),
       Call(ClibPrintf),
-      Mov(RDI(W64), 0),
+      Mov(ARG_1(W64), 0),
       Call(ClibFlush)
     )
   )
@@ -1089,19 +1089,19 @@ object Clib {
       printbLabel,
       List(
         Comment("Align stack to 16 bytes for external calls"),
-        And(RSP(W64), -16),
-        Test(RDI(W8), 1),
+        And(STACK_POINTER(W64), -16),
+        Test(ARG_1(W8), 1),
         Jmp(NotEqual, boolBranchTrue),
-        Lea(RDX(W64), RegImmPointer(RIP, falseLabel)(W64)),
+        Lea(ARG_3(W64), RegImmPointer(INSTRUCTION_POINTER, falseLabel)(W64)),
         Jmp(NoCond, boolBranchFalse),
         DefineLabel(boolBranchTrue),
-        Lea(RDX(W64), RegImmPointer(RIP, trueLabel)(W64)),
+        Lea(ARG_3(W64), RegImmPointer(INSTRUCTION_POINTER, trueLabel)(W64)),
         DefineLabel(boolBranchFalse),
-        Mov(RSI(W32), RegImmPointer(RDX(W64), -4)(W32)),
-        Lea(RDI(W64), RegImmPointer(RIP, boolStrLabel)(W64)),
-        Mov(RAX(W8), 0),
+        Mov(ARG_2(W32), RegImmPointer(ARG_3(W64), -4)(W32)),
+        Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, boolStrLabel)(W64)),
+        Mov(RETURN(W8), 0),
         Call(ClibPrintf),
-        Mov(RDI(W64), 0),
+        Mov(ARG_1(W64), 0),
         Call(ClibFlush)
       )
     )
@@ -1111,13 +1111,13 @@ object Clib {
     printsLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Mov(RDX(W64), RDI(W64)),
-      Mov(RSI(W32), RegImmPointer(RDI(W64), -4)(W32)),
-      Lea(RDI(W64), RegImmPointer(RIP, StringFormatLabel)(W64)),
-      Mov(RAX(W8), 0),
+      And(STACK_POINTER(W64), -16),
+      Mov(ARG_3(W64), ARG_1(W64)),
+      Mov(ARG_2(W32), RegImmPointer(ARG_1(W64), -4)(W32)),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, StringFormatLabel)(W64)),
+      Mov(RETURN(W8), 0),
       Call(ClibPrintf),
-      Mov(RDI(W64), 0),
+      Mov(ARG_1(W64), 0),
       Call(ClibFlush)
     )
   )
@@ -1127,12 +1127,12 @@ object Clib {
     printpLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Mov(RSI(W64), RDI(W64)),
-      Lea(RDI(W64), RegImmPointer(RIP, PointerFormatLabel)(W64)),
-      Mov(RAX(W8), 0),
+      And(STACK_POINTER(W64), -16),
+      Mov(ARG_2(W64), ARG_1(W64)),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, PointerFormatLabel)(W64)),
+      Mov(RETURN(W8), 0),
       Call(ClibPrintf),
-      Mov(RDI(W64), 0),
+      Mov(ARG_1(W64), 0),
       Call(ClibFlush)
     )
   )
@@ -1142,10 +1142,10 @@ object Clib {
     printlnLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Lea(RDI(W64), RegImmPointer(RIP, printlnStrLabel)(W64)),
+      And(STACK_POINTER(W64), -16),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, printlnStrLabel)(W64)),
       Call(ClibPuts),
-      Mov(RDI(W64), 0),
+      Mov(ARG_1(W64), 0),
       Call(ClibFlush)
     )
   )
@@ -1165,17 +1165,17 @@ object Clib {
     readiLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
+      And(STACK_POINTER(W64), -16),
       Comment("Allocate space on the stack to store the read value"),
-      Sub(RSP(W64), 16),
+      Sub(STACK_POINTER(W64), 16),
       Comment("Store original value in case of EOF"),
-      Mov(RegPointer(RSP(W64))(W32), RDI(W32)),
-      Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
-      Lea(RDI(W64), RegImmPointer(RIP, IntReadLabel)(W64)),
-      Mov(RAX(W8), 0),
+      Mov(RegPointer(STACK_POINTER(W64))(W32), ARG_1(W32)),
+      Lea(ARG_2(W64), RegPointer(STACK_POINTER(W64))(W64)),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, IntReadLabel)(W64)),
+      Mov(RETURN(W8), 0),
       Call(ClibScanf),
-      Mov(RAX(W32), RegPointer(RSP(W64))(W32)),
-      Add(RSP(W64), 16)
+      Mov(RETURN(W32), RegPointer(STACK_POINTER(W64))(W32)),
+      Add(STACK_POINTER(W64), 16)
     )
   )
 
@@ -1184,17 +1184,17 @@ object Clib {
     readcLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
+      And(STACK_POINTER(W64), -16),
       Comment("Allocate space on the stack to store the read value"),
-      Sub(RSP(W64), 16),
+      Sub(STACK_POINTER(W64), 16),
       Comment("Store original value in case of EOF"),
-      Mov(RegPointer(RSP(W64))(W8), RDI(W8)),
-      Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
-      Lea(RDI(W64), RegImmPointer(RIP, CharacterReadLabel)(W64)),
-      Mov(RAX(W8), 0),
+      Mov(RegPointer(STACK_POINTER(W64))(W8), ARG_1(W8)),
+      Lea(ARG_2(W64), RegPointer(STACK_POINTER(W64))(W64)),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, CharacterReadLabel)(W64)),
+      Mov(RETURN(W8), 0),
       Call(ClibScanf),
-      Mov(RAX(W8), RegPointer(RSP(W64))(W8)),
-      Add(RSP(W64), 16)
+      Mov(RETURN(W8), RegPointer(STACK_POINTER(W64))(W8)),
+      Add(STACK_POINTER(W64), 16)
     )
   )
 
@@ -1224,10 +1224,10 @@ object Clib {
   private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
     DefineLabel(outOfMemoryLabel),
     Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, OutOfMemoryStringLabel)(W64)),
+    And(STACK_POINTER(W64), -16),
+    Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, OutOfMemoryStringLabel)(W64)),
     Call(printsLabel),
-    Mov(RDI(W8), -1),
+    Mov(ARG_1(W8), -1),
     Call(ClibExit),
     Ret(None)
   )
@@ -1236,10 +1236,10 @@ object Clib {
   private val _errNull = createReadOnlyString(NullPairStringLabel, NullPairString) ::: List(
     DefineLabel(errNullLabel),
     Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, NullPairStringLabel)(W64)),
+    And(STACK_POINTER(W64), -16),
+    Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, NullPairStringLabel)(W64)),
     Call(printsLabel),
-    Mov(RDI(W8), -1),
+    Mov(ARG_1(W8), -1),
     Call(ClibExit)
   )
 
@@ -1247,10 +1247,10 @@ object Clib {
   private val _errDivZero = createReadOnlyString(DivZeroStringLabel, DivZeroString) ::: List(
     DefineLabel(errDivZeroLabel),
     Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, DivZeroStringLabel)(W64)),
+    And(STACK_POINTER(W64), -16),
+    Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, DivZeroStringLabel)(W64)),
     Call(printsLabel),
-    Mov(RDI(W8), -1),
+    Mov(ARG_1(W8), -1),
     Call(ClibExit)
   )
 
@@ -1258,10 +1258,10 @@ object Clib {
   private val _errOverflow = createReadOnlyString(OverflowStringLabel, OverflowString) ::: List(
     DefineLabel(errOverflowLabel),
     Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, OverflowStringLabel)(W64)),
+    And(STACK_POINTER(W64), -16),
+    Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, OverflowStringLabel)(W64)),
     Call(printsLabel),
-    Mov(RDI(W8), -1),
+    Mov(ARG_1(W8), -1),
     Call(ClibExit)
   )
 
@@ -1269,13 +1269,13 @@ object Clib {
   private val _errBadChar = createReadOnlyString(BadCharStringLabel, BadCharString) ::: List(
     DefineLabel(errBadCharLabel),
     Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, BadCharStringLabel)(W64)),
-    Mov(RAX(W8), 0),
+    And(STACK_POINTER(W64), -16),
+    Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, BadCharStringLabel)(W64)),
+    Mov(RETURN(W8), 0),
     Call(ClibPrintf),
-    Mov(RDI(W64), 0),
+    Mov(ARG_1(W64), 0),
     Call(ClibFlush),
-    Mov(RDI(W8), -1),
+    Mov(ARG_1(W8), -1),
     Call(ClibExit)
   )
 
@@ -1283,13 +1283,13 @@ object Clib {
   private val _errArrBounds = createReadOnlyString(ArrBoundsStringLabel, ArrBoundsString) ::: List(
     DefineLabel(errArrBoundsLabel),
     Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, ArrBoundsStringLabel)(W64)),
-    Mov(RAX(W8), 0),
+    And(STACK_POINTER(W64), -16),
+    Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, ArrBoundsStringLabel)(W64)),
+    Mov(RETURN(W8), 0),
     Call(ClibPrintf),
-    Mov(RDI(W64), 0),
+    Mov(ARG_1(W64), 0),
     Call(ClibFlush),
-    Mov(RDI(W8), -1),
+    Mov(ARG_1(W8), -1),
     Call(ClibExit)
   )
 
@@ -1304,7 +1304,7 @@ object Clib {
     exitLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
+      And(STACK_POINTER(W64), -16),
       Call(ClibExit)
     )
   )
@@ -1314,9 +1314,9 @@ object Clib {
     mallocLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
+      And(STACK_POINTER(W64), -16),
       Call(ClibMalloc),
-      Compare(RAX(W64), 0),
+      Compare(RETURN(W64), 0),
       Jmp(Equal, outOfMemoryLabel)
     )
   )
@@ -1326,7 +1326,7 @@ object Clib {
     freeLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
+      And(STACK_POINTER(W64), -16),
       Call(ClibFree)
     )
   )
@@ -1336,8 +1336,8 @@ object Clib {
     freepairLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Compare(RDI(W64), 0),
+      And(STACK_POINTER(W64), -16),
+      Compare(ARG_1(W64), 0),
       Jmp(Equal, errNullLabel),
       Call(ClibFree)
     )
