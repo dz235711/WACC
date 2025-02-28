@@ -938,8 +938,8 @@ class Translator {
       instructionCtx: InstructionContext,
       locationCtx: LocationContext
   ): Unit = {
-    val dest = locationCtx.reserveNext(typeToSize(e1.getType))
     translateExpr(e1)
+    val dest = locationCtx.reserveNext(typeToSize(e1.getType))
     if check1.isDefined then check1.get(dest)
     val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
     if check2.isDefined then check2.get(dest, e2Dest)
