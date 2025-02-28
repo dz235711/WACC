@@ -2,9 +2,7 @@ package wacc
 
 type Immediate = Int
 
-sealed trait Pointer {
-  val size: Size
-}
+sealed trait Pointer extends Sizeable
 
 /** Pointer for `[reg]` */
 case class RegPointer(reg: Register)(val size: Size) extends Pointer
