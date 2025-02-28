@@ -7,11 +7,13 @@ import TypedAST.{
   Not as TypedNot,
   Or as TypedOr,
   Sub as TypedSub,
+  Greater as TypedGreater,
   *
 }
 import wacc.RenamedAST.KnownType.{ArrayType, BoolType, CharType, IntType, PairType, StringType}
 import wacc.RenamedAST.{?, KnownType, SemType}
 import wacc.Size.*
+import wacc.Condition.*
 
 import java.rmi.UnexpectedException
 import scala.collection.mutable
@@ -281,7 +283,7 @@ class Translator {
           instructionCtx.addLibraryFunction(Clib.printsLabel)
           instructionCtx.addLibraryFunction(Clib.errNullLabel)
           locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), NULL) })
-          instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
+          instructionCtx.addInstruction(Jmp(Equal, Clib.errNullLabel))
 
           // Call free
           locationCtx.setUpCall(List(l))
@@ -406,9 +408,9 @@ class Translator {
     translateExpr(cond)
 
     instructionCtx.addInstruction(Test(dest, TRUE))
-    instructionCtx.addInstruction(JmpZero(falseLabel))
+    instructionCtx.addInstruction(Jmp(Zero, falseLabel))
     translateStmt(trueBody)
-    instructionCtx.addInstruction(Jmp(afterTrueLabel))
+    instructionCtx.addInstruction(Jmp(NoCond, afterTrueLabel))
     instructionCtx.addInstruction(DefineLabel(falseLabel))
 
   /** Translates an RValue to and stores the result in the next available location at the time of invocation.
@@ -584,7 +586,7 @@ class Translator {
       // Check for under/overflow runtime error
       instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
-      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
+      instructionCtx.addInstruction(Jmp(Overflow, Clib.errOverflowLabel))
     case Len(e) =>
       val lenDest = locationCtx.reserveNext(typeToSize(IntType)) // Length is stored in a 4-byte location here
       e match
@@ -611,9 +613,9 @@ class Translator {
         e,
         { l =>
           locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), MIN_CHAR) })
-          instructionCtx.addInstruction(JmpLessEqual(Clib.errBadCharLabel))
+          instructionCtx.addInstruction(Jmp(LessEqual, Clib.errBadCharLabel))
           locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), MAX_CHAR) })
-          instructionCtx.addInstruction(JmpGreaterEqual(Clib.errBadCharLabel))
+          instructionCtx.addInstruction(Jmp(GreaterEqual, Clib.errBadCharLabel))
           locationCtx.movLocLoc(chrDest, l)
         }
       )
@@ -629,7 +631,7 @@ class Translator {
       // Check for under/overflow runtime error
       instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
-      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
+      instructionCtx.addInstruction(Jmp(Overflow, Clib.errOverflowLabel))
 
     case Mod(dividendExp, divisorExp) =>
       // Move the divisor to the eventual destination of the result (first available location)
@@ -643,7 +645,7 @@ class Translator {
         modDest,
         { reg => Compare(reg(typeToSize(IntType)), 0) }
       )
-      instructionCtx.addInstruction(JmpEqual(Clib.errDivZeroLabel))
+      instructionCtx.addInstruction(Jmp(Equal, Clib.errDivZeroLabel))
 
       // Move the dividend to the next available location
       translateExpr(dividendExp)
@@ -680,7 +682,7 @@ class Translator {
         divDest,
         { reg => Compare(reg(typeToSize(IntType)), 0) }
       )
-      instructionCtx.addInstruction(JmpEqual(Clib.errDivZeroLabel))
+      instructionCtx.addInstruction(Jmp(Equal, Clib.errDivZeroLabel))
 
       // Move the dividend to the next available location
       translateExpr(dividendExp)
@@ -711,7 +713,7 @@ class Translator {
       // Check for under/overflow runtime error
       instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
-      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
+      instructionCtx.addInstruction(Jmp(Overflow, Clib.errOverflowLabel))
 
     case TypedSub(e1, e2) =>
       binary(e1, e2, Sub.apply)
@@ -719,9 +721,9 @@ class Translator {
       // Check for under/overflow runtime error
       instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
-      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
+      instructionCtx.addInstruction(Jmp(Overflow, Clib.errOverflowLabel))
 
-    case Greater(e1, e2) => cmpExp(e1, e2, SetGreater.apply)
+    case TypedGreater(e1, e2) => cmpExp(e1, e2, SetGreater.apply)
 
     case GreaterEq(e1, e2) => cmpExp(e1, e2, SetGreaterEqual.apply)
 
@@ -872,7 +874,7 @@ class Translator {
               case r: Register => Compare(r, MIN_ARR_SIZE)
               case p: Pointer  => Compare(p, MIN_ARR_SIZE)
             })
-            instructionCtx.addInstruction(JmpLess(Clib.errArrBoundsLabel))
+            instructionCtx.addInstruction(Jmp(Less, (Clib.errArrBoundsLabel)))
             locationCtx.regInstr2(
               indexDest,
               baseDest,
@@ -880,7 +882,7 @@ class Translator {
                 Compare(indexReg(typeToSize(e.getType)), RegPointer(sizeReg(POINTER_SIZE))(typeToSize(IntType)))
               }
             )
-            instructionCtx.addInstruction(JmpGreaterEqual(Clib.errArrBoundsLabel))
+            instructionCtx.addInstruction(Jmp(GreaterEqual, Clib.errArrBoundsLabel))
 
             // get the size of the type (for scaling)
             val tySize = typeToSize(nextTy).toBytes
@@ -920,7 +922,7 @@ class Translator {
         case r: Register => instructionCtx.addInstruction(Compare(r, NULL))
         case p: Pointer  => instructionCtx.addInstruction(Compare(p, NULL))
       }
-      instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
+      instructionCtx.addInstruction(Jmp(Equal, Clib.errNullLabel))
 
       pairPtrLoc
 
@@ -938,7 +940,7 @@ class Translator {
         case r: Register => instructionCtx.addInstruction(Compare(r, NULL))
         case p: Pointer  => instructionCtx.addInstruction(Compare(p, NULL))
       }
-      instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
+      instructionCtx.addInstruction(Jmp(Equal, Clib.errNullLabel))
 
       // Calculate the location of the second element
       val sndDest = locationCtx.getNext(typeToSize(PairType(?, ty)))
@@ -1118,9 +1120,9 @@ object Clib {
         Comment("Align stack to 16 bytes for external calls"),
         And(RSP(W64), -16),
         Test(RDI(W8), 1),
-        JmpNotEqual(boolBranchTrue),
+        Jmp(NotEqual, boolBranchTrue),
         Lea(RDX(W64), RegImmPointer(RIP, falseLabel)(W64)),
-        Jmp(boolBranchFalse),
+        Jmp(NoCond, boolBranchFalse),
         DefineLabel(boolBranchTrue),
         Lea(RDX(W64), RegImmPointer(RIP, trueLabel)(W64)),
         DefineLabel(boolBranchFalse),
@@ -1344,7 +1346,7 @@ object Clib {
       And(RSP(W64), -16),
       Call(ClibMalloc),
       Compare(RAX(W64), 0),
-      JmpEqual(outOfMemoryLabel)
+      Jmp(Equal, outOfMemoryLabel)
     )
   )
 
@@ -1365,7 +1367,7 @@ object Clib {
       Comment("Align stack to 16 bytes for external calls"),
       And(RSP(W64), -16),
       Compare(RDI(W64), 0),
-      JmpEqual(errNullLabel),
+      Jmp(Equal, errNullLabel),
       Call(ClibFree)
     )
   )

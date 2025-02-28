@@ -80,28 +80,35 @@ object Compare {
 }
 
 // Jump instructions
+enum Condition {
+  case NoCond, Equal, NotEqual, Greater, GreaterEqual, Less, LessEqual, Zero, NotZero, Carry, NotCarry, Overflow,
+    NotOverflow,
+    Sign, NotSign, Parity, NotParity, Above, AboveEqual, Below, BelowEqual
+}
+
 case class DefineLabel(label: Label) extends Instruction
-case class Jmp(label: Label) extends Instruction
-case class JmpEqual(label: Label) extends Instruction
-case class JmpNotEqual(label: Label) extends Instruction
-case class JmpGreater(label: Label) extends Instruction
-case class JmpGreaterEqual(label: Label) extends Instruction
-case class JmpLess(label: Label) extends Instruction
-case class JmpLessEqual(label: Label) extends Instruction
-case class JmpZero(label: Label) extends Instruction
-case class JmpNotZero(label: Label) extends Instruction
-case class JmpCarry(label: Label) extends Instruction
-case class JmpNotCarry(label: Label) extends Instruction
-case class JmpOverflow(label: Label) extends Instruction
-case class JmpNotOverflow(label: Label) extends Instruction
-case class JmpSign(label: Label) extends Instruction
-case class JmpNotSign(label: Label) extends Instruction
-case class JmpParity(label: Label) extends Instruction
-case class JmpNotParity(label: Label) extends Instruction
-case class JmpAbove(label: Label) extends Instruction
-case class JmpAboveEqual(label: Label) extends Instruction
-case class JmpBelow(label: Label) extends Instruction
-case class JmpBelowEqual(label: Label) extends Instruction
+case class Jmp(cond: Condition, label: Label) extends Instruction
+
+// case class JmpEqual(label: Label) extends Instruction
+// case class JmpNotEqual(label: Label) extends Instruction
+// case class JmpGreater(label: Label) extends Instruction
+// case class JmpGreaterEqual(label: Label) extends Instruction
+// case class JmpLess(label: Label) extends Instruction
+// case class JmpLessEqual(label: Label) extends Instruction
+// case class JmpZero(label: Label) extends Instruction
+// case class JmpNotZero(label: Label) extends Instruction
+// case class JmpCarry(label: Label) extends Instruction
+// case class JmpNotCarry(label: Label) extends Instruction
+// case class JmpOverflow(label: Label) extends Instruction
+// case class JmpNotOverflow(label: Label) extends Instruction
+// case class JmpSign(label: Label) extends Instruction
+// case class JmpNotSign(label: Label) extends Instruction
+// case class JmpParity(label: Label) extends Instruction
+// case class JmpNotParity(label: Label) extends Instruction
+// case class JmpAbove(label: Label) extends Instruction
+// case class JmpAboveEqual(label: Label) extends Instruction
+// case class JmpBelow(label: Label) extends Instruction
+// case class JmpBelowEqual(label: Label) extends Instruction
 
 // Byte set Instructions
 case class SetGreater(dest: Register | Pointer) extends Instruction
