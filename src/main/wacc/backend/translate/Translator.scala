@@ -86,6 +86,15 @@ class Translator {
   /** The value of FALSE */
   private val FALSE = 0
 
+  /** The minimum value of a char */
+  private val MIN_CHAR = 0
+
+  /** The maximum value of a char */
+  private val MAX_CHAR = 127
+
+  /** The minimum value for an array to be indexed */
+  private val MIN_ARR_SIZE = 0
+
   /** The label for a user-defined function */
   private val FUNCTION_LABEL = "wacc_func_"
 
@@ -242,7 +251,10 @@ class Translator {
       unary(
         e,
         { l =>
+          // Check for runtime error
+          instructionCtx.addLibraryFunction(Clib.errNullLabel)
           locationCtx.regInstr1(l, { Compare(_, NULL) })
+          instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
           // Call free
           locationCtx.setUpCall(List(l))
@@ -513,8 +525,12 @@ class Translator {
       expr: TypedAST.Expr
   )(using instructionCtx: InstructionContext, locationCtx: LocationContext): Unit = expr match {
     case TypedNot(e) => unary(e, { l => instructionCtx.addInstruction(Not(l)) })
-    case Negate(e)   => unary(e, { l => instructionCtx.addInstruction(Neg(l)) })
+    case Negate(e) =>
+      unary(e, { l => instructionCtx.addInstruction(Neg(l)) })
 
+      // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
+      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
     case Len(e) =>
       val lenDest =
         locationCtx.reserveNext(typeToSize(IntType)) // we want to move the size of the array to this location
@@ -527,8 +543,18 @@ class Translator {
       locationCtx.unreserveLast()
 
     case Chr(e) =>
+      instructionCtx.addLibraryFunction(Clib.errBadCharLabel)
       val chrDest = locationCtx.reserveNext(typeToSize(CharType))
-      unary(e, { l => locationCtx.movLocLoc(chrDest, l) })
+      unary(
+        e,
+        { l =>
+          locationCtx.regInstr1(l, { reg => Compare(reg, MIN_CHAR) })
+          instructionCtx.addInstruction(JmpLessEqual(Clib.errBadCharLabel))
+          locationCtx.regInstr1(l, { reg => Compare(reg, MAX_CHAR) })
+          instructionCtx.addInstruction(JmpGreaterEqual(Clib.errBadCharLabel))
+          locationCtx.movLocLoc(chrDest, l)
+        }
+      )
       locationCtx.unreserveLast()
 
     case Mult(e1, e2) =>
@@ -536,13 +562,24 @@ class Translator {
         e1,
         e2,
         { (regOp1, locOp2) => SignedMul(Some(regOp1), locOp2, None) }
-      ) // TODO: runtime error if over/underflow
+      )
+
+      // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
+      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
     case Mod(dividendExp, divisorExp) =>
       // Move the divisor to the eventual destination of the result (first available location)
       translateExpr(divisorExp)
       val modDest = locationCtx.reserveNext(typeToSize(IntType))
-      // TODO: runtime error if divide by 0
+
+      // Check for division by zero runtime error
+      instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
+      locationCtx.regInstr1(
+        modDest,
+        { reg => Compare(reg, 0) }
+      )
+      instructionCtx.addInstruction(JmpEqual(Clib.errDivZeroLabel))
 
       // Move the dividend to the next available location
       translateExpr(dividendExp)
@@ -551,7 +588,7 @@ class Translator {
       // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
       // so we need to ensure we don't clobber those registers
       locationCtx.withDivRegisters(
-        List(RAX(typeToSize(IntType)), RDX(typeToSize(IntType))), {
+        {
           // Move the dividend to RAX
           instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
           // Perform the division
@@ -569,7 +606,14 @@ class Translator {
       // Move the divisor to the eventual destination of the result (first available location)
       translateExpr(divisorExp)
       val divDest = locationCtx.reserveNext(typeToSize(IntType))
-      // TODO: runtime error if divide by 0
+
+      // Check for division by zero runtime error
+      instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
+      locationCtx.regInstr1(
+        divDest,
+        { reg => Compare(reg, 0) }
+      )
+      instructionCtx.addInstruction(JmpEqual(Clib.errDivZeroLabel))
 
       // Move the dividend to the next available location
       translateExpr(dividendExp)
@@ -592,9 +636,19 @@ class Translator {
       locationCtx.unreserveLast()
       locationCtx.unreserveLast()
 
-    case TypedAdd(e1, e2) => binary(e1, e2, Add.apply) // TODO: runtime error if over/underflow
+    case TypedAdd(e1, e2) =>
+      binary(e1, e2, Add.apply)
 
-    case TypedSub(e1, e2) => binary(e1, e2, Sub.apply) // TODO: runtime error if over/underflow
+      // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
+      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
+
+    case TypedSub(e1, e2) =>
+      binary(e1, e2, Sub.apply)
+
+      // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
+      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
     case Greater(e1, e2) => cmpExp(e1, e2, SetGreater.apply)
 
@@ -725,6 +779,8 @@ class Translator {
       val baseLoc = locationCtx.getLocation(v)
       locationCtx.movLocLoc(baseDest, baseLoc)
 
+      instructionCtx.addLibraryFunction(Clib.errArrBoundsLabel)
+
       // Calculate the final location
       es.foldLeft(v.getType) { (tyAcc, e) =>
         tyAcc match {
@@ -733,7 +789,18 @@ class Translator {
             translateExpr(e)
             val indexDest = locationCtx.getNext(typeToSize(e.getType))
 
-            // TODO: runtime error if index out of bounds
+            // Check if the index is out of bounds runtime error
+            instructionCtx.addInstruction(indexDest match {
+              case r: Register => Compare(r, MIN_ARR_SIZE)
+              case p: Pointer  => Compare(p, MIN_ARR_SIZE)
+            })
+            instructionCtx.addInstruction(JmpLess(Clib.errArrBoundsLabel))
+            locationCtx.regInstr2(
+              indexDest,
+              baseDest,
+              { (indexReg, sizeReg) => Compare(indexReg, RegPointer(sizeReg)(typeToSize(IntType))) }
+            )
+            instructionCtx.addInstruction(JmpGreaterEqual(Clib.errArrBoundsLabel))
 
             // get the size of the type (for scaling)
             val tySize = typeToSize(nextTy).toBytes
@@ -762,7 +829,14 @@ class Translator {
         case id: Ident     => locationCtx.getLocation(id)
         case h: HeapLValue => getHeapLocation(h)
       }
-      // TODO: runtime error if null
+
+      // Check for null pair runtime error
+      instructionCtx.addLibraryFunction(Clib.errNullLabel)
+      locationCtx.regInstr1(
+        pairPtrLoc,
+        { reg => Compare(RegPointer(reg)(POINTER_SIZE), NULL) }
+      )
+      instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
       pairPtrLoc
 
@@ -772,7 +846,14 @@ class Translator {
         case id: Ident     => locationCtx.getLocation(id)
         case h: HeapLValue => getHeapLocation(h)
       }
-      // TODO: runtime error if null
+
+      // Check for null pair runtime error
+      instructionCtx.addLibraryFunction(Clib.errNullLabel)
+      locationCtx.regInstr1(
+        pairPtrLoc,
+        { reg => Compare(RegPointer(reg)(POINTER_SIZE), NULL) }
+      )
+      instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
       // Calculate the location of the second element
       val sndDest = locationCtx.getNext(typeToSize(PairType(?, ty)))
@@ -1112,12 +1193,24 @@ object Clib {
   /// ---- ERRORS ----
   val outOfMemoryLabel = "_outOfMemory"
   val errNullLabel = "_errNull"
+  val errDivZeroLabel = "_errDivZero"
+  val errOverflowLabel = "_errOverflow"
+  val errBadCharLabel = "_errBadChar"
+  val errArrBoundsLabel = "_errArrBounds"
 
   private val OutOfMemoryStringLabel = ".outOfMemoryString"
   private val NullPairStringLabel = ".nullPairString"
+  private val DivZeroStringLabel = ".divZeroString"
+  private val OverflowStringLabel = ".overflowString"
+  private val BadCharStringLabel = ".badCharString"
+  private val ArrBoundsStringLabel = ".arrBoundsString"
 
   private val OutOfMemoryString = "fatal error: out of memory\n"
   private val NullPairString = "fatal error: null pair dereferenced or freed\n"
+  private val DivZeroString = "fatal error: division or modulo by zero\n"
+  private val OverflowString = "fatal error: integer overflow or underflow occurred\n"
+  private val BadCharString = "fatal error: int %d is not ascii character 0-127\n"
+  private val ArrBoundsString = "fatal error: array index out of bounds\n"
 
   /** Subroutine for an out of memory error. */
   private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
@@ -1142,6 +1235,56 @@ object Clib {
     Call(ClibExit)
   )
 
+  /** Subroutine for a division by zero error. */
+  private val _errDivZero = createReadOnlyString(DivZeroStringLabel, DivZeroString) ::: List(
+    DefineLabel(errDivZeroLabel),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, DivZeroStringLabel)(W64)),
+    Call(printsLabel),
+    Mov(RDI(W8), -1),
+    Call(ClibExit)
+  )
+
+  /** Subroutine for an overflow error. */
+  private val _errOverflow = createReadOnlyString(OverflowStringLabel, OverflowString) ::: List(
+    DefineLabel(errOverflowLabel),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, OverflowStringLabel)(W64)),
+    Call(printsLabel),
+    Mov(RDI(W8), -1),
+    Call(ClibExit)
+  )
+
+  /** Subroutine for a bad character error. */
+  private val _errBadChar = createReadOnlyString(BadCharStringLabel, BadCharString) ::: List(
+    DefineLabel(errBadCharLabel),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, BadCharStringLabel)(W64)),
+    Mov(RAX(W8), 0),
+    Call(ClibPrintf),
+    Mov(RDI(W64), 0),
+    Call(ClibFlush),
+    Mov(RDI(W8), -1),
+    Call(ClibExit)
+  )
+
+  /** Subroutine for an array bounds error. */
+  private val _errArrBounds = createReadOnlyString(ArrBoundsStringLabel, ArrBoundsString) ::: List(
+    DefineLabel(errArrBoundsLabel),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, ArrBoundsStringLabel)(W64)),
+    Mov(RAX(W8), 0),
+    Call(ClibPrintf),
+    Mov(RDI(W64), 0),
+    Call(ClibFlush),
+    Mov(RDI(W8), -1),
+    Call(ClibExit)
+  )
+
   val labelToFunc: Map[Label, List[Instruction]] = Map(
     printiLabel -> _printi,
     printcLabel -> _printc,
@@ -1156,6 +1299,10 @@ object Clib {
     freeLabel -> _free,
     freepairLabel -> _freepair,
     outOfMemoryLabel -> _outOfMemory,
-    errNullLabel -> _errNull
+    errNullLabel -> _errNull,
+    errDivZeroLabel -> _errDivZero,
+    errOverflowLabel -> _errOverflow,
+    errBadCharLabel -> _errBadChar,
+    errArrBoundsLabel -> _errArrBounds
   )
 }
