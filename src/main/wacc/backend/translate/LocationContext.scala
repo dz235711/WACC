@@ -195,7 +195,10 @@ class LocationContext {
     // 1. set return value
     instructionCtx.addInstruction(
       Mov(
-        ReturnReg(retVal.size),
+        ReturnReg(retVal match {
+          case r: Register => r.width
+          case p: Pointer  => p.size
+        }),
         retVal
       )
     )
@@ -233,9 +236,9 @@ class LocationContext {
           if (CallerSaved.contains(r))
             // If the location is a caller-saved register, it is now in the stack
             val newStackLoc =
-              RegImmPointer(StackPointer, PointerSize * (CallerSaved.length - CallerSaved.indexOf(r)))(r.size)
-            instructionCtx.addInstruction(Mov(argReg(r.size), newStackLoc))
-          else instructionCtx.addInstruction(Mov(argReg(r.size), r))
+              RegImmPointer(StackPointer, PointerSize * (CallerSaved.length - CallerSaved.indexOf(r)))(r.width)
+            instructionCtx.addInstruction(Mov(argReg(r.width), newStackLoc))
+          else instructionCtx.addInstruction(Mov(argReg(r.width), r))
         case p: Pointer => instructionCtx.addInstruction(Mov(argReg(p.size), p))
       }
     }
@@ -247,7 +250,7 @@ class LocationContext {
           if (CallerSaved.contains(r))
             // If the location is a caller-saved register, it is now in the stack
             val newStackLoc =
-              RegImmPointer(StackPointer, PointerSize * (CallerSaved.length + index - CallerSaved.indexOf(r)))(r.size)
+              RegImmPointer(StackPointer, PointerSize * (CallerSaved.length + index - CallerSaved.indexOf(r)))(r.width)
             instructionCtx.addInstruction(Push(newStackLoc))
           else instructionCtx.addInstruction(Push(r))
         case p: Pointer => instructionCtx.addInstruction(Push(p))
@@ -299,7 +302,10 @@ class LocationContext {
    */
   def regInstr1(loc1: Location, op: (Size => Register) => Instruction)(using instructionCtx: InstructionContext): Unit =
     val emptyReg = EmptyRegs.head
-    val loc1Size = loc1.size
+    val loc1Size = loc1 match {
+      case r: Register => r.width
+      case p: Pointer  => p.size
+    }
 
     // Move the location to a register, perform the operation, then move the result back
     instructionCtx.addInstruction(Mov(emptyReg(loc1Size), loc1))
@@ -319,11 +325,17 @@ class LocationContext {
   def regInstr2(loc1: Location, loc2: Location, op: (Size => Register, Size => Register) => Instruction)(using
       instructionCtx: InstructionContext
   ): Unit =
-    val emptyReg1 = EmptyRegs.last
+    val emptyReg1 = EmptyRegs.head
     val emptyReg2 = EmptyRegs.last
 
-    val loc1Size = loc1.size
-    val loc2Size = loc2.size
+    val loc1Size = loc1 match {
+      case r: Register => r.width
+      case p: Pointer  => p.size
+    }
+    val loc2Size = loc2 match {
+      case r: Register => r.width
+      case p: Pointer  => p.size
+    }
 
     // Move the locations to registers, perform the operation, then move the results back
     instructionCtx.addInstruction(Mov(emptyReg1(loc1Size), loc1))
