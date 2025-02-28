@@ -800,26 +800,26 @@ object Clib {
   private val ClibPrintf = "printf@plt"
   private val ClibPuts = "puts@plt"
   private val ClibScanf = "scanf@plt"
-  
+
   // ---- PRINT FUNCTIONS ----
   private val IntFormatLabel = ".intFormat"
   private val CharacterFormatLabel = ".charFormat"
   private val StringFormatLabel = ".stringFormat"
   private val PointerFormatLabel = ".pointerFormat"
   private val printlnStrLabel = ".printlnStr"
-  
+
   private val IntFormatSpecifier = "%d"
   private val CharacterFormatSpecifier = "%c"
   private val StringFormatSpecifier = "%.*s"
   private val PointerFormatSpecifier = "%p"
   private val printlnStr = ""
-  
+
   val printiLabel = "_printi"
   val printcLabel = "_printc"
   val printsLabel = "_prints"
   val printpLabel = "_printp"
   val printlnLabel = "_println"
-  
+
   /** Subroutine for printing an integer. */
   val _printi = createReadOnlyString(IntFormatLabel, IntFormatSpecifier) ::: createFunction(
     printiLabel,
@@ -897,7 +897,7 @@ object Clib {
   // ---- READ FUNCTIONS ----
   private val IntReadLabel = ".intRead"
   private val CharacterReadLabel = ".charRead"
-  
+
   private val IntReadSpecifier = "%d"
   private val CharacterReadSpecifier = " %c"
 
@@ -942,7 +942,7 @@ object Clib {
     )
   )
 
-  // ---- EXIT AND HEAP FUNCTIONS ----  
+  // ---- EXIT AND HEAP FUNCTIONS ----
   val exitLabel = "_exit"
   val mallocLabel = "_malloc"
   val freeLabel = "_free"
@@ -992,11 +992,10 @@ object Clib {
     )
   )
 
-
   /// ---- ERRORS ----
   private val outOfMemoryLabel = "_outOfMemory"
   private val errNullLabel = "_errNull"
-  
+
   private val OutOfMemoryStringLabel = ".outOfMemoryString"
   private val NullPairStringLabel = ".nullPairString"
 
