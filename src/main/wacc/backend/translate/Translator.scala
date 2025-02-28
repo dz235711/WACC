@@ -642,10 +642,10 @@ class Translator {
       instructionCtx: InstructionContext,
       locationCtx: LocationContext
   ): Unit =
-    val dest = locationCtx.getNext(typeToSize(e1.getType))
     translateExpr(e1)
-    val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
+    val dest = locationCtx.reserveNext(typeToSize(e1.getType))
     translateExpr(e2)
+    val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
     locationCtx.regInstr1(dest, { reg => Compare(reg, e2Dest) })
     instructionCtx.addInstruction(setter(dest))
     locationCtx.unreserveLast()

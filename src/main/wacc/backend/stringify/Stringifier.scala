@@ -19,8 +19,14 @@ class x86Stringifier {
       GlobalMain,
       SectionReadOnlyData
     ) ++
-      strings
-        .map { case (label, string) => Asciz(s"$label: $string") } ++
+      strings.flatMap((string, label) => {
+        List(
+          Comment(s"String literal $label is $string"),
+          IntData(string.length),
+          DefineLabel(label),
+          Asciz(string)
+        )
+      }) ++
       List(Text, DefineLabel("main")) ++
       instructions)
       .map(instr => {
@@ -100,7 +106,7 @@ class x86Stringifier {
     case SectionReadOnlyData   => ".section .rodata"
     case Text                  => ".text"
     case IntData(value)        => s".int $value"
-    case Asciz(string)         => s".asciz $string"
+    case Asciz(string)         => s".asciz \"$string\""
     case SetGreater(dest)      => s"setg ${stringifyOperand(dest)}"
     case SetGreaterEqual(dest) => s"setge ${stringifyOperand(dest)}"
     case SetSmaller(dest)      => s"setl ${stringifyOperand(dest)}"
