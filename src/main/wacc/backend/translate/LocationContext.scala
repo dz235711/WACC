@@ -181,8 +181,8 @@ class LocationContext {
       })
 
   /** Reset stack pointer and pop callee-saved registers from the stack, and set up the return value.
-   * Run this at the end of a function just before returning.
    *
+   * @note Run this at the end of a function just before returning.
    * @param retVal The location of the return value
    */
   def cleanUpFunc(retVal: Location)(using instructionCtx: InstructionContext): Unit = {
@@ -203,8 +203,8 @@ class LocationContext {
   }
 
   /** Saves caller registers and moves arguments to their intended registers/on the stack.
-   * Run this just before calling a function.
    *
+   * @note Run this just before calling a function.
    * @param argLocations The temporary locations of the arguments
    */
   def setUpCall(argLocations: List[Location])(using instructionCtx: InstructionContext): Unit = {
@@ -212,20 +212,15 @@ class LocationContext {
     pushLocs(CallerSaved)
 
     // 2. Move first 6 arguments to their intended registers
-    for ((argLoc, argReg) <- argLocations.take(ArgRegs.length).zip(ArgRegs)) {
+    for ((argLoc, argReg) <- argLocations.zip(ArgRegs)) {
       argLoc match {
         case r: Register =>
           if (CallerSaved.contains(r))
             // If the location is a caller-saved register, it is now in the stack
-
-            instructionCtx.addInstruction(
-              Mov(
-                argReg(W64),
-                RegImmPointer(StackPointer, PointerSize * (CallerSaved.length - CallerSaved.indexOf(r)))(r.width)
-              )
-            )
-          else
-            instructionCtx.addInstruction(Mov(argReg(r.width), r))
+            val newStackLoc =
+              RegImmPointer(StackPointer, PointerSize * (CallerSaved.length - CallerSaved.indexOf(r)))(r.width)
+            instructionCtx.addInstruction(Mov(argReg(r.width), newStackLoc))
+          else instructionCtx.addInstruction(Mov(argReg(r.width), r))
         case p: Pointer => instructionCtx.addInstruction(Mov(argReg(p.size), p))
       }
     }
@@ -236,38 +231,31 @@ class LocationContext {
         case r: Register =>
           if (CallerSaved.contains(r))
             // If the location is a caller-saved register, it is now in the stack
-            instructionCtx.addInstruction(
-              Push(
-                RegImmPointer(StackPointer, PointerSize * (CallerSaved.length - CallerSaved.indexOf(r) + index))(
-                  r.width
-                )
-              )
-            )
-          else
-            instructionCtx.addInstruction(Push(r))
+            val newStackLoc =
+              RegImmPointer(StackPointer, PointerSize * (CallerSaved.length + index - CallerSaved.indexOf(r)))(r.width)
+            instructionCtx.addInstruction(Push(newStackLoc))
+          else instructionCtx.addInstruction(Push(r))
         case p: Pointer => instructionCtx.addInstruction(Push(p))
       }
     }
   }
 
   /** Restore caller registers and save result to a location
-   * Run this just after calling a function.
    *
+   * @note Run this just after calling a function.
    * @return The location of the result
    */
   def cleanUpCall()(using instructionCtx: InstructionContext): Location =
-    // 1. Store result, taking into account reserved stack locations and caller-saved registers
-    val newRsp = RegImmPointer(BasePointer, -PointerSize * (reservedStackLocs + CallerSaved.length))(W64)
-    instructionCtx.addInstruction(Mov(newRsp, ReturnReg))
+    // 1. Shift the stack pointer
+    instructionCtx.addInstruction(
+      Mov(StackPointer, RegImmPointer(BasePointer, PointerSize * (reservedStackLocs + CallerSaved.length))(W64))
+    )
 
-    // 2. Shift the stack pointer
-    instructionCtx.addInstruction(Mov(StackPointer, newRsp))
-
-    // 3. Restore caller registers
+    // 2. Restore caller registers
     popLocs(CallerSaved)
 
-    // 4. Return result location
-    newRsp
+    // 3. Return result location
+    ReturnReg
 
   /** Move a value from one location to another
    *
