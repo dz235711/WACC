@@ -633,16 +633,20 @@ class Translator {
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(Jmp(Overflow, Clib.errOverflowLabel))
 
-    case Mod(dividendExp, divisorExp) =>
+    case op @ (Div(_, _) | Mod(_, _)) =>
+      val (dividendExp, divisorExp) = op match {
+        case Div(d, v) => (d, v)
+        case Mod(d, v) => (d, v)
+      }
       // Move the divisor to the eventual destination of the result (first available location)
       translateExpr(divisorExp)
-      val modDest = locationCtx.reserveNext(typeToSize(IntType))
+      val resultDest = locationCtx.reserveNext(typeToSize(IntType))
 
       // Check for division by zero runtime error
       instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
       locationCtx.regInstr1(
-        modDest,
+        resultDest,
         { reg => Compare(reg(typeToSize(IntType)), 0) }
       )
       instructionCtx.addInstruction(Jmp(Equal, Clib.errDivZeroLabel))
@@ -651,42 +655,9 @@ class Translator {
       translateExpr(dividendExp)
       val dividendDest = locationCtx.reserveNext(typeToSize(IntType))
 
-      // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
-      // so we need to ensure we don't clobber those registers
-      locationCtx.withDivRegisters(
-        {
-          // Move the dividend to EAX
-          instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
-          // Sign extend EAX into RDX
-          instructionCtx.addInstruction(Cdq)
-          // Perform the division
-          instructionCtx.addInstruction(SignedDiv(modDest))
-          // Move the remainder to the destination
-          locationCtx.movLocLoc(modDest, RDX(typeToSize(IntType)))
-        }
-      )
-
-      // Unreserve the locations
-      locationCtx.unreserveLast()
-      locationCtx.unreserveLast()
-
-    case Div(dividendExp, divisorExp) =>
-      // Move the divisor to the eventual destination of the result (first available location)
-      translateExpr(divisorExp)
-      val divDest = locationCtx.reserveNext(typeToSize(IntType))
-
-      // Check for division by zero runtime error
-      instructionCtx.addLibraryFunction(Clib.printsLabel)
-      instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
-      locationCtx.regInstr1(
-        divDest,
-        { reg => Compare(reg(typeToSize(IntType)), 0) }
-      )
-      instructionCtx.addInstruction(Jmp(Equal, Clib.errDivZeroLabel))
-
-      // Move the dividend to the next available location
-      translateExpr(dividendExp)
-      val dividendDest = locationCtx.reserveNext(typeToSize(IntType))
+      val resultReg = op match
+        case _: Div => RAX.apply
+        case _: Mod => RDX.apply
 
       // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
       // so we need to ensure we don't clobber those registers
@@ -697,9 +668,9 @@ class Translator {
           // Sign extend EAX into RDX
           instructionCtx.addInstruction(Cdq)
           // Perform the division
-          instructionCtx.addInstruction(SignedDiv(divDest))
-          // Move the quotient to the destination
-          locationCtx.movLocLoc(divDest, RAX(typeToSize(IntType)))
+          instructionCtx.addInstruction(SignedDiv(resultDest))
+          // Move the quotient or remainder to the destination
+          locationCtx.movLocLoc(resultDest, resultReg(typeToSize(IntType)))
         }
       )
 
