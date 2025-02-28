@@ -467,7 +467,10 @@ class Translator {
         e1,
         e2,
         { (regOp1, locOp2) => SignedMul(Some(regOp1), locOp2, None) }
-      ) // TODO: runtime error if over/underflow
+      )
+
+      // Check for under/overflow runtime error
+      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
     case Mod(dividendExp, divisorExp) =>
       // Move the divisor to the eventual destination of the result (first available location)
@@ -535,9 +538,17 @@ class Translator {
       locationCtx.unreserveLast()
       locationCtx.unreserveLast()
 
-    case TypedAdd(e1, e2) => binary(e1, e2, Add.apply) // TODO: runtime error if over/underflow
+    case TypedAdd(e1, e2) =>
+      binary(e1, e2, Add.apply)
 
-    case TypedSub(e1, e2) => binary(e1, e2, Sub.apply) // TODO: runtime error if over/underflow
+      // Check for under/overflow runtime error
+      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
+
+    case TypedSub(e1, e2) =>
+      binary(e1, e2, Sub.apply)
+
+      // Check for under/overflow runtime error
+      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
     case Greater(e1, e2) => cmpExp(e1, e2, SetGreater.apply)
 
@@ -1034,14 +1045,17 @@ object Clib {
   private val outOfMemoryLabel = "_outOfMemory"
   val errNullLabel = "_errNull"
   val errDivZeroLabel = "_errDivZero"
+  val errOverflowLabel = "_errOverflow"
 
   private val OutOfMemoryStringLabel = ".outOfMemoryString"
   private val NullPairStringLabel = ".nullPairString"
   private val DivZeroStringLabel = ".divZeroString"
+  private val OverflowStringLabel = ".overflowString"
 
   private val OutOfMemoryString = "fatal error: out of memory\n"
   private val NullPairString = "fatal error: null pair dereferenced or freed\n"
   private val DivZeroString = "fatal error: division or modulo by zero\n"
+  private val OverflowString = "fatal error: integer overflow or underflow occurred\n"
 
   /** Subroutine for an out of memory error. */
   private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
@@ -1072,6 +1086,17 @@ object Clib {
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
     Lea(RDI(W64), RegImmPointer(RIP, DivZeroStringLabel)(W64)),
+    Call(printsLabel),
+    Mov(RDI(W8), -1),
+    Call(ClibExit)
+  )
+
+  /** Subroutine for an overflow error. */
+  private val _errOverflow = createReadOnlyString(OverflowStringLabel, OverflowString) ::: List(
+    DefineLabel(errOverflowLabel),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, OverflowStringLabel)(W64)),
     Call(printsLabel),
     Mov(RDI(W8), -1),
     Call(ClibExit)
