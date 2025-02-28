@@ -42,7 +42,7 @@ class x86Stringifier {
         if (translated.startsWith(".") || translated.endsWith(":")) translated
         else s"${" " * INDENTATION_SIZE}$translated"
       })
-      .mkString("\n")
+      .mkString("\n") ++ "\n"
   }
 
   /**
