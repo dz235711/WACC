@@ -749,7 +749,7 @@ class Translator {
 }
 
 /** C library functions that might be used in the translator */
-sealed object Clib {
+object Clib {
 
   /**
    * Creates a list of assembly instructions to define a string
