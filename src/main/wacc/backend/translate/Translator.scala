@@ -224,22 +224,32 @@ class Translator {
       locationCtx.cleanUpCall()
 
     case Print(e) =>
+      // TODO: Set flag
       val dest = locationCtx.getNext(typeToSize(e.getType))
       translateExpr(e)
 
       // Call the print function corresponding to the type of the expression
       locationCtx.setUpCall(List(dest))
-      e.getType match
-        case _ => ??? // TODO
+      val printLabel = e.getType match {
+        case IntType          => Clib.printiLabel
+        case CharType         => Clib.printcLabel
+        case BoolType         => Clib.printbLabel
+        case StringType       => Clib.printsLabel
+        case ArrayType(ty)    => Clib.printpLabel
+        case PairType(t1, t2) => Clib.printpLabel
+        case _                => throw new RuntimeException("Invalid type")
+      }
+      instructionCtx.addInstruction(Call(printLabel))
       locationCtx.cleanUpCall()
 
     case PrintLn(e) =>
+      // TODO: Set flag
       // Print the expression
       translateStmt(Print(e))
 
       // Print a newline
-      locationCtx.setUpCall(List())
-      // TODO: call println
+      locationCtx.setUpCall(List()) // TODO: You can call println right after print, so this can be optimised
+      instructionCtx.addInstruction(Call(Clib.printlnLabel))
       locationCtx.cleanUpCall()
 
     case If(cond, s1, s2) =>
@@ -812,18 +822,25 @@ object Clib {
   // ---- PRINT FUNCTIONS ----
   private val IntFormatLabel = ".intFormat"
   private val CharacterFormatLabel = ".charFormat"
+  private val falseLabel = ".false"
+  private val trueLabel = ".true"
+  private val boolStrLabel = ".boolStr"
   private val StringFormatLabel = ".stringFormat"
   private val PointerFormatLabel = ".pointerFormat"
   private val printlnStrLabel = ".printlnStr"
 
   private val IntFormatSpecifier = "%d"
   private val CharacterFormatSpecifier = "%c"
+  private val falseStr = "false"
+  private val trueStr = "true"
+  private val boolStr = "%.*s"
   private val StringFormatSpecifier = "%.*s"
   private val PointerFormatSpecifier = "%p"
   private val printlnStr = ""
 
   val printiLabel = "_printi"
   val printcLabel = "_printc"
+  val printbLabel = "_printb"
   val printsLabel = "_prints"
   val printpLabel = "_printp"
   val printlnLabel = "_println"
@@ -858,6 +875,33 @@ object Clib {
       Mov(RSP(W64), RBP(W64))
     )
   )
+
+  private val boolBranchFalse = "_printbFalse"
+  private val boolBranchTrue = "_printbTrue"
+
+  val _printb = createReadOnlyString(falseLabel, falseStr)
+    ::: createReadOnlyString(trueLabel, trueStr)
+    ::: createReadOnlyString(boolStrLabel, boolStr)
+    ::: createFunction(
+      printbLabel,
+      List(
+        Comment("Align stack to 16 bytes for external calls"),
+        And(RSP(W64), -16),
+        Compare(RDI(W8), 0),
+        JmpNotEqual(boolBranchTrue),
+        Lea(RDX(W64), RegImmPointer(RIP, falseLabel)(W64)),
+        Jmp(boolBranchFalse),
+        DefineLabel(boolBranchTrue),
+        Lea(RDX(W64), RegImmPointer(RIP, trueLabel)(W64)),
+        DefineLabel(boolBranchFalse),
+        Mov(RSI(W32), RegImmPointer(RDX(W64), -4)(W32)),
+        Lea(RDI(W64), RegImmPointer(RIP, boolStrLabel)(W64)),
+        Mov(RAX(W8), 0),
+        Call(ClibPrintf),
+        Mov(RDI(W64), 0),
+        Call(ClibFlush)
+      )
+    )
 
   /** Subroutine for printing a string. */
   val _prints = createReadOnlyString(StringFormatLabel, StringFormatSpecifier) ::: createFunction(
