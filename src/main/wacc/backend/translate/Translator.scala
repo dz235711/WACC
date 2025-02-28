@@ -198,19 +198,24 @@ class Translator {
       )
 
     case Free(e) =>
+      val freeLabel = e.getType match {
+        case PairType(_, _) => Clib.freepairLabel
+        case ArrayType(_)   => Clib.freeLabel
+        case _              => throw new UnexpectedException("Invalid type")
+      }
+
       // Check for null
       unary(
         e,
         { l =>
           locationCtx.regInstr1(l, { Compare(_, NULL) })
-          instructionCtx.addInstruction(JmpEqual("free_null_error"))
 
           // Call free
           locationCtx.setUpCall(List(l))
+          instructionCtx.addInstruction(Call(freeLabel))
         }
       )
 
-      // TODO:clib free
       locationCtx.cleanUpCall()
 
     case Return(e) =>
