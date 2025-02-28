@@ -1,7 +1,6 @@
 package wacc
 
 type Immediate = Int
-type Label = String
 
 sealed trait Pointer {
   val size: Size

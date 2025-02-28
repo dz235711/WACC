@@ -8,11 +8,11 @@ class x86Stringifier {
 
   /** Convert string literals and assembly IR to an x86-64 assembly string
    *
-   * @param strings The list of label to string literal tuples
+   * @param strings The list of string literal to label tuples
    * @param instructions The list of assembly IR instructions
    * @return The x86-64 assembly string
    */
-  def stringify(strings: List[(Label, String)], instructions: List[Instruction]): String = {
+  def stringify(strings: List[(String, Label)], instructions: List[Instruction]): String = {
     // TODO: Use string builder
     (List(
       NoPrefixSyntax,
@@ -21,7 +21,6 @@ class x86Stringifier {
     ) ++
       strings.flatMap((string, label) => {
         List(
-          Comment(s"String literal $label is $string"),
           IntData(string.length),
           DefineLabel(label),
           Asciz(string)
@@ -29,7 +28,7 @@ class x86Stringifier {
       }) ++
       List(
         Text,
-        DefineLabel("main"),
+        DefineLabel(Label("main")),
         Push(RBP(W64)),
         Mov(RBP(W64), RSP(W64))
       ) ++
@@ -150,7 +149,7 @@ class x86Stringifier {
     case n: Immediate => s"$n"
     case r: Register  => stringifyRegister(r)
     case p: Pointer   => stringifyPointer(p)
-    case s: String    => s
+    case Label(s)     => s
   }
 
   /**

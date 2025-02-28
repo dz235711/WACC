@@ -19,6 +19,8 @@ import java.util.regex.Pattern
 
 type HeapLValue = Fst | Snd | ArrayElem
 
+case class Label(label: String)
+
 // Agreement: a translate function will:
 // 1. put its result in the next available location at the time of its invocation
 // 2. unreserve any locations it reserves
@@ -38,8 +40,9 @@ sealed class InstructionContext {
    * @return The next string label
    */
   def getStringLabel: Label =
+    val toReturn = Label(s".L.str$stringCounter")
     stringCounter += 1
-    s".L.str$stringCounter"
+    toReturn
 
   def getWhileLoopId: Int =
     whileLoopCounter += 1
@@ -164,7 +167,7 @@ class Translator {
    * @param id The id (integer) to generate the function name
    * @return The function name
    */
-  private def getFunctionName(id: Int): String = s"$FUNCTION_LABEL$id"
+  private def getFunctionName(id: Int): Label = Label(s"$FUNCTION_LABEL$id")
 
   /** Translates a statement to a list of instructions
    *
@@ -359,8 +362,8 @@ class Translator {
       locationCtx.cleanUpCall(None)
 
     case If(cond, s1, s2) =>
-      val falseLabel = s"if_false_${ifCounter}"
-      val endLabel = s"if_end_${ifCounter}"
+      val falseLabel = Label(s"if_false_${ifCounter}")
+      val endLabel = Label(s"if_end_${ifCounter}")
       ifCounter += 1
 
       branch(endLabel, falseLabel, cond, s1)
@@ -368,8 +371,8 @@ class Translator {
       instructionCtx.addInstruction(DefineLabel(endLabel))
 
     case While(cond, body) =>
-      val startLabel = s"while_start_${instructionCtx.getWhileLoopId}"
-      val endLabel = s"while_end_${instructionCtx.getWhileLoopId}"
+      val startLabel = Label(s"while_start_${instructionCtx.getWhileLoopId}")
+      val endLabel = Label(s"while_end_${instructionCtx.getWhileLoopId}")
 
       instructionCtx.addInstruction(DefineLabel(startLabel))
       branch(startLabel, endLabel, cond, body)
@@ -395,7 +398,7 @@ class Translator {
    * @param cond The condition to check
    * @param trueBody The body to execute if the condition is true
    */
-  private def branch(afterTrueLabel: String, falseLabel: String, cond: Expr, trueBody: Stmt)(using
+  private def branch(afterTrueLabel: Label, falseLabel: Label, cond: Expr, trueBody: Stmt)(using
       instructionCtx: InstructionContext,
       locationCtx: LocationContext
   ): Unit =
@@ -1039,23 +1042,23 @@ object Clib {
   )
 
   // C library function labels
-  private val ClibExit = "exit@plt"
-  private val ClibFlush = "fflush@plt"
-  private val ClibFree = "free@plt"
-  private val ClibMalloc = "malloc@plt"
-  private val ClibPrintf = "printf@plt"
-  private val ClibPuts = "puts@plt"
-  private val ClibScanf = "scanf@plt"
+  private val ClibExit = Label("exit@plt")
+  private val ClibFlush = Label("fflush@plt")
+  private val ClibFree = Label("free@plt")
+  private val ClibMalloc = Label("malloc@plt")
+  private val ClibPrintf = Label("printf@plt")
+  private val ClibPuts = Label("puts@plt")
+  private val ClibScanf = Label("scanf@plt")
 
   // ---- PRINT FUNCTIONS ----
-  private val IntFormatLabel = ".intFormat"
-  private val CharacterFormatLabel = ".charFormat"
-  private val falseLabel = ".false"
-  private val trueLabel = ".true"
-  private val boolStrLabel = ".boolStr"
-  private val StringFormatLabel = ".stringFormat"
-  private val PointerFormatLabel = ".pointerFormat"
-  private val printlnStrLabel = ".printlnStr"
+  private val IntFormatLabel = Label(".intFormat")
+  private val CharacterFormatLabel = Label(".charFormat")
+  private val falseLabel = Label(".false")
+  private val trueLabel = Label(".true")
+  private val boolStrLabel = Label(".boolStr")
+  private val StringFormatLabel = Label(".stringFormat")
+  private val PointerFormatLabel = Label(".pointerFormat")
+  private val printlnStrLabel = Label(".printlnStr")
 
   private val IntFormatSpecifier = "%d"
   private val CharacterFormatSpecifier = "%c"
@@ -1066,12 +1069,12 @@ object Clib {
   private val PointerFormatSpecifier = "%p"
   private val printlnStr = ""
 
-  val printiLabel = "_printi"
-  val printcLabel = "_printc"
-  val printbLabel = "_printb"
-  val printsLabel = "_prints"
-  val printpLabel = "_printp"
-  val printlnLabel = "_println"
+  val printiLabel = Label("_printi")
+  val printcLabel = Label("_printc")
+  val printbLabel = Label("_printb")
+  val printsLabel = Label("_prints")
+  val printpLabel = Label("_printp")
+  val printlnLabel = Label("_println")
 
   /** Subroutine for printing an integer. */
   private val _printi = createReadOnlyString(IntFormatLabel, IntFormatSpecifier) ::: createFunction(
@@ -1103,8 +1106,8 @@ object Clib {
     )
   )
 
-  private val boolBranchFalse = "_printbFalse"
-  private val boolBranchTrue = "_printbTrue"
+  private val boolBranchFalse = Label("_printbFalse")
+  private val boolBranchTrue = Label("_printbTrue")
 
   private val _printb = createReadOnlyString(falseLabel, falseStr)
     ::: createReadOnlyString(trueLabel, trueStr)
@@ -1175,14 +1178,14 @@ object Clib {
   )
 
   // ---- READ FUNCTIONS ----
-  private val IntReadLabel = ".intRead"
-  private val CharacterReadLabel = ".charRead"
+  private val IntReadLabel = Label(".intRead")
+  private val CharacterReadLabel = Label(".charRead")
 
   private val IntReadSpecifier = "%d"
   private val CharacterReadSpecifier = " %c"
 
-  val readiLabel = "_readi"
-  val readcLabel = "_readc"
+  val readiLabel = Label("_readi")
+  val readcLabel = Label("_readc")
 
   /** Subroutine for reading an integer. */
   private val _readi = createReadOnlyString(IntReadLabel, IntReadSpecifier) ::: createFunction(
@@ -1223,19 +1226,19 @@ object Clib {
   )
 
   /// ---- ERRORS ----
-  val outOfMemoryLabel = "_outOfMemory"
-  val errNullLabel = "_errNull"
-  val errDivZeroLabel = "_errDivZero"
-  val errOverflowLabel = "_errOverflow"
-  val errBadCharLabel = "_errBadChar"
-  val errArrBoundsLabel = "_errArrBounds"
+  val outOfMemoryLabel = Label("_outOfMemory")
+  val errNullLabel = Label("_errNull")
+  val errDivZeroLabel = Label("_errDivZero")
+  val errOverflowLabel = Label("_errOverflow")
+  val errBadCharLabel = Label("_errBadChar")
+  val errArrBoundsLabel = Label("_errArrBounds")
 
-  private val OutOfMemoryStringLabel = ".outOfMemoryString"
-  private val NullPairStringLabel = ".nullPairString"
-  private val DivZeroStringLabel = ".divZeroString"
-  private val OverflowStringLabel = ".overflowString"
-  private val BadCharStringLabel = ".badCharString"
-  private val ArrBoundsStringLabel = ".arrBoundsString"
+  private val OutOfMemoryStringLabel = Label(".outOfMemoryString")
+  private val NullPairStringLabel = Label(".nullPairString")
+  private val DivZeroStringLabel = Label(".divZeroString")
+  private val OverflowStringLabel = Label(".overflowString")
+  private val BadCharStringLabel = Label(".badCharString")
+  private val ArrBoundsStringLabel = Label(".arrBoundsString")
 
   private val OutOfMemoryString = "fatal error: out of memory"
   private val NullPairString = "fatal error: null pair dereferenced or freed"
@@ -1318,10 +1321,10 @@ object Clib {
   )
 
   // ---- EXIT AND HEAP FUNCTIONS ----
-  val exitLabel = "_exit"
-  val mallocLabel = "_malloc"
-  val freeLabel = "_free"
-  val freepairLabel = "_freepair"
+  val exitLabel = Label("_exit")
+  val mallocLabel = Label("_malloc")
+  val freeLabel = Label("_free")
+  val freepairLabel = Label("_freepair")
 
   /** Subroutine for exiting the program. */
   private val _exit = createFunction(
