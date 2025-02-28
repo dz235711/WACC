@@ -189,13 +189,9 @@ class Translator {
       }
       // Call the read function
       instructionCtx.addInstruction(Call(readLabel))
-
+      val resultLoc = locationCtx.cleanUpCall(Some(typeToSize(id.getType)))
       val idDest = locationCtx.getLocation(id)
-      instructionCtx.addInstruction(idDest match {
-        case r: Register => Mov(r, RAX(typeToSize(id.getType)))
-        case p: Pointer  => Mov(p, RAX(typeToSize(id.getType)))
-      })
-      locationCtx.cleanUpCall()
+      locationCtx.movLocLoc(idDest, resultLoc)
 
     case Read(h: HeapLValue) =>
       val readParamLoc = locationCtx.getNext(typeToSize(h.getType))
@@ -225,7 +221,7 @@ class Translator {
       instructionCtx.addInstruction(Call(readLabel))
 
       // Clean up and save the result.
-      val resultLoc = locationCtx.cleanUpCall()
+      val resultLoc = locationCtx.cleanUpCall(Some(typeToSize(h.getType)))
 
       // Move the result into the original location.
       locationCtx.regInstr2(
@@ -263,7 +259,7 @@ class Translator {
         }
       )
 
-      locationCtx.cleanUpCall()
+      locationCtx.cleanUpCall(None)
 
     case Return(e) =>
       unary(e, locationCtx.cleanUpFunc)
@@ -278,7 +274,7 @@ class Translator {
       // Call exit
       locationCtx.setUpCall(List(dest))
       instructionCtx.addInstruction(Call(Clib.exitLabel))
-      locationCtx.cleanUpCall()
+      locationCtx.cleanUpCall(None)
 
     case Print(e) =>
       val dest = locationCtx.getNext(typeToSize(e.getType))
@@ -323,7 +319,7 @@ class Translator {
       }
       locationCtx.setUpCall(List(dest))
       instructionCtx.addInstruction(Call(printLabel))
-      locationCtx.cleanUpCall()
+      locationCtx.cleanUpCall(None)
 
     case PrintLn(e) =>
       instructionCtx.addLibraryFunction(Clib.printlnLabel)
@@ -333,19 +329,19 @@ class Translator {
       // Print a newline
       locationCtx.setUpCall(List()) // TODO: You can call println right after print, so this can be optimised
       instructionCtx.addInstruction(Call(Clib.printlnLabel))
-      locationCtx.cleanUpCall()
+      locationCtx.cleanUpCall(None)
 
     case If(cond, s1, s2) =>
-      val falseLabel = s"if_false_${cond.hashCode()}"
-      val endLabel = s"if_end_${cond.hashCode()}"
+      val falseLabel = s"if_false_${cond.hashCode().abs}"
+      val endLabel = s"if_end_${cond.hashCode().abs}"
 
       branch(endLabel, falseLabel, cond, s1)
       translateStmt(s2)
       instructionCtx.addInstruction(DefineLabel(endLabel))
 
     case While(cond, body) =>
-      val startLabel = s"while_start_${cond.hashCode()}"
-      val endLabel = s"while_end_${cond.hashCode()}"
+      val startLabel = s"while_start_${cond.hashCode().abs}"
+      val endLabel = s"while_end_${cond.hashCode().abs}"
 
       instructionCtx.addInstruction(DefineLabel(startLabel))
       branch(startLabel, endLabel, cond, body)
@@ -408,7 +404,7 @@ class Translator {
       })
       locationCtx.setUpCall(List(tempSizeLocation))
       instructionCtx.addInstruction(Call(Clib.mallocLabel))
-      val ptrLoc: Location = locationCtx.cleanUpCall()
+      val ptrLoc: Location = locationCtx.cleanUpCall(Some(typeToSize(ArrayType(eTy))))
 
       // Move the pointer to the array to the next available location
       val arrayLoc = locationCtx.reserveNext(W64)
@@ -452,7 +448,7 @@ class Translator {
       // Allocate memory for the pair and get the pointer to the pair
       locationCtx.setUpCall(List(tempSizeLocation))
       instructionCtx.addInstruction(Call(Clib.mallocLabel))
-      val ptrLoc = locationCtx.cleanUpCall()
+      val ptrLoc = locationCtx.cleanUpCall(Some(typeToSize(PairType(t1, t2))))
 
       // Move the pointer to the pair to the next available location
       val pairLoc = locationCtx.reserveNext(W64) // W64 because it's a pointer
@@ -508,8 +504,8 @@ class Translator {
     case TypedCall(v, args, ty) =>
       // Translate arguments into temporary locations
       val argLocations: List[Location] = args.map { arg =>
-        val dest = locationCtx.reserveNext(typeToSize(arg.getType))
         translateExpr(arg)
+        val dest = locationCtx.reserveNext(typeToSize(arg.getType))
         dest
       }
       // Save caller-save registers and set up arguments
@@ -517,7 +513,7 @@ class Translator {
       // Call the function
       instructionCtx.addInstruction(Call(getFunctionName(v.id)))
       // Restore caller-save registers
-      locationCtx.cleanUpCall()
+      locationCtx.cleanUpCall(None)
 
       // Free argument temp locations
       argLocations.foreach { _ =>
@@ -550,13 +546,13 @@ class Translator {
       locationCtx.unreserveLast()
 
     case Ord(e) =>
-      val ordDest = locationCtx.reserveNext(typeToSize(IntType))
+      val ordDest = locationCtx.reserveNext(typeToSize(CharType))
       unary(e, { l => locationCtx.movLocLoc(ordDest, l) })
       locationCtx.unreserveLast()
 
     case Chr(e) =>
       instructionCtx.addLibraryFunction(Clib.errBadCharLabel)
-      val chrDest = locationCtx.reserveNext(typeToSize(CharType))
+      val chrDest = locationCtx.reserveNext(typeToSize(IntType))
       unary(
         e,
         { l =>
@@ -743,11 +739,12 @@ class Translator {
     *
     * @param f The function to translate
     */
-  private def translateFunction(
-      f: Func
-  )(using instructionCtx: InstructionContext, locationCtx: LocationContext): Unit =
+  private def translateFunction(f: Func)(using instructionCtx: InstructionContext): Unit =
     // Define the function label
     instructionCtx.addInstruction(DefineLabel(getFunctionName(f.v.id)))
+
+    // Set up the location context for the function
+    given locationCtx: LocationContext = new LocationContext()
 
     // Set up stack frame and save callee-save registers
     locationCtx.setUpFunc(f.params)
@@ -773,8 +770,10 @@ class Translator {
     translateExpr(e2)
     val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
     locationCtx.regInstr1(dest, { reg => Compare(reg, e2Dest) })
-    instructionCtx.addInstruction(setter(dest))
+    // Move dest to a 1-byte location so that the setter can set the correct byte
     locationCtx.unreserveLast()
+    val destByte = locationCtx.getNext(W8)
+    instructionCtx.addInstruction(setter(destByte))
 
   /** Get the location of an LValue that is stored on the heap
    *

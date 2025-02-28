@@ -6,13 +6,13 @@ import org.scalatest.matchers.should.Matchers.*
 class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/function/simple_functions/"
 
-  it should "execute argScopeCanBeShadowed.wacc" taggedAs Backend in pending /*{
+  it should "execute argScopeCanBeShadowed.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "argScopeCanBeShadowed.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute asciiTable.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "asciiTable.wacc")
@@ -22,13 +22,13 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }*/
 
-  it should "execute functionDeclaration.wacc" taggedAs Backend in pending /*{
+  it should "execute functionDeclaration.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "functionDeclaration.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute functionDoubleReturn.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "functionDoubleReturn.wacc")
@@ -70,13 +70,13 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }*/
 
-  it should "execute functionSimple.wacc" taggedAs Backend in pending /*{
+  it should "execute functionSimple.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "functionSimple.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute functionSimpleLoop.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "functionSimpleLoop.wacc")
@@ -86,13 +86,13 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }*/
 
-  it should "execute functionUpdateParameter.wacc" taggedAs Backend in pending /*{
+  it should "execute functionUpdateParameter.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "functionUpdateParameter.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute incFunction.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "incFunction.wacc")
@@ -142,21 +142,21 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }*/
 
-  it should "execute sameArgName.wacc" taggedAs Backend in pending /*{
+  it should "execute sameArgName.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "sameArgName.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
-  it should "execute sameArgName2.wacc" taggedAs Backend in pending /*{
+  it should "execute sameArgName2.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "sameArgName2.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute sameNameAsVar.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "sameNameAsVar.wacc")

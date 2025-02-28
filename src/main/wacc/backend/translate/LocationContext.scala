@@ -58,7 +58,7 @@ class LocationContext {
   private val identMap = mutable.Map[Ident, Location]()
 
   // Register constants
-  private val ReturnReg = RAX(W64)
+  private val ReturnReg = RAX.apply
   private val EmptyRegs = List(RAX.apply, RDX.apply) // never used as a location
   private val StackPointer = RSP(W64)
   private val BasePointer = RBP(W64)
@@ -193,7 +193,15 @@ class LocationContext {
     instructionCtx.addInstruction(Comment("Cleaning up function"))
 
     // 1. set return value
-    instructionCtx.addInstruction(Mov(ReturnReg, retVal))
+    instructionCtx.addInstruction(
+      Mov(
+        ReturnReg(retVal match {
+          case r: Register => r.width
+          case p: Pointer  => p.size
+        }),
+        retVal
+      )
+    )
 
     // 2. reset the stack pointer
     instructionCtx.addInstruction(Mov(StackPointer, BasePointer))
@@ -257,7 +265,7 @@ class LocationContext {
    * @note Run this just after calling a function.
    * @return The location of the result
    */
-  def cleanUpCall()(using instructionCtx: InstructionContext): Location =
+  def cleanUpCall(size: Option[Size])(using instructionCtx: InstructionContext): Location =
     instructionCtx.addInstruction(Comment("Cleaning up function call"))
 
     // 1. Restore caller registers
@@ -266,7 +274,7 @@ class LocationContext {
     instructionCtx.addInstruction(Comment("Function call clean up complete"))
 
     // 2. Return result location
-    ReturnReg
+    ReturnReg(size.getOrElse(W64))
 
   /** Move a value from one location to another
    *
@@ -292,7 +300,7 @@ class LocationContext {
    * @param loc1 The first location
    * @param op   The operation to perform on the two locations, where the first location is guaranteed to be a register
    */
-  def regInstr1(loc1: Location, op: Register => Instruction)(using instructionCtx: InstructionContext): Unit =
+  def regInstr1(loc1: Location, op: (Register) => Instruction)(using instructionCtx: InstructionContext): Unit =
     val emptyReg = EmptyRegs.head(loc1 match {
       case r: Register => r.width
       case p: Pointer  => p.size
