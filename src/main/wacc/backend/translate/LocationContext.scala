@@ -6,7 +6,7 @@ import wacc.Size.*
 
 import scala.collection.mutable
 import wacc.RenamedAST.KnownType.{ArrayType, BoolType, CharType, IntType, PairType, StringType}
-import wacc.RenamedAST.{?, KnownType, SemType}
+import wacc.RenamedAST.{KnownType, SemType}
 
 import java.rmi.UnexpectedException
 
@@ -58,8 +58,8 @@ class LocationContext {
   private val identMap = mutable.Map[Ident, Location]()
 
   // Register constants
-  private val ReturnReg = RAX(W64)
-  private val EmptyRegs = List(RAX(W64), RDX(W64)) // never used as a location
+  private val ReturnReg = RAX.apply
+  private val EmptyRegs = List(RAX.apply, RDX.apply) // never used as a location
   private val StackPointer = RSP(W64)
   private val BasePointer = RBP(W64)
   private val ArgRegs = List(RDI.apply, RSI.apply, RDX.apply, RCX.apply, R8.apply, R9.apply)
@@ -72,7 +72,7 @@ class LocationContext {
    * @return The next location to use
    */
   def getNext(size: Size): Location =
-    if (freeRegs.nonEmpty) freeRegs.head(size)
+    if (freeRegs.nonEmpty) freeRegs.last(size)
     else RegImmPointer(BasePointer, reservedStackLocs * PointerSize)(size)
 
   /** Get the location to use and reserve it
@@ -193,7 +193,15 @@ class LocationContext {
     instructionCtx.addInstruction(Comment("Cleaning up function"))
 
     // 1. set return value
-    instructionCtx.addInstruction(Mov(ReturnReg, retVal))
+    instructionCtx.addInstruction(
+      Mov(
+        ReturnReg(retVal match {
+          case r: Register => r.width
+          case p: Pointer  => p.size
+        }),
+        retVal
+      )
+    )
 
     // 2. reset the stack pointer
     instructionCtx.addInstruction(Mov(StackPointer, BasePointer))
@@ -257,21 +265,16 @@ class LocationContext {
    * @note Run this just after calling a function.
    * @return The location of the result
    */
-  def cleanUpCall()(using instructionCtx: InstructionContext): Location =
+  def cleanUpCall(size: Option[Size])(using instructionCtx: InstructionContext): Location =
     instructionCtx.addInstruction(Comment("Cleaning up function call"))
 
-    // 1. Shift the stack pointer
-    instructionCtx.addInstruction(
-      Mov(StackPointer, RegImmPointer(BasePointer, PointerSize * (reservedStackLocs + CallerSaved.length))(W64))
-    )
-
-    // 2. Restore caller registers
+    // 1. Restore caller registers
     popLocs(CallerSaved)
 
     instructionCtx.addInstruction(Comment("Function call clean up complete"))
 
-    // 3. Return result location
-    ReturnReg
+    // 2. Return result location
+    ReturnReg(size.getOrElse(W64))
 
   /** Move a value from one location to another
    *
@@ -285,8 +288,9 @@ class LocationContext {
         src match {
           case srcR: Register => instructionCtx.addInstruction(Mov(destP, srcR))
           case srcP: Pointer =>
-            instructionCtx.addInstruction(Mov(EmptyRegs.head, srcP))
-            instructionCtx.addInstruction(Mov(destP, EmptyRegs.head))
+            val emptyReg = EmptyRegs.head(srcP.size)
+            instructionCtx.addInstruction(Mov(emptyReg, srcP))
+            instructionCtx.addInstruction(Mov(destP, emptyReg))
         }
     }
 
@@ -296,13 +300,19 @@ class LocationContext {
    * @param loc1 The first location
    * @param op   The operation to perform on the two locations, where the first location is guaranteed to be a register
    */
-  def regInstr1(loc1: Location, op: Register => Instruction)(using instructionCtx: InstructionContext): Unit =
+  def regInstr1(loc1: Location, op: (Size => Register) => Instruction)(using instructionCtx: InstructionContext): Unit =
+    val emptyReg = EmptyRegs.head
+    val loc1Size = loc1 match {
+      case r: Register => r.width
+      case p: Pointer  => p.size
+    }
+
     // Move the location to a register, perform the operation, then move the result back
-    instructionCtx.addInstruction(Mov(EmptyRegs.head, loc1))
-    instructionCtx.addInstruction(op(EmptyRegs.head))
+    instructionCtx.addInstruction(Mov(emptyReg(loc1Size), loc1))
+    instructionCtx.addInstruction(op(emptyReg))
     instructionCtx.addInstruction(loc1 match {
-      case r: Register => Mov(r, EmptyRegs.head)
-      case p: Pointer  => Mov(p, EmptyRegs.head)
+      case r: Register => Mov(r, emptyReg(loc1Size))
+      case p: Pointer  => Mov(p, emptyReg(loc1Size))
     })
 
   /** Perform some operation that forces the use of 2 registers.
@@ -312,20 +322,32 @@ class LocationContext {
    * @param loc2 The second location
    * @param op   The operation to perform on the locations as registers
    */
-  def regInstr2(loc1: Location, loc2: Location, op: (Register, Register) => Instruction)(using
+  def regInstr2(loc1: Location, loc2: Location, op: (Size => Register, Size => Register) => Instruction)(using
       instructionCtx: InstructionContext
   ): Unit =
+    val emptyReg1 = EmptyRegs.head
+    val emptyReg2 = EmptyRegs.last
+
+    val loc1Size = loc1 match {
+      case r: Register => r.width
+      case p: Pointer  => p.size
+    }
+    val loc2Size = loc2 match {
+      case r: Register => r.width
+      case p: Pointer  => p.size
+    }
+
     // Move the locations to registers, perform the operation, then move the results back
-    instructionCtx.addInstruction(Mov(EmptyRegs(0), loc1))
-    instructionCtx.addInstruction(Mov(EmptyRegs(1), loc2))
-    instructionCtx.addInstruction(op(EmptyRegs(0), EmptyRegs(1)))
+    instructionCtx.addInstruction(Mov(emptyReg1(loc1Size), loc1))
+    instructionCtx.addInstruction(Mov(emptyReg2(loc2Size), loc2))
+    instructionCtx.addInstruction(op(emptyReg1, emptyReg2))
     instructionCtx.addInstruction(loc1 match {
-      case r: Register => Mov(r, EmptyRegs(0))
-      case p: Pointer  => Mov(p, EmptyRegs(0))
+      case r: Register => Mov(r, emptyReg1(loc1Size))
+      case p: Pointer  => Mov(p, emptyReg1(loc1Size))
     })
     instructionCtx.addInstruction(loc2 match {
-      case r: Register => Mov(r, EmptyRegs(1))
-      case p: Pointer  => Mov(p, EmptyRegs(1))
+      case r: Register => Mov(r, emptyReg2(loc2Size))
+      case p: Pointer  => Mov(p, emptyReg2(loc2Size))
     })
 
   /** Perform some operation that forces the use of division registers (rax, rdx). They are guaranteed to be free.

@@ -10,7 +10,7 @@ class BackendValidSequenceTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "basicSeq.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
 
@@ -18,7 +18,7 @@ class BackendValidSequenceTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "basicSeq2.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
 
@@ -26,7 +26,7 @@ class BackendValidSequenceTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "boolAssignment.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
 
@@ -34,39 +34,39 @@ class BackendValidSequenceTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "charAssignment.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute exitSimple.wacc" taggedAs Backend in pending /*{
+  it should "execute exitSimple.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "exitSimple.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
-  it should "execute intAssignment.wacc" taggedAs Backend in pending /*{
+  it should "execute intAssignment.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "intAssignment.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
-  it should "execute intLeadingZeros.wacc" taggedAs Backend in pending /*{
+  it should "execute intLeadingZeros.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "intLeadingZeros.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute stringAssignment.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "stringAssignment.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
 

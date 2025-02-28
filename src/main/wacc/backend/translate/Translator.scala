@@ -15,6 +15,7 @@ import wacc.Size.*
 
 import java.rmi.UnexpectedException
 import scala.collection.mutable
+import java.util.regex.Pattern
 
 type HeapLValue = Fst | Snd | ArrayElem
 
@@ -27,6 +28,8 @@ sealed class InstructionContext {
   private val stringCtx = new ListContext[(String, Label)]()
   private var stringCounter = 0
 
+  private var whileLoopCounter = 0
+
   /** Stores library functions in a set to prevent duplicates. */
   private val libFunctions: mutable.Set[List[Instruction]] = mutable.Set()
 
@@ -36,7 +39,11 @@ sealed class InstructionContext {
    */
   def getStringLabel: Label =
     stringCounter += 1
-    s".string_$stringCounter"
+    s".L.str$stringCounter"
+
+  def getWhileLoopId: Int =
+    whileLoopCounter += 1
+    whileLoopCounter
 
   /** Get the the strings and list of instructions
    * 
@@ -54,13 +61,25 @@ sealed class InstructionContext {
    * 
    * @param string The string to add
    */
-  def addString(string: String, label: Label): Unit = stringCtx.add((string, label))
+  def addString(string: String, label: Label): Unit =
+    val p = Pattern.compile("\"|\'|\\\\")
+    val m = p.matcher(string)
+    val sb = new StringBuffer()
+    while (m.find()) {
+      m.group() match {
+        case "\\" => m.appendReplacement(sb, "\\\\")
+        case "\"" => m.appendReplacement(sb, "\\\\\"")
+        case "\'" => m.appendReplacement(sb, "\\\\\'")
+      }
+    }
+    m.appendTail(sb)
+    stringCtx.add(sb.toString(), label)
 
   /** Add a library function to the list of instructions
     *
     * @param funcBody The body of the library function to be added
     */
-  def addLibraryFunction(funcLabel: Label): Unit = Clib.labelToFunc(funcLabel)
+  def addLibraryFunction(funcLabel: Label): Unit = libFunctions += Clib.labelToFunc(funcLabel)
 
   def getLibraryFunctions: Set[List[Instruction]] = libFunctions.toSet
 }
@@ -98,6 +117,9 @@ class Translator {
   /** The label for a user-defined function */
   private val FUNCTION_LABEL = "wacc_func_"
 
+  /** The number of if statements so each jump label is unique */
+  private var ifCounter = 0
+
   def translate(program: Program): (List[(String, Label)], List[Instruction]) = {
     given translateCtx: InstructionContext = new InstructionContext()
     given locationCtx: LocationContext = new LocationContext()
@@ -107,6 +129,7 @@ class Translator {
 
     // Return 0 from main body
     translateCtx.addInstruction(Mov(RAX(W64), 0))
+    translateCtx.addInstruction(Pop(RBP(W64)))
     translateCtx.addInstruction(Ret(None))
 
     // Translate all functions in the program
@@ -123,15 +146,18 @@ class Translator {
    * @param t The semantic type to convert
    * @return The size of the semantic type
    */
-  private def typeToSize(t: SemType): Size = t match {
-    case IntType        => W32
-    case BoolType       => W8
-    case CharType       => W8
-    case StringType     => W64
-    case ArrayType(_)   => W64
-    case PairType(_, _) => W64
-    case _              => throw new UnexpectedException("Unexpected Error: Invalid type")
-  }
+  private def typeToSize(t: SemType): Size =
+    t match {
+      case IntType        => W32
+      case BoolType       => W8
+      case CharType       => W8
+      case StringType     => W64
+      case ArrayType(_)   => W64
+      case PairType(_, _) => W64
+      // In the case of an unkown type, we know that we are in a pair element,
+      // so we can just move the whole 8 bytes.
+      case ? => W64
+    }
 
   /** Generates a function name from an id
    * 
@@ -167,7 +193,7 @@ class Translator {
           locationCtx.regInstr2(
             hDest,
             resultLoc,
-            { (reg1, reg2) => Mov(RegPointer(reg1)(typeToSize(l.getType)), reg2) }
+            { (reg1, reg2) => Mov(RegPointer(reg1(POINTER_SIZE))(typeToSize(l.getType)), reg2(typeToSize(l.getType))) }
           )
       }
 
@@ -188,13 +214,9 @@ class Translator {
       }
       // Call the read function
       instructionCtx.addInstruction(Call(readLabel))
-
+      val resultLoc = locationCtx.cleanUpCall(Some(typeToSize(id.getType)))
       val idDest = locationCtx.getLocation(id)
-      instructionCtx.addInstruction(idDest match {
-        case r: Register => Mov(r, RAX(typeToSize(id.getType)))
-        case p: Pointer  => Mov(p, RAX(typeToSize(id.getType)))
-      })
-      locationCtx.cleanUpCall()
+      locationCtx.movLocLoc(idDest, resultLoc)
 
     case Read(h: HeapLValue) =>
       val readParamLoc = locationCtx.getNext(typeToSize(h.getType))
@@ -202,7 +224,7 @@ class Translator {
       locationCtx.regInstr2(
         readParamLoc,
         pointerLoc,
-        { (reg1, reg2) => Mov(reg1, RegPointer(reg2)(typeToSize(h.getType))) }
+        { (reg1, reg2) => Mov(reg1(typeToSize(h.getType)), RegPointer(reg2(POINTER_SIZE))(typeToSize(h.getType))) }
       )
 
       // Move the original value to RDI in case the read fails
@@ -224,19 +246,20 @@ class Translator {
       instructionCtx.addInstruction(Call(readLabel))
 
       // Clean up and save the result.
-      val resultLoc = locationCtx.cleanUpCall()
+      val resultLoc = locationCtx.cleanUpCall(Some(typeToSize(h.getType)))
 
       // Move the result into the original location.
       locationCtx.regInstr2(
         pointerLoc,
         resultLoc,
-        { (reg1, reg2) => Mov(RegPointer(reg1)(typeToSize(h.getType)), reg2) }
+        { (reg1, reg2) => Mov(RegPointer(reg1(POINTER_SIZE))(typeToSize(h.getType)), reg2(typeToSize(h.getType))) }
       )
 
     case Free(e) =>
       val freeLabel = e.getType match {
         case PairType(_, _) => {
           instructionCtx.addLibraryFunction(Clib.freepairLabel)
+          instructionCtx.addLibraryFunction(Clib.printsLabel)
           instructionCtx.addLibraryFunction(Clib.errNullLabel)
           Clib.freepairLabel
         }
@@ -252,8 +275,9 @@ class Translator {
         e,
         { l =>
           // Check for runtime error
+          instructionCtx.addLibraryFunction(Clib.printsLabel)
           instructionCtx.addLibraryFunction(Clib.errNullLabel)
-          locationCtx.regInstr1(l, { Compare(_, NULL) })
+          locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), NULL) })
           instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
           // Call free
@@ -262,7 +286,7 @@ class Translator {
         }
       )
 
-      locationCtx.cleanUpCall()
+      locationCtx.cleanUpCall(None)
 
     case Return(e) =>
       unary(e, locationCtx.cleanUpFunc)
@@ -277,14 +301,13 @@ class Translator {
       // Call exit
       locationCtx.setUpCall(List(dest))
       instructionCtx.addInstruction(Call(Clib.exitLabel))
-      locationCtx.cleanUpCall()
+      locationCtx.cleanUpCall(None)
 
     case Print(e) =>
       val dest = locationCtx.getNext(typeToSize(e.getType))
       translateExpr(e)
 
       // Call the print function corresponding to the type of the expression
-      locationCtx.setUpCall(List(dest))
       val printLabel = e.getType match {
         case IntType => {
           instructionCtx.addLibraryFunction(Clib.printiLabel)
@@ -302,6 +325,15 @@ class Translator {
           instructionCtx.addLibraryFunction(Clib.printsLabel)
           Clib.printsLabel
         }
+        case ArrayType(CharType) => {
+          // Increment the pointer to the start of the string (skip the size)
+          instructionCtx.addInstruction(dest match {
+            case r: Register => Add(r, INT_SIZE)
+            case p: Pointer  => Add(p, INT_SIZE)
+          })
+          instructionCtx.addLibraryFunction(Clib.printsLabel)
+          Clib.printsLabel
+        }
         case ArrayType(_) => {
           instructionCtx.addLibraryFunction(Clib.printpLabel)
           Clib.printpLabel
@@ -312,8 +344,9 @@ class Translator {
         }
         case _ => throw new RuntimeException("Invalid type")
       }
+      locationCtx.setUpCall(List(dest))
       instructionCtx.addInstruction(Call(printLabel))
-      locationCtx.cleanUpCall()
+      locationCtx.cleanUpCall(None)
 
     case PrintLn(e) =>
       instructionCtx.addLibraryFunction(Clib.printlnLabel)
@@ -323,19 +356,20 @@ class Translator {
       // Print a newline
       locationCtx.setUpCall(List()) // TODO: You can call println right after print, so this can be optimised
       instructionCtx.addInstruction(Call(Clib.printlnLabel))
-      locationCtx.cleanUpCall()
+      locationCtx.cleanUpCall(None)
 
     case If(cond, s1, s2) =>
-      val falseLabel = s"if_false_${cond.hashCode()}"
-      val endLabel = s"if_end_${cond.hashCode()}"
+      val falseLabel = s"if_false_${ifCounter}"
+      val endLabel = s"if_end_${ifCounter}"
+      ifCounter += 1
 
       branch(endLabel, falseLabel, cond, s1)
       translateStmt(s2)
       instructionCtx.addInstruction(DefineLabel(endLabel))
 
     case While(cond, body) =>
-      val startLabel = s"while_start_${cond.hashCode()}"
-      val endLabel = s"while_end_${cond.hashCode()}"
+      val startLabel = s"while_start_${instructionCtx.getWhileLoopId}"
+      val endLabel = s"while_end_${instructionCtx.getWhileLoopId}"
 
       instructionCtx.addInstruction(DefineLabel(startLabel))
       branch(startLabel, endLabel, cond, body)
@@ -382,12 +416,13 @@ class Translator {
       instructionCtx: InstructionContext,
       locationCtx: LocationContext
   ): Unit = value match {
-    case ArrayLiter(es, ty) =>
+    case ArrayLiter(es, ArrayType(eTy)) =>
       instructionCtx.addLibraryFunction(Clib.mallocLabel)
       instructionCtx.addLibraryFunction(Clib.outOfMemoryLabel)
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
 
       // Calculate size needed for the array
-      val size = (typeToSize(ty).toBytes * es.size) + INT_SIZE
+      val size = (typeToSize(eTy).toBytes * es.size) + INT_SIZE
 
       // Allocate memory for the array and get the pointer to the array
       val tempSizeLocation = locationCtx.getNext(W32)
@@ -397,16 +432,16 @@ class Translator {
       })
       locationCtx.setUpCall(List(tempSizeLocation))
       instructionCtx.addInstruction(Call(Clib.mallocLabel))
-      val ptrLoc: Location = locationCtx.cleanUpCall()
+      val ptrLoc: Location = locationCtx.cleanUpCall(Some(typeToSize(ArrayType(eTy))))
 
       // Move the pointer to the array to the next available location
-      val arrayLoc = locationCtx.reserveNext(W64)
+      val arrayLoc = locationCtx.reserveNext(POINTER_SIZE)
       locationCtx.movLocLoc(arrayLoc, ptrLoc)
 
       // Store the size of the array
       locationCtx.regInstr1(
         arrayLoc,
-        { reg => Mov(RegPointer(reg)(POINTER_SIZE), es.size) }
+        { reg => Mov(RegPointer(reg(POINTER_SIZE))(POINTER_SIZE), es.size) }
       )
 
       // Store the elements in the array
@@ -418,7 +453,7 @@ class Translator {
           arrayLoc,
           expLoc,
           { (reg1, reg2) =>
-            Mov(RegImmPointer(reg1, offset)(typeToSize(e.getType)), reg2)
+            Mov(RegImmPointer(reg1(POINTER_SIZE), offset)(typeToSize(e.getType)), reg2(typeToSize(e.getType)))
           }
         )
       }
@@ -429,6 +464,7 @@ class Translator {
     case NewPair(e1, e2, PairType(t1, t2)) =>
       instructionCtx.addLibraryFunction(Clib.mallocLabel)
       instructionCtx.addLibraryFunction(Clib.outOfMemoryLabel)
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
 
       // Move the size of the pair to the next available location
       val tempSizeLocation = locationCtx.getNext(W32)
@@ -440,7 +476,7 @@ class Translator {
       // Allocate memory for the pair and get the pointer to the pair
       locationCtx.setUpCall(List(tempSizeLocation))
       instructionCtx.addInstruction(Call(Clib.mallocLabel))
-      val ptrLoc = locationCtx.cleanUpCall()
+      val ptrLoc = locationCtx.cleanUpCall(Some(typeToSize(PairType(t1, t2))))
 
       // Move the pointer to the pair to the next available location
       val pairLoc = locationCtx.reserveNext(W64) // W64 because it's a pointer
@@ -452,7 +488,7 @@ class Translator {
       locationCtx.regInstr2(
         pairLoc,
         resultLoc1,
-        { (reg1, reg2) => Mov(RegPointer(reg1)(typeToSize(t1)), reg2) }
+        { (reg1, reg2) => Mov(RegPointer(reg1(POINTER_SIZE))(typeToSize(t1)), reg2(typeToSize(t1))) }
       )
 
       // Store the second element in the pair
@@ -462,7 +498,7 @@ class Translator {
       locationCtx.regInstr2(
         pairLoc,
         resultLoc2,
-        { (reg1, reg2) => Mov(RegImmPointer(reg1, offsetSnd)(typeToSize(t2)), reg2) }
+        { (reg1, reg2) => Mov(RegImmPointer(reg1(POINTER_SIZE), offsetSnd)(typeToSize(t2)), reg2(typeToSize(t2))) }
       )
 
       // Unreserve the pair location
@@ -477,27 +513,27 @@ class Translator {
       locationCtx.regInstr2(
         dest,
         fstLoc,
-        { (reg1, reg2) => Mov(reg1, RegPointer(reg2)(typeToSize(f.getType))) }
+        { (reg1, reg2) => Mov(reg1(typeToSize(ty)), RegPointer(reg2(POINTER_SIZE))(typeToSize(ty))) }
       )
 
     case s @ Snd(_, ty) =>
       // Get the current location in the map of the Snd
-      val fstLoc = getHeapLocation(s)
+      val sndLoc = getHeapLocation(s)
 
       // Move this into the expected result location
       val dest = locationCtx.getNext(typeToSize(ty))
 
       locationCtx.regInstr2(
+        sndLoc,
         dest,
-        fstLoc,
-        { (reg1, reg2) => Mov(reg1, RegPointer(reg2)(typeToSize(s.getType))) }
+        { (reg1, reg2) => Mov(reg2(typeToSize(ty)), RegPointer(reg1(POINTER_SIZE))(typeToSize(ty))) }
       )
 
     case TypedCall(v, args, ty) =>
       // Translate arguments into temporary locations
       val argLocations: List[Location] = args.map { arg =>
-        val dest = locationCtx.reserveNext(typeToSize(arg.getType))
         translateExpr(arg)
+        val dest = locationCtx.reserveNext(typeToSize(arg.getType))
         dest
       }
       // Save caller-save registers and set up arguments
@@ -505,12 +541,15 @@ class Translator {
       // Call the function
       instructionCtx.addInstruction(Call(getFunctionName(v.id)))
       // Restore caller-save registers
-      locationCtx.cleanUpCall()
+      val returnDest = locationCtx.cleanUpCall(Some(typeToSize(ty)))
 
       // Free argument temp locations
       argLocations.foreach { _ =>
         locationCtx.unreserveLast()
       }
+
+      val resultLoc = locationCtx.getNext(typeToSize(ty))
+      locationCtx.movLocLoc(resultLoc, returnDest)
 
     case e: Expr => translateExpr(e)
     case _       => throw new UnexpectedException("Unexpected Error: Invalid RValue")
@@ -524,33 +563,53 @@ class Translator {
   private def translateExpr(
       expr: TypedAST.Expr
   )(using instructionCtx: InstructionContext, locationCtx: LocationContext): Unit = expr match {
-    case TypedNot(e) => unary(e, { l => instructionCtx.addInstruction(Not(l)) })
+    case TypedNot(e) =>
+      unary(
+        e,
+        { l =>
+          instructionCtx.addInstruction(Not(l))
+          // Truncate the new value to 1-bit
+          l match {
+            case r: Register => instructionCtx.addInstruction(And(r, 1))
+            case p: Pointer  => instructionCtx.addInstruction(And(p, 1))
+          }
+        }
+      )
     case Negate(e) =>
       unary(e, { l => instructionCtx.addInstruction(Neg(l)) })
 
       // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
     case Len(e) =>
-      val lenDest =
-        locationCtx.reserveNext(typeToSize(IntType)) // we want to move the size of the array to this location
-      unary(e, { l => locationCtx.movLocLoc(lenDest, l) })
-      locationCtx.unreserveLast()
+      val lenDest = locationCtx.reserveNext(typeToSize(IntType)) // Length is stored in a 4-byte location here
+      e match
+        case id: Ident =>
+          val loc = locationCtx.getLocation(id)
+          locationCtx.regInstr2(
+            loc,
+            lenDest,
+            { (reg1, reg2) => Mov(reg2(typeToSize(IntType)), RegPointer(reg1(POINTER_SIZE))(typeToSize(IntType))) }
+          )
+        case _ => throw new RuntimeException("Unexpected Error: Invalid expression for Len")
 
     case Ord(e) =>
-      val ordDest = locationCtx.reserveNext(typeToSize(IntType))
+      val ordDestExtended = locationCtx.getNext(typeToSize(IntType))
+      val ordDest = locationCtx.reserveNext(typeToSize(CharType))
       unary(e, { l => locationCtx.movLocLoc(ordDest, l) })
+      locationCtx.regInstr1(ordDestExtended, { reg => Movzx(reg(typeToSize(IntType)), reg(typeToSize(CharType))) })
       locationCtx.unreserveLast()
 
     case Chr(e) =>
       instructionCtx.addLibraryFunction(Clib.errBadCharLabel)
-      val chrDest = locationCtx.reserveNext(typeToSize(CharType))
+      val chrDest = locationCtx.reserveNext(typeToSize(IntType))
       unary(
         e,
         { l =>
-          locationCtx.regInstr1(l, { reg => Compare(reg, MIN_CHAR) })
+          locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), MIN_CHAR) })
           instructionCtx.addInstruction(JmpLessEqual(Clib.errBadCharLabel))
-          locationCtx.regInstr1(l, { reg => Compare(reg, MAX_CHAR) })
+          locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), MAX_CHAR) })
           instructionCtx.addInstruction(JmpGreaterEqual(Clib.errBadCharLabel))
           locationCtx.movLocLoc(chrDest, l)
         }
@@ -565,6 +624,7 @@ class Translator {
       )
 
       // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
@@ -574,10 +634,11 @@ class Translator {
       val modDest = locationCtx.reserveNext(typeToSize(IntType))
 
       // Check for division by zero runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
       locationCtx.regInstr1(
         modDest,
-        { reg => Compare(reg, 0) }
+        { reg => Compare(reg(typeToSize(IntType)), 0) }
       )
       instructionCtx.addInstruction(JmpEqual(Clib.errDivZeroLabel))
 
@@ -589,8 +650,10 @@ class Translator {
       // so we need to ensure we don't clobber those registers
       locationCtx.withDivRegisters(
         {
-          // Move the dividend to RAX
+          // Move the dividend to EAX
           instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
+          // Sign extend EAX into RDX
+          instructionCtx.addInstruction(Cdq)
           // Perform the division
           instructionCtx.addInstruction(SignedDiv(modDest))
           // Move the remainder to the destination
@@ -608,10 +671,11 @@ class Translator {
       val divDest = locationCtx.reserveNext(typeToSize(IntType))
 
       // Check for division by zero runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
       locationCtx.regInstr1(
         divDest,
-        { reg => Compare(reg, 0) }
+        { reg => Compare(reg(typeToSize(IntType)), 0) }
       )
       instructionCtx.addInstruction(JmpEqual(Clib.errDivZeroLabel))
 
@@ -623,8 +687,10 @@ class Translator {
       // so we need to ensure we don't clobber those registers
       locationCtx.withDivRegisters(
         List(RAX(typeToSize(IntType)), RDX(typeToSize(IntType))), {
-          // Move the dividend to RAX
+          // Move the dividend to EAX
           instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
+          // Sign extend EAX into RDX
+          instructionCtx.addInstruction(Cdq)
           // Perform the division
           instructionCtx.addInstruction(SignedDiv(divDest))
           // Move the quotient to the destination
@@ -640,6 +706,7 @@ class Translator {
       binary(e1, e2, Add.apply)
 
       // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
@@ -647,6 +714,7 @@ class Translator {
       binary(e1, e2, Sub.apply)
 
       // Check for under/overflow runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
 
@@ -698,7 +766,7 @@ class Translator {
 
       // Load the address of the string into the destination
       val stringPointer: Pointer = RegImmPointer(RIP, label)(typeToSize(StringType))
-      locationCtx.regInstr1(dest, { Lea(_, stringPointer) })
+      locationCtx.regInstr1(dest, { reg => Lea(reg(POINTER_SIZE), stringPointer) })
 
     case PairLiter =>
       val dest = locationCtx.getNext(typeToSize(PairType(?, ?)))
@@ -713,14 +781,18 @@ class Translator {
       locationCtx.movLocLoc(dest, loc)
 
     case elem: ArrayElem =>
+      val dest = locationCtx.reserveNext(typeToSize(elem.getType))
       val loc = getHeapLocation(elem)
-      val dest = locationCtx.getNext(typeToSize(elem.getType))
 
       locationCtx.regInstr2(
         dest,
         loc,
-        { (reg1, reg2) => Mov(reg1, RegPointer(reg2)(typeToSize(elem.getType))) }
+        { (reg1, reg2) =>
+          Mov(reg1(typeToSize(elem.getType)), RegPointer(reg2(POINTER_SIZE))(typeToSize(elem.getType)))
+        }
       )
+
+      locationCtx.unreserveLast()
 
     case NestedExpr(e, ty) => translateExpr(e)
   }
@@ -729,11 +801,12 @@ class Translator {
     *
     * @param f The function to translate
     */
-  private def translateFunction(
-      f: Func
-  )(using instructionCtx: InstructionContext, locationCtx: LocationContext): Unit =
+  private def translateFunction(f: Func)(using instructionCtx: InstructionContext): Unit =
     // Define the function label
     instructionCtx.addInstruction(DefineLabel(getFunctionName(f.v.id)))
+
+    // Set up the location context for the function
+    given locationCtx: LocationContext = new LocationContext()
 
     // Set up stack frame and save callee-save registers
     locationCtx.setUpFunc(f.params)
@@ -758,9 +831,11 @@ class Translator {
     val dest = locationCtx.reserveNext(typeToSize(e1.getType))
     translateExpr(e2)
     val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
-    locationCtx.regInstr1(dest, { reg => Compare(reg, e2Dest) })
-    instructionCtx.addInstruction(setter(dest))
+    locationCtx.regInstr1(dest, { reg => Compare(reg(typeToSize(e2.getType)), e2Dest) })
+    // Move dest to a 1-byte location so that the setter can set the correct byte
     locationCtx.unreserveLast()
+    val destByte = locationCtx.getNext(W8)
+    instructionCtx.addInstruction(setter(destByte))
 
   /** Get the location of an LValue that is stored on the heap
    *
@@ -798,7 +873,9 @@ class Translator {
             locationCtx.regInstr2(
               indexDest,
               baseDest,
-              { (indexReg, sizeReg) => Compare(indexReg, RegPointer(sizeReg)(typeToSize(IntType))) }
+              { (indexReg, sizeReg) =>
+                Compare(indexReg(typeToSize(e.getType)), RegPointer(sizeReg(POINTER_SIZE))(typeToSize(IntType)))
+              }
             )
             instructionCtx.addInstruction(JmpGreaterEqual(Clib.errArrBoundsLabel))
 
@@ -810,7 +887,10 @@ class Translator {
               indexDest,
               { (reg1, reg2) =>
                 // baseDest = baseDest + indexDest * tySize + INT_SIZE
-                Lea(reg1, RegScaleRegImmPointer(reg1, tySize, reg2, INT_SIZE)(typeToSize(nextTy)))
+                Lea(
+                  reg1(POINTER_SIZE),
+                  RegScaleRegImmPointer(reg1(POINTER_SIZE), tySize, reg2(POINTER_SIZE), INT_SIZE)(typeToSize(nextTy))
+                )
               }
             )
             nextTy
@@ -831,11 +911,12 @@ class Translator {
       }
 
       // Check for null pair runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errNullLabel)
-      locationCtx.regInstr1(
-        pairPtrLoc,
-        { reg => Compare(RegPointer(reg)(POINTER_SIZE), NULL) }
-      )
+      pairPtrLoc match {
+        case r: Register => instructionCtx.addInstruction(Compare(r, NULL))
+        case p: Pointer  => instructionCtx.addInstruction(Compare(p, NULL))
+      }
       instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
       pairPtrLoc
@@ -848,11 +929,12 @@ class Translator {
       }
 
       // Check for null pair runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errNullLabel)
-      locationCtx.regInstr1(
-        pairPtrLoc,
-        { reg => Compare(RegPointer(reg)(POINTER_SIZE), NULL) }
-      )
+      pairPtrLoc match {
+        case r: Register => instructionCtx.addInstruction(Compare(r, NULL))
+        case p: Pointer  => instructionCtx.addInstruction(Compare(p, NULL))
+      }
       instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
 
       // Calculate the location of the second element
@@ -863,7 +945,7 @@ class Translator {
       val offset = PAIR_SIZE / 2
       locationCtx.regInstr1(
         sndDest,
-        { reg => Lea(reg, RegImmPointer(reg, offset)(typeToSize(ty))) }
+        { reg => Lea(reg(POINTER_SIZE), RegImmPointer(reg(POINTER_SIZE), offset)(typeToSize(ty))) }
       )
 
       sndDest
@@ -901,13 +983,13 @@ class Translator {
       instructionCtx: InstructionContext,
       locationCtx: LocationContext
   ): Unit = {
-    val dest = locationCtx.reserveNext(typeToSize(e1.getType))
     translateExpr(e1)
+    val dest = locationCtx.reserveNext(typeToSize(e1.getType))
     if check1.isDefined then check1.get(dest)
     val e2Dest = locationCtx.getNext(typeToSize(e2.getType))
     if check2.isDefined then check2.get(dest, e2Dest)
     translateExpr(e2)
-    locationCtx.regInstr1(dest, { reg => instr(reg, e2Dest) })
+    locationCtx.regInstr1(dest, { reg => instr(reg(typeToSize(e2.getType)), e2Dest) })
     locationCtx.unreserveLast()
   }
 }
@@ -1017,8 +1099,7 @@ object Clib {
       Mov(RAX(W8), 0),
       Call(ClibPrintf),
       Mov(RDI(W64), 0),
-      Call(ClibFlush),
-      Mov(RSP(W64), RBP(W64))
+      Call(ClibFlush)
     )
   )
 
@@ -1033,7 +1114,7 @@ object Clib {
       List(
         Comment("Align stack to 16 bytes for external calls"),
         And(RSP(W64), -16),
-        Compare(RDI(W8), 0),
+        Test(RDI(W8), 1),
         JmpNotEqual(boolBranchTrue),
         Lea(RDX(W64), RegImmPointer(RIP, falseLabel)(W64)),
         Jmp(boolBranchFalse),
@@ -1055,6 +1136,7 @@ object Clib {
     List(
       Comment("Align stack to 16 bytes for external calls"),
       And(RSP(W64), -16),
+      Mov(RDX(W64), RDI(W64)),
       Mov(RSI(W32), RegImmPointer(RDI(W64), -4)(W32)),
       Lea(RDI(W64), RegImmPointer(RIP, StringFormatLabel)(W64)),
       Mov(RAX(W8), 0),
@@ -1071,7 +1153,7 @@ object Clib {
       Comment("Align stack to 16 bytes for external calls"),
       And(RSP(W64), -16),
       Mov(RSI(W64), RDI(W64)),
-      Lea(RDI(W64), RegImmPointer(RIP, PointerFormatSpecifier)(W64)),
+      Lea(RDI(W64), RegImmPointer(RIP, PointerFormatLabel)(W64)),
       Mov(RAX(W8), 0),
       Call(ClibPrintf),
       Mov(RDI(W64), 0),
@@ -1140,56 +1222,6 @@ object Clib {
     )
   )
 
-  // ---- EXIT AND HEAP FUNCTIONS ----
-  val exitLabel = "_exit"
-  val mallocLabel = "_malloc"
-  val freeLabel = "_free"
-  val freepairLabel = "_freepair"
-
-  /** Subroutine for exiting the program. */
-  private val _exit = createFunction(
-    exitLabel,
-    List(
-      Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Call(ClibExit)
-    )
-  )
-
-  /** Subroutine for allocating memory. Used for pairs and arrays. */
-  private val _malloc = createFunction(
-    mallocLabel,
-    List(
-      Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Call(ClibMalloc),
-      Compare(RAX(W64), 0),
-      JmpEqual(outOfMemoryLabel)
-    )
-  )
-
-  /** Subroutine for freeing array memory on the heap. */
-  private val _free = createFunction(
-    freeLabel,
-    List(
-      Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Call(ClibFree)
-    )
-  )
-
-  /** Subroutine for freeing pair memory on the heap. */
-  private val _freepair = createFunction(
-    freepairLabel,
-    List(
-      Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Compare(RDI(W64), 0),
-      JmpEqual(errNullLabel),
-      Call(ClibFree)
-    )
-  )
-
   /// ---- ERRORS ----
   val outOfMemoryLabel = "_outOfMemory"
   val errNullLabel = "_errNull"
@@ -1205,12 +1237,12 @@ object Clib {
   private val BadCharStringLabel = ".badCharString"
   private val ArrBoundsStringLabel = ".arrBoundsString"
 
-  private val OutOfMemoryString = "fatal error: out of memory\n"
-  private val NullPairString = "fatal error: null pair dereferenced or freed\n"
-  private val DivZeroString = "fatal error: division or modulo by zero\n"
-  private val OverflowString = "fatal error: integer overflow or underflow occurred\n"
-  private val BadCharString = "fatal error: int %d is not ascii character 0-127\n"
-  private val ArrBoundsString = "fatal error: array index out of bounds\n"
+  private val OutOfMemoryString = "fatal error: out of memory"
+  private val NullPairString = "fatal error: null pair dereferenced or freed"
+  private val DivZeroString = "fatal error: division or modulo by zero"
+  private val OverflowString = "fatal error: integer overflow or underflow occurred"
+  private val BadCharString = "fatal error: int %d is not ascii character 0-127"
+  private val ArrBoundsString = "fatal error: array index out of bounds"
 
   /** Subroutine for an out of memory error. */
   private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
@@ -1283,6 +1315,56 @@ object Clib {
     Call(ClibFlush),
     Mov(RDI(W8), -1),
     Call(ClibExit)
+  )
+
+  // ---- EXIT AND HEAP FUNCTIONS ----
+  val exitLabel = "_exit"
+  val mallocLabel = "_malloc"
+  val freeLabel = "_free"
+  val freepairLabel = "_freepair"
+
+  /** Subroutine for exiting the program. */
+  private val _exit = createFunction(
+    exitLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Call(ClibExit)
+    )
+  )
+
+  /** Subroutine for allocating memory. Used for pairs and arrays. */
+  private val _malloc = createFunction(
+    mallocLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Call(ClibMalloc),
+      Compare(RAX(W64), 0),
+      JmpEqual(outOfMemoryLabel)
+    )
+  )
+
+  /** Subroutine for freeing array memory on the heap. */
+  private val _free = createFunction(
+    freeLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Call(ClibFree)
+    )
+  )
+
+  /** Subroutine for freeing pair memory on the heap. */
+  private val _freepair = createFunction(
+    freepairLabel,
+    List(
+      Comment("Align stack to 16 bytes for external calls"),
+      And(RSP(W64), -16),
+      Compare(RDI(W64), 0),
+      JmpEqual(errNullLabel),
+      Call(ClibFree)
+    )
   )
 
   val labelToFunc: Map[Label, List[Instruction]] = Map(

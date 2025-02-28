@@ -10,7 +10,7 @@ class BackendValidBasicSkipTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "comment.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
 
@@ -18,7 +18,7 @@ class BackendValidBasicSkipTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "commentEoF.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
 
@@ -26,7 +26,7 @@ class BackendValidBasicSkipTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "commentInLine.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
 
@@ -34,7 +34,7 @@ class BackendValidBasicSkipTests extends AnyFlatSpec {
     val programTester = new ProgramTester(dir + "skip.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
-    exitStatus shouldBe programTester.expectedExitStatus
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
 

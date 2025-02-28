@@ -2,7 +2,7 @@ package wacc
 
 import wacc.Size.*
 
-type Operand = Register | Pointer | Immediate | String
+type Operand = Register | Pointer | Immediate | Label
 
 class x86Stringifier {
 
@@ -27,7 +27,12 @@ class x86Stringifier {
           Asciz(string)
         )
       }) ++
-      List(Text, DefineLabel("main")) ++
+      List(
+        Text,
+        DefineLabel("main"),
+        Push(RBP(W64)),
+        Mov(RBP(W64), RSP(W64))
+      ) ++
       instructions)
       .map(instr => {
         // we first convert the instruction to a string
@@ -37,7 +42,7 @@ class x86Stringifier {
         if (translated.startsWith(".") || translated.endsWith(":")) translated
         else s"${" " * INDENTATION_SIZE}$translated"
       })
-      .mkString("\n")
+      .mkString("\n") ++ "\n"
   }
 
   /**
@@ -50,6 +55,7 @@ class x86Stringifier {
       instr: Instruction
   ): String = instr match {
     case Mov(dest, src)                 => s"mov ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
+    case Movzx(dest, src)               => s"movzx ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
     case Call(label)                    => s"call ${stringifyOperand(label)}"
     case Ret(imm)                       => s"ret${stringifyOperand(imm, prefix = " ")}"
     case Nop                            => "nop"
@@ -57,6 +63,7 @@ class x86Stringifier {
     case Push(src)                      => s"push ${stringifyOperand(src)}"
     case Pop(dest)                      => s"pop ${stringifyOperand(dest)}"
     case Lea(dest, src)                 => s"lea ${stringifyOperand(dest)}, ${{ stringifyPointerArithmetic(src) }}"
+    case Cdq                            => "cdq"
     case DefineLabel(label)             => s"${stringifyOperand(label)}:"
     case Jmp(label)                     => s"jmp ${stringifyOperand(label)}"
     case JmpEqual(label)                => s"je ${stringifyOperand(label)}"
@@ -156,6 +163,16 @@ class x86Stringifier {
   private def stringifyPointer(pointer: Pointer): String =
     s"${ptrSize(pointer.size)} ${stringifyPointerArithmetic(pointer)}"
 
+  /** Returns the sign symbol of an operand
+   *
+   * @param operand The operand to check
+   * @return The sign symbol of the operand
+   */
+  def signSymbol(operand: Immediate | Label): String = operand match {
+    case n: Immediate if n < 0 => ""
+    case _                     => "+"
+  }
+
   /**
     * Converts pointer arithmetic into string representation (without a pointer size prefix)
     *
@@ -166,7 +183,7 @@ class x86Stringifier {
   private def stringifyPointerArithmetic(pointer: Pointer): String = {
     val arithmetic = pointer match {
       case RegPointer(reg)           => s"${stringifyOperand(reg)}"
-      case RegImmPointer(reg, imm)   => s"${stringifyOperand(reg)}+${stringifyOperand(imm)}"
+      case RegImmPointer(reg, imm)   => s"${stringifyOperand(reg)}${signSymbol(imm)}${stringifyOperand(imm)}"
       case RegRegPointer(reg1, reg2) => s"${stringifyOperand(reg1)}+${stringifyOperand(reg2)}"
       case RegScaleRegPointer(reg1, scale, reg2) =>
         s"${stringifyOperand(reg1)}+${stringifyOperand(scale)}*${stringifyOperand(reg2)}"

@@ -80,7 +80,8 @@ object lexer {
         ).contains(c),
       ),
       escapeSequences = EscapeDesc.plain.copy(
-        literals = Set('0', 'b', 't', 'n', 'f', 'r', '"', '\'', '\\')
+        mapping = Map("0" -> 0x00, "b" -> 0x08, "t" -> 0x09, "n" -> 0x0a, "f" -> 0x0c, "r" -> 0x0d),
+        literals = Set('\"', '\'', '\\')
       )
     ),
     numericDesc = NumericDesc.plain.copy(
