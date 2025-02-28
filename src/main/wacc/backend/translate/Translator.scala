@@ -84,6 +84,10 @@ class Translator {
     // Translate the program body
     translateStmt(program.body)
 
+    // Return 0 from main body
+    translateCtx.addInstruction(Mov(RAX(W64), 0))
+    translateCtx.addInstruction(Ret(None))
+
     // Translate all functions in the program
     program.fs.foreach { f => translateFunction(f) }
 
