@@ -580,10 +580,16 @@ class Translator {
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
       instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
     case Len(e) =>
-      val lenDest =
-        locationCtx.reserveNext(typeToSize(IntType)) // we want to move the size of the array to this location
-      unary(e, { l => locationCtx.movLocLoc(lenDest, l) })
-      locationCtx.unreserveLast()
+      val lenDest = locationCtx.reserveNext(typeToSize(IntType)) // Length is stored in a 4-byte location here
+      e match
+        case id: Ident =>
+          val loc = locationCtx.getLocation(id)
+          locationCtx.regInstr2(
+            loc,
+            lenDest,
+            { (reg1, reg2) => Mov(reg2(typeToSize(IntType)), RegPointer(reg1(POINTER_SIZE))(typeToSize(IntType))) }
+          )
+        case _ => throw new RuntimeException("Unexpected Error: Invalid expression for Len")
 
     case Ord(e) =>
       val ordDest = locationCtx.reserveNext(typeToSize(CharType))
