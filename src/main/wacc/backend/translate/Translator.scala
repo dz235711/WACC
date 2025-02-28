@@ -543,11 +543,11 @@ class Translator {
       locationCtx.unreserveLast()
 
     case Chr(e) =>
+      instructionCtx.addLibraryFunction(Clib.errBadCharLabel)
       val chrDest = locationCtx.reserveNext(typeToSize(CharType))
       unary(
         e,
         { l =>
-          instructionCtx.addLibraryFunction(Clib.errBadCharLabel)
           locationCtx.regInstr1(l, { reg => Compare(reg, MIN_CHAR) })
           instructionCtx.addInstruction(JmpLessEqual(Clib.errBadCharLabel))
           locationCtx.regInstr1(l, { reg => Compare(reg, MAX_CHAR) })
