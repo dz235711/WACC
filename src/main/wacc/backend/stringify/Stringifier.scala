@@ -30,7 +30,8 @@ class x86Stringifier {
       List(
         Text,
         DefineLabel("main"),
-        Push(RBP(W64))
+        Push(RBP(W64)),
+        Mov(RBP(W64), RSP(W64))
       ) ++
       instructions)
       .map(instr => {
@@ -161,7 +162,7 @@ class x86Stringifier {
     s"${ptrSize(pointer.size)} ${stringifyPointerArithmetic(pointer)}"
 
   /** Returns the sign symbol of an operand
-   * 
+   *
    * @param operand The operand to check
    * @return The sign symbol of the operand
    */

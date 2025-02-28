@@ -937,8 +937,7 @@ object Clib {
       Mov(RAX(W8), 0),
       Call(ClibPrintf),
       Mov(RDI(W64), 0),
-      Call(ClibFlush),
-      Mov(RSP(W64), RBP(W64))
+      Call(ClibFlush)
     )
   )
 

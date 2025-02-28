@@ -260,17 +260,12 @@ class LocationContext {
   def cleanUpCall()(using instructionCtx: InstructionContext): Location =
     instructionCtx.addInstruction(Comment("Cleaning up function call"))
 
-    // 1. Shift the stack pointer
-    instructionCtx.addInstruction(
-      Mov(StackPointer, RegImmPointer(BasePointer, PointerSize * (reservedStackLocs + CallerSaved.length))(W64))
-    )
-
-    // 2. Restore caller registers
+    // 1. Restore caller registers
     popLocs(CallerSaved)
 
     instructionCtx.addInstruction(Comment("Function call clean up complete"))
 
-    // 3. Return result location
+    // 2. Return result location
     ReturnReg
 
   /** Move a value from one location to another
