@@ -7,17 +7,21 @@ import TypedAST.{
   Not as TypedNot,
   Or as TypedOr,
   Sub as TypedSub,
+  Greater as TypedGreater,
   *
 }
 import wacc.RenamedAST.KnownType.{ArrayType, BoolType, CharType, IntType, PairType, StringType}
 import wacc.RenamedAST.{?, KnownType, SemType}
 import wacc.Size.*
+import wacc.Condition.*
 
 import java.rmi.UnexpectedException
 import scala.collection.mutable
 import java.util.regex.Pattern
 
 type HeapLValue = Fst | Snd | ArrayElem
+
+case class Label(label: String)
 
 // Agreement: a translate function will:
 // 1. put its result in the next available location at the time of its invocation
@@ -38,8 +42,9 @@ sealed class InstructionContext {
    * @return The next string label
    */
   def getStringLabel: Label =
+    val toReturn = Label(s".L.str$stringCounter")
     stringCounter += 1
-    s".L.str$stringCounter"
+    toReturn
 
   def getWhileLoopId: Int =
     whileLoopCounter += 1
@@ -128,8 +133,8 @@ class Translator {
     translateStmt(program.body)
 
     // Return 0 from main body
-    translateCtx.addInstruction(Mov(RAX(W64), 0))
-    translateCtx.addInstruction(Pop(RBP(W64)))
+    translateCtx.addInstruction(Mov(RETURN(W64), 0))
+    translateCtx.addInstruction(Pop(BASE_POINTER(W64)))
     translateCtx.addInstruction(Ret(None))
 
     // Translate all functions in the program
@@ -164,7 +169,7 @@ class Translator {
    * @param id The id (integer) to generate the function name
    * @return The function name
    */
-  private def getFunctionName(id: Int): String = s"$FUNCTION_LABEL$id"
+  private def getFunctionName(id: Int): Label = Label(s"$FUNCTION_LABEL$id")
 
   /** Translates a statement to a list of instructions
    *
@@ -278,7 +283,7 @@ class Translator {
           instructionCtx.addLibraryFunction(Clib.printsLabel)
           instructionCtx.addLibraryFunction(Clib.errNullLabel)
           locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), NULL) })
-          instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
+          instructionCtx.addInstruction(Jmp(Equal, Clib.errNullLabel))
 
           // Call free
           locationCtx.setUpCall(List(l))
@@ -359,8 +364,8 @@ class Translator {
       locationCtx.cleanUpCall(None)
 
     case If(cond, s1, s2) =>
-      val falseLabel = s"if_false_${ifCounter}"
-      val endLabel = s"if_end_${ifCounter}"
+      val falseLabel = Label(s"if_false_${ifCounter}")
+      val endLabel = Label(s"if_end_${ifCounter}")
       ifCounter += 1
 
       branch(endLabel, falseLabel, cond, s1)
@@ -368,8 +373,8 @@ class Translator {
       instructionCtx.addInstruction(DefineLabel(endLabel))
 
     case While(cond, body) =>
-      val startLabel = s"while_start_${instructionCtx.getWhileLoopId}"
-      val endLabel = s"while_end_${instructionCtx.getWhileLoopId}"
+      val startLabel = Label(s"while_start_${instructionCtx.getWhileLoopId}")
+      val endLabel = Label(s"while_end_${instructionCtx.getWhileLoopId}")
 
       instructionCtx.addInstruction(DefineLabel(startLabel))
       branch(startLabel, endLabel, cond, body)
@@ -395,7 +400,7 @@ class Translator {
    * @param cond The condition to check
    * @param trueBody The body to execute if the condition is true
    */
-  private def branch(afterTrueLabel: String, falseLabel: String, cond: Expr, trueBody: Stmt)(using
+  private def branch(afterTrueLabel: Label, falseLabel: Label, cond: Expr, trueBody: Stmt)(using
       instructionCtx: InstructionContext,
       locationCtx: LocationContext
   ): Unit =
@@ -403,9 +408,9 @@ class Translator {
     translateExpr(cond)
 
     instructionCtx.addInstruction(Test(dest, TRUE))
-    instructionCtx.addInstruction(JmpZero(falseLabel))
+    instructionCtx.addInstruction(Jmp(Zero, falseLabel))
     translateStmt(trueBody)
-    instructionCtx.addInstruction(Jmp(afterTrueLabel))
+    instructionCtx.addInstruction(Jmp(NoCond, afterTrueLabel))
     instructionCtx.addInstruction(DefineLabel(falseLabel))
 
   /** Translates an RValue to and stores the result in the next available location at the time of invocation.
@@ -581,7 +586,7 @@ class Translator {
       // Check for under/overflow runtime error
       instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
-      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
+      instructionCtx.addInstruction(Jmp(Overflow, Clib.errOverflowLabel))
     case Len(e) =>
       val lenDest = locationCtx.reserveNext(typeToSize(IntType)) // Length is stored in a 4-byte location here
       e match
@@ -608,9 +613,9 @@ class Translator {
         e,
         { l =>
           locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), MIN_CHAR) })
-          instructionCtx.addInstruction(JmpLessEqual(Clib.errBadCharLabel))
+          instructionCtx.addInstruction(Jmp(LessEqual, Clib.errBadCharLabel))
           locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), MAX_CHAR) })
-          instructionCtx.addInstruction(JmpGreaterEqual(Clib.errBadCharLabel))
+          instructionCtx.addInstruction(Jmp(GreaterEqual, Clib.errBadCharLabel))
           locationCtx.movLocLoc(chrDest, l)
         }
       )
@@ -626,75 +631,46 @@ class Translator {
       // Check for under/overflow runtime error
       instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
-      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
+      instructionCtx.addInstruction(Jmp(Overflow, Clib.errOverflowLabel))
 
-    case Mod(dividendExp, divisorExp) =>
+    case op @ (Div(_, _) | Mod(_, _)) =>
+      val (dividendExp, divisorExp) = op match {
+        case Div(d, v) => (d, v)
+        case Mod(d, v) => (d, v)
+      }
       // Move the divisor to the eventual destination of the result (first available location)
       translateExpr(divisorExp)
-      val modDest = locationCtx.reserveNext(typeToSize(IntType))
+      val resultDest = locationCtx.reserveNext(typeToSize(IntType))
 
       // Check for division by zero runtime error
       instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
       locationCtx.regInstr1(
-        modDest,
+        resultDest,
         { reg => Compare(reg(typeToSize(IntType)), 0) }
       )
-      instructionCtx.addInstruction(JmpEqual(Clib.errDivZeroLabel))
+      instructionCtx.addInstruction(Jmp(Equal, Clib.errDivZeroLabel))
 
       // Move the dividend to the next available location
       translateExpr(dividendExp)
       val dividendDest = locationCtx.reserveNext(typeToSize(IntType))
 
-      // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
-      // so we need to ensure we don't clobber those registers
-      locationCtx.withDivRegisters(
-        {
-          // Move the dividend to EAX
-          instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
-          // Sign extend EAX into RDX
-          instructionCtx.addInstruction(Cdq)
-          // Perform the division
-          instructionCtx.addInstruction(SignedDiv(modDest))
-          // Move the remainder to the destination
-          locationCtx.movLocLoc(modDest, RDX(typeToSize(IntType)))
-        }
-      )
-
-      // Unreserve the locations
-      locationCtx.unreserveLast()
-      locationCtx.unreserveLast()
-
-    case Div(dividendExp, divisorExp) =>
-      // Move the divisor to the eventual destination of the result (first available location)
-      translateExpr(divisorExp)
-      val divDest = locationCtx.reserveNext(typeToSize(IntType))
-
-      // Check for division by zero runtime error
-      instructionCtx.addLibraryFunction(Clib.printsLabel)
-      instructionCtx.addLibraryFunction(Clib.errDivZeroLabel)
-      locationCtx.regInstr1(
-        divDest,
-        { reg => Compare(reg(typeToSize(IntType)), 0) }
-      )
-      instructionCtx.addInstruction(JmpEqual(Clib.errDivZeroLabel))
-
-      // Move the dividend to the next available location
-      translateExpr(dividendExp)
-      val dividendDest = locationCtx.reserveNext(typeToSize(IntType))
+      val resultReg = op match
+        case _: Div => QUOT_REG.apply
+        case _: Mod => REM_REG.apply
 
       // Signed division in x86-64 stores the quotient in RAX and the remainder in RDX
       // so we need to ensure we don't clobber those registers
       locationCtx.withDivRegisters(
-        List(RAX(typeToSize(IntType)), RDX(typeToSize(IntType))), {
+        List(QUOT_REG(typeToSize(IntType)), REM_REG(typeToSize(IntType))), {
           // Move the dividend to EAX
-          instructionCtx.addInstruction(Mov(RAX(typeToSize(IntType)), dividendDest))
+          instructionCtx.addInstruction(Mov(QUOT_REG(typeToSize(IntType)), dividendDest))
           // Sign extend EAX into RDX
           instructionCtx.addInstruction(Cdq)
           // Perform the division
-          instructionCtx.addInstruction(SignedDiv(divDest))
-          // Move the quotient to the destination
-          locationCtx.movLocLoc(divDest, RAX(typeToSize(IntType)))
+          instructionCtx.addInstruction(SignedDiv(resultDest))
+          // Move the quotient or remainder to the destination
+          locationCtx.movLocLoc(resultDest, resultReg(typeToSize(IntType)))
         }
       )
 
@@ -708,7 +684,7 @@ class Translator {
       // Check for under/overflow runtime error
       instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
-      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
+      instructionCtx.addInstruction(Jmp(Overflow, Clib.errOverflowLabel))
 
     case TypedSub(e1, e2) =>
       binary(e1, e2, Sub.apply)
@@ -716,9 +692,9 @@ class Translator {
       // Check for under/overflow runtime error
       instructionCtx.addLibraryFunction(Clib.printsLabel)
       instructionCtx.addLibraryFunction(Clib.errOverflowLabel)
-      instructionCtx.addInstruction(JmpOverflow(Clib.errOverflowLabel))
+      instructionCtx.addInstruction(Jmp(Overflow, Clib.errOverflowLabel))
 
-    case Greater(e1, e2) => cmpExp(e1, e2, SetGreater.apply)
+    case TypedGreater(e1, e2) => cmpExp(e1, e2, SetGreater.apply)
 
     case GreaterEq(e1, e2) => cmpExp(e1, e2, SetGreaterEqual.apply)
 
@@ -765,7 +741,7 @@ class Translator {
       val dest = locationCtx.getNext(typeToSize(StringType))
 
       // Load the address of the string into the destination
-      val stringPointer: Pointer = RegImmPointer(RIP, label)(typeToSize(StringType))
+      val stringPointer: Pointer = RegImmPointer(INSTRUCTION_POINTER, label)(typeToSize(StringType))
       locationCtx.regInstr1(dest, { reg => Lea(reg(POINTER_SIZE), stringPointer) })
 
     case PairLiter =>
@@ -870,7 +846,7 @@ class Translator {
                 case r: Register => Compare(r, MIN_ARR_SIZE)
                 case p: Pointer  => Compare(p, MIN_ARR_SIZE)
               })
-              instructionCtx.addInstruction(JmpLess(Clib.errArrBoundsLabel))
+              instructionCtx.addInstruction(Jmp(Less, (Clib.errArrBoundsLabel)))
               locationCtx.regInstr2(
                 indexDest,
                 baseDest,
@@ -878,7 +854,7 @@ class Translator {
                   Compare(indexReg(typeToSize(e.getType)), RegPointer(sizeReg(POINTER_SIZE))(typeToSize(IntType)))
                 }
               )
-              instructionCtx.addInstruction(JmpGreaterEqual(Clib.errArrBoundsLabel))
+              instructionCtx.addInstruction(Jmp(GreaterEqual, Clib.errArrBoundsLabel))
 
               // get the size of the type (for scaling)
               val tySize = typeToSize(nextTy).toBytes
@@ -928,7 +904,7 @@ class Translator {
           case r: Register => instructionCtx.addInstruction(Compare(r, NULL))
           case p: Pointer  => instructionCtx.addInstruction(Compare(p, NULL))
         }
-        instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
+        instructionCtx.addInstruction(Jmp(Equal, Clib.errNullLabel))
 
         l match {
           case id: Ident =>
@@ -959,7 +935,7 @@ class Translator {
           case r: Register => instructionCtx.addInstruction(Compare(r, NULL))
           case p: Pointer  => instructionCtx.addInstruction(Compare(p, NULL))
         }
-        instructionCtx.addInstruction(JmpEqual(Clib.errNullLabel))
+        instructionCtx.addInstruction(Jmp(Equal, Clib.errNullLabel))
 
         // Calculate the location of the second element
         val sndDest = locationCtx.getNext(typeToSize(PairType(?, ty)))
@@ -1063,32 +1039,32 @@ object Clib {
     */
   private def createFunction(label: Label, body: List[Instruction]): List[Instruction] = List(
     DefineLabel(label),
-    Push(RBP(W64)),
-    Mov(RBP(W64), RSP(W64))
+    Push(BASE_POINTER(W64)),
+    Mov(BASE_POINTER(W64), STACK_POINTER(W64))
   ) ::: body ::: List(
-    Mov(RSP(W64), RBP(W64)),
-    Pop(RBP(W64)),
+    Mov(STACK_POINTER(W64), BASE_POINTER(W64)),
+    Pop(BASE_POINTER(W64)),
     Ret(None)
   )
 
   // C library function labels
-  private val ClibExit = "exit@plt"
-  private val ClibFlush = "fflush@plt"
-  private val ClibFree = "free@plt"
-  private val ClibMalloc = "malloc@plt"
-  private val ClibPrintf = "printf@plt"
-  private val ClibPuts = "puts@plt"
-  private val ClibScanf = "scanf@plt"
+  private val ClibExit = Label("exit@plt")
+  private val ClibFlush = Label("fflush@plt")
+  private val ClibFree = Label("free@plt")
+  private val ClibMalloc = Label("malloc@plt")
+  private val ClibPrintf = Label("printf@plt")
+  private val ClibPuts = Label("puts@plt")
+  private val ClibScanf = Label("scanf@plt")
 
   // ---- PRINT FUNCTIONS ----
-  private val IntFormatLabel = ".intFormat"
-  private val CharacterFormatLabel = ".charFormat"
-  private val falseLabel = ".false"
-  private val trueLabel = ".true"
-  private val boolStrLabel = ".boolStr"
-  private val StringFormatLabel = ".stringFormat"
-  private val PointerFormatLabel = ".pointerFormat"
-  private val printlnStrLabel = ".printlnStr"
+  private val IntFormatLabel = Label(".intFormat")
+  private val CharacterFormatLabel = Label(".charFormat")
+  private val falseLabel = Label(".false")
+  private val trueLabel = Label(".true")
+  private val boolStrLabel = Label(".boolStr")
+  private val StringFormatLabel = Label(".stringFormat")
+  private val PointerFormatLabel = Label(".pointerFormat")
+  private val printlnStrLabel = Label(".printlnStr")
 
   private val IntFormatSpecifier = "%d"
   private val CharacterFormatSpecifier = "%c"
@@ -1099,24 +1075,24 @@ object Clib {
   private val PointerFormatSpecifier = "%p"
   private val printlnStr = ""
 
-  val printiLabel = "_printi"
-  val printcLabel = "_printc"
-  val printbLabel = "_printb"
-  val printsLabel = "_prints"
-  val printpLabel = "_printp"
-  val printlnLabel = "_println"
+  val printiLabel = Label("_printi")
+  val printcLabel = Label("_printc")
+  val printbLabel = Label("_printb")
+  val printsLabel = Label("_prints")
+  val printpLabel = Label("_printp")
+  val printlnLabel = Label("_println")
 
   /** Subroutine for printing an integer. */
   private val _printi = createReadOnlyString(IntFormatLabel, IntFormatSpecifier) ::: createFunction(
     printiLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Mov(RSI(W32), RDI(W32)),
-      Lea(RDI(W64), RegImmPointer(RIP, IntFormatLabel)(W64)),
-      Mov(RAX(W8), 0),
+      And(STACK_POINTER(W64), -16),
+      Mov(ARG_2(W32), ARG_1(W32)),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, IntFormatLabel)(W64)),
+      Mov(RETURN(W8), 0),
       Call(ClibPrintf),
-      Mov(RDI(W64), 0),
+      Mov(ARG_1(W64), 0),
       Call(ClibFlush)
     )
   )
@@ -1126,18 +1102,18 @@ object Clib {
     printcLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Mov(RSI(W8), RDI(W8)),
-      Lea(RDI(W64), RegImmPointer(RIP, CharacterFormatLabel)(W64)),
-      Mov(RAX(W8), 0),
+      And(STACK_POINTER(W64), -16),
+      Mov(ARG_2(W8), ARG_1(W8)),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, CharacterFormatLabel)(W64)),
+      Mov(RETURN(W8), 0),
       Call(ClibPrintf),
-      Mov(RDI(W64), 0),
+      Mov(ARG_1(W64), 0),
       Call(ClibFlush)
     )
   )
 
-  private val boolBranchFalse = "_printbFalse"
-  private val boolBranchTrue = "_printbTrue"
+  private val boolBranchFalse = Label("_printbFalse")
+  private val boolBranchTrue = Label("_printbTrue")
 
   private val _printb = createReadOnlyString(falseLabel, falseStr)
     ::: createReadOnlyString(trueLabel, trueStr)
@@ -1146,19 +1122,19 @@ object Clib {
       printbLabel,
       List(
         Comment("Align stack to 16 bytes for external calls"),
-        And(RSP(W64), -16),
-        Test(RDI(W8), 1),
-        JmpNotEqual(boolBranchTrue),
-        Lea(RDX(W64), RegImmPointer(RIP, falseLabel)(W64)),
-        Jmp(boolBranchFalse),
+        And(STACK_POINTER(W64), -16),
+        Test(ARG_1(W8), 1),
+        Jmp(NotEqual, boolBranchTrue),
+        Lea(ARG_3(W64), RegImmPointer(INSTRUCTION_POINTER, falseLabel)(W64)),
+        Jmp(NoCond, boolBranchFalse),
         DefineLabel(boolBranchTrue),
-        Lea(RDX(W64), RegImmPointer(RIP, trueLabel)(W64)),
+        Lea(ARG_3(W64), RegImmPointer(INSTRUCTION_POINTER, trueLabel)(W64)),
         DefineLabel(boolBranchFalse),
-        Mov(RSI(W32), RegImmPointer(RDX(W64), -4)(W32)),
-        Lea(RDI(W64), RegImmPointer(RIP, boolStrLabel)(W64)),
-        Mov(RAX(W8), 0),
+        Mov(ARG_2(W32), RegImmPointer(ARG_3(W64), -4)(W32)),
+        Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, boolStrLabel)(W64)),
+        Mov(RETURN(W8), 0),
         Call(ClibPrintf),
-        Mov(RDI(W64), 0),
+        Mov(ARG_1(W64), 0),
         Call(ClibFlush)
       )
     )
@@ -1168,13 +1144,13 @@ object Clib {
     printsLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Mov(RDX(W64), RDI(W64)),
-      Mov(RSI(W32), RegImmPointer(RDI(W64), -4)(W32)),
-      Lea(RDI(W64), RegImmPointer(RIP, StringFormatLabel)(W64)),
-      Mov(RAX(W8), 0),
+      And(STACK_POINTER(W64), -16),
+      Mov(ARG_3(W64), ARG_1(W64)),
+      Mov(ARG_2(W32), RegImmPointer(ARG_1(W64), -4)(W32)),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, StringFormatLabel)(W64)),
+      Mov(RETURN(W8), 0),
       Call(ClibPrintf),
-      Mov(RDI(W64), 0),
+      Mov(ARG_1(W64), 0),
       Call(ClibFlush)
     )
   )
@@ -1184,12 +1160,12 @@ object Clib {
     printpLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Mov(RSI(W64), RDI(W64)),
-      Lea(RDI(W64), RegImmPointer(RIP, PointerFormatLabel)(W64)),
-      Mov(RAX(W8), 0),
+      And(STACK_POINTER(W64), -16),
+      Mov(ARG_2(W64), ARG_1(W64)),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, PointerFormatLabel)(W64)),
+      Mov(RETURN(W8), 0),
       Call(ClibPrintf),
-      Mov(RDI(W64), 0),
+      Mov(ARG_1(W64), 0),
       Call(ClibFlush)
     )
   )
@@ -1199,40 +1175,40 @@ object Clib {
     printlnLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Lea(RDI(W64), RegImmPointer(RIP, printlnStrLabel)(W64)),
+      And(STACK_POINTER(W64), -16),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, printlnStrLabel)(W64)),
       Call(ClibPuts),
-      Mov(RDI(W64), 0),
+      Mov(ARG_1(W64), 0),
       Call(ClibFlush)
     )
   )
 
   // ---- READ FUNCTIONS ----
-  private val IntReadLabel = ".intRead"
-  private val CharacterReadLabel = ".charRead"
+  private val IntReadLabel = Label(".intRead")
+  private val CharacterReadLabel = Label(".charRead")
 
   private val IntReadSpecifier = "%d"
   private val CharacterReadSpecifier = " %c"
 
-  val readiLabel = "_readi"
-  val readcLabel = "_readc"
+  val readiLabel = Label("_readi")
+  val readcLabel = Label("_readc")
 
   /** Subroutine for reading an integer. */
   private val _readi = createReadOnlyString(IntReadLabel, IntReadSpecifier) ::: createFunction(
     readiLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
+      And(STACK_POINTER(W64), -16),
       Comment("Allocate space on the stack to store the read value"),
-      Sub(RSP(W64), 16),
+      Sub(STACK_POINTER(W64), 16),
       Comment("Store original value in case of EOF"),
-      Mov(RegPointer(RSP(W64))(W32), RDI(W32)),
-      Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
-      Lea(RDI(W64), RegImmPointer(RIP, IntReadLabel)(W64)),
-      Mov(RAX(W8), 0),
+      Mov(RegPointer(STACK_POINTER(W64))(W32), ARG_1(W32)),
+      Lea(ARG_2(W64), RegPointer(STACK_POINTER(W64))(W64)),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, IntReadLabel)(W64)),
+      Mov(RETURN(W8), 0),
       Call(ClibScanf),
-      Mov(RAX(W32), RegPointer(RSP(W64))(W32)),
-      Add(RSP(W64), 16)
+      Mov(RETURN(W32), RegPointer(STACK_POINTER(W64))(W32)),
+      Add(STACK_POINTER(W64), 16)
     )
   )
 
@@ -1241,34 +1217,34 @@ object Clib {
     readcLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
+      And(STACK_POINTER(W64), -16),
       Comment("Allocate space on the stack to store the read value"),
-      Sub(RSP(W64), 16),
+      Sub(STACK_POINTER(W64), 16),
       Comment("Store original value in case of EOF"),
-      Mov(RegPointer(RSP(W64))(W8), RDI(W8)),
-      Lea(RSI(W64), RegPointer(RSP(W64))(W64)),
-      Lea(RDI(W64), RegImmPointer(RIP, CharacterReadLabel)(W64)),
-      Mov(RAX(W8), 0),
+      Mov(RegPointer(STACK_POINTER(W64))(W8), ARG_1(W8)),
+      Lea(ARG_2(W64), RegPointer(STACK_POINTER(W64))(W64)),
+      Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, CharacterReadLabel)(W64)),
+      Mov(RETURN(W8), 0),
       Call(ClibScanf),
-      Mov(RAX(W8), RegPointer(RSP(W64))(W8)),
-      Add(RSP(W64), 16)
+      Mov(RETURN(W8), RegPointer(STACK_POINTER(W64))(W8)),
+      Add(STACK_POINTER(W64), 16)
     )
   )
 
   /// ---- ERRORS ----
-  val outOfMemoryLabel = "_outOfMemory"
-  val errNullLabel = "_errNull"
-  val errDivZeroLabel = "_errDivZero"
-  val errOverflowLabel = "_errOverflow"
-  val errBadCharLabel = "_errBadChar"
-  val errArrBoundsLabel = "_errArrBounds"
+  val outOfMemoryLabel = Label("_outOfMemory")
+  val errNullLabel = Label("_errNull")
+  val errDivZeroLabel = Label("_errDivZero")
+  val errOverflowLabel = Label("_errOverflow")
+  val errBadCharLabel = Label("_errBadChar")
+  val errArrBoundsLabel = Label("_errArrBounds")
 
-  private val OutOfMemoryStringLabel = ".outOfMemoryString"
-  private val NullPairStringLabel = ".nullPairString"
-  private val DivZeroStringLabel = ".divZeroString"
-  private val OverflowStringLabel = ".overflowString"
-  private val BadCharStringLabel = ".badCharString"
-  private val ArrBoundsStringLabel = ".arrBoundsString"
+  private val OutOfMemoryStringLabel = Label(".outOfMemoryString")
+  private val NullPairStringLabel = Label(".nullPairString")
+  private val DivZeroStringLabel = Label(".divZeroString")
+  private val OverflowStringLabel = Label(".overflowString")
+  private val BadCharStringLabel = Label(".badCharString")
+  private val ArrBoundsStringLabel = Label(".arrBoundsString")
 
   private val OutOfMemoryString = "fatal error: out of memory"
   private val NullPairString = "fatal error: null pair dereferenced or freed"
@@ -1281,10 +1257,10 @@ object Clib {
   private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
     DefineLabel(outOfMemoryLabel),
     Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, OutOfMemoryStringLabel)(W64)),
+    And(STACK_POINTER(W64), -16),
+    Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, OutOfMemoryStringLabel)(W64)),
     Call(printsLabel),
-    Mov(RDI(W8), -1),
+    Mov(ARG_1(W8), -1),
     Call(ClibExit),
     Ret(None)
   )
@@ -1293,10 +1269,10 @@ object Clib {
   private val _errNull = createReadOnlyString(NullPairStringLabel, NullPairString) ::: List(
     DefineLabel(errNullLabel),
     Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, NullPairStringLabel)(W64)),
+    And(STACK_POINTER(W64), -16),
+    Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, NullPairStringLabel)(W64)),
     Call(printsLabel),
-    Mov(RDI(W8), -1),
+    Mov(ARG_1(W8), -1),
     Call(ClibExit)
   )
 
@@ -1304,10 +1280,10 @@ object Clib {
   private val _errDivZero = createReadOnlyString(DivZeroStringLabel, DivZeroString) ::: List(
     DefineLabel(errDivZeroLabel),
     Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, DivZeroStringLabel)(W64)),
+    And(STACK_POINTER(W64), -16),
+    Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, DivZeroStringLabel)(W64)),
     Call(printsLabel),
-    Mov(RDI(W8), -1),
+    Mov(ARG_1(W8), -1),
     Call(ClibExit)
   )
 
@@ -1315,10 +1291,10 @@ object Clib {
   private val _errOverflow = createReadOnlyString(OverflowStringLabel, OverflowString) ::: List(
     DefineLabel(errOverflowLabel),
     Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, OverflowStringLabel)(W64)),
+    And(STACK_POINTER(W64), -16),
+    Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, OverflowStringLabel)(W64)),
     Call(printsLabel),
-    Mov(RDI(W8), -1),
+    Mov(ARG_1(W8), -1),
     Call(ClibExit)
   )
 
@@ -1326,13 +1302,13 @@ object Clib {
   private val _errBadChar = createReadOnlyString(BadCharStringLabel, BadCharString) ::: List(
     DefineLabel(errBadCharLabel),
     Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, BadCharStringLabel)(W64)),
-    Mov(RAX(W8), 0),
+    And(STACK_POINTER(W64), -16),
+    Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, BadCharStringLabel)(W64)),
+    Mov(RETURN(W8), 0),
     Call(ClibPrintf),
-    Mov(RDI(W64), 0),
+    Mov(ARG_1(W64), 0),
     Call(ClibFlush),
-    Mov(RDI(W8), -1),
+    Mov(ARG_1(W8), -1),
     Call(ClibExit)
   )
 
@@ -1340,28 +1316,28 @@ object Clib {
   private val _errArrBounds = createReadOnlyString(ArrBoundsStringLabel, ArrBoundsString) ::: List(
     DefineLabel(errArrBoundsLabel),
     Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, ArrBoundsStringLabel)(W64)),
-    Mov(RAX(W8), 0),
+    And(STACK_POINTER(W64), -16),
+    Lea(ARG_1(W64), RegImmPointer(INSTRUCTION_POINTER, ArrBoundsStringLabel)(W64)),
+    Mov(RETURN(W8), 0),
     Call(ClibPrintf),
-    Mov(RDI(W64), 0),
+    Mov(ARG_1(W64), 0),
     Call(ClibFlush),
-    Mov(RDI(W8), -1),
+    Mov(ARG_1(W8), -1),
     Call(ClibExit)
   )
 
   // ---- EXIT AND HEAP FUNCTIONS ----
-  val exitLabel = "_exit"
-  val mallocLabel = "_malloc"
-  val freeLabel = "_free"
-  val freepairLabel = "_freepair"
+  val exitLabel = Label("_exit")
+  val mallocLabel = Label("_malloc")
+  val freeLabel = Label("_free")
+  val freepairLabel = Label("_freepair")
 
   /** Subroutine for exiting the program. */
   private val _exit = createFunction(
     exitLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
+      And(STACK_POINTER(W64), -16),
       Call(ClibExit)
     )
   )
@@ -1371,10 +1347,10 @@ object Clib {
     mallocLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
+      And(STACK_POINTER(W64), -16),
       Call(ClibMalloc),
-      Compare(RAX(W64), 0),
-      JmpEqual(outOfMemoryLabel)
+      Compare(RETURN(W64), 0),
+      Jmp(Equal, outOfMemoryLabel)
     )
   )
 
@@ -1383,7 +1359,7 @@ object Clib {
     freeLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
+      And(STACK_POINTER(W64), -16),
       Call(ClibFree)
     )
   )
@@ -1393,9 +1369,9 @@ object Clib {
     freepairLabel,
     List(
       Comment("Align stack to 16 bytes for external calls"),
-      And(RSP(W64), -16),
-      Compare(RDI(W64), 0),
-      JmpEqual(errNullLabel),
+      And(STACK_POINTER(W64), -16),
+      Compare(ARG_1(W64), 0),
+      Jmp(Equal, errNullLabel),
       Call(ClibFree)
     )
   )

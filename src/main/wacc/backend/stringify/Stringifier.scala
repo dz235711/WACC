@@ -1,6 +1,7 @@
 package wacc
 
 import wacc.Size.*
+import wacc.Condition.*
 
 type Operand = Register | Pointer | Immediate | Label
 
@@ -8,11 +9,11 @@ class x86Stringifier {
 
   /** Convert string literals and assembly IR to an x86-64 assembly string
    *
-   * @param strings The list of label to string literal tuples
+   * @param strings The list of string literal to label tuples
    * @param instructions The list of assembly IR instructions
    * @return The x86-64 assembly string
    */
-  def stringify(strings: List[(Label, String)], instructions: List[Instruction]): String = {
+  def stringify(strings: List[(String, Label)], instructions: List[Instruction]): String = {
     // TODO: Use string builder
     (List(
       NoPrefixSyntax,
@@ -21,7 +22,6 @@ class x86Stringifier {
     ) ++
       strings.flatMap((string, label) => {
         List(
-          Comment(s"String literal $label is $string"),
           IntData(string.length),
           DefineLabel(label),
           Asciz(string)
@@ -29,7 +29,7 @@ class x86Stringifier {
       }) ++
       List(
         Text,
-        DefineLabel("main"),
+        DefineLabel(Label("main")),
         Push(RBP(W64)),
         Mov(RBP(W64), RSP(W64))
       ) ++
@@ -48,7 +48,7 @@ class x86Stringifier {
   /**
     * Converts an instruction into a string representation
     *
-    * @param instr
+    * @param instr The instruction to convert to a string
     * @return a string representation of the instruction
     */
   private def stringifyInstr(
@@ -57,7 +57,7 @@ class x86Stringifier {
     case Mov(dest, src)                 => s"mov ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
     case Movzx(dest, src)               => s"movzx ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
     case Call(label)                    => s"call ${stringifyOperand(label)}"
-    case Ret(imm)                       => s"ret${stringifyOperand(imm, prefix = " ")}"
+    case Ret(imm)                       => s"ret${stringifyOptionalOperand(imm, prefix = " ")}"
     case Nop                            => "nop"
     case Halt                           => "hlt"
     case Push(src)                      => s"push ${stringifyOperand(src)}"
@@ -65,27 +65,27 @@ class x86Stringifier {
     case Lea(dest, src)                 => s"lea ${stringifyOperand(dest)}, ${{ stringifyPointerArithmetic(src) }}"
     case Cdq                            => "cdq"
     case DefineLabel(label)             => s"${stringifyOperand(label)}:"
-    case Jmp(label)                     => s"jmp ${stringifyOperand(label)}"
-    case JmpEqual(label)                => s"je ${stringifyOperand(label)}"
-    case JmpNotEqual(label)             => s"jne ${stringifyOperand(label)}"
-    case JmpGreater(label)              => s"jg ${stringifyOperand(label)}"
-    case JmpGreaterEqual(label)         => s"jge ${stringifyOperand(label)}"
-    case JmpLess(label)                 => s"jl ${stringifyOperand(label)}"
-    case JmpLessEqual(label)            => s"jle ${stringifyOperand(label)}"
-    case JmpZero(label)                 => s"jz ${stringifyOperand(label)}"
-    case JmpNotZero(label)              => s"jnz ${stringifyOperand(label)}"
-    case JmpCarry(label)                => s"jc ${stringifyOperand(label)}"
-    case JmpNotCarry(label)             => s"jnc ${stringifyOperand(label)}"
-    case JmpOverflow(label)             => s"jo ${stringifyOperand(label)}"
-    case JmpNotOverflow(label)          => s"jno ${stringifyOperand(label)}"
-    case JmpSign(label)                 => s"js ${stringifyOperand(label)}"
-    case JmpNotSign(label)              => s"jns ${stringifyOperand(label)}"
-    case JmpParity(label)               => s"jp ${stringifyOperand(label)}"
-    case JmpNotParity(label)            => s"jnp ${stringifyOperand(label)}"
-    case JmpAbove(label)                => s"ja ${stringifyOperand(label)}"
-    case JmpAboveEqual(label)           => s"jae ${stringifyOperand(label)}"
-    case JmpBelow(label)                => s"jb ${stringifyOperand(label)}"
-    case JmpBelowEqual(label)           => s"jbe ${stringifyOperand(label)}"
+    case Jmp(NoCond, label)             => s"jmp ${stringifyOperand(label)}"
+    case Jmp(Equal, label)              => s"je ${stringifyOperand(label)}"
+    case Jmp(NotEqual, label)           => s"jne ${stringifyOperand(label)}"
+    case Jmp(Greater, label)            => s"jg ${stringifyOperand(label)}"
+    case Jmp(GreaterEqual, label)       => s"jge ${stringifyOperand(label)}"
+    case Jmp(Less, label)               => s"jl ${stringifyOperand(label)}"
+    case Jmp(LessEqual, label)          => s"jle ${stringifyOperand(label)}"
+    case Jmp(Zero, label)               => s"jz ${stringifyOperand(label)}"
+    case Jmp(NotZero, label)            => s"jnz ${stringifyOperand(label)}"
+    case Jmp(Carry, label)              => s"jc ${stringifyOperand(label)}"
+    case Jmp(NotCarry, label)           => s"jnc ${stringifyOperand(label)}"
+    case Jmp(Overflow, label)           => s"jo ${stringifyOperand(label)}"
+    case Jmp(NotOverflow, label)        => s"jno ${stringifyOperand(label)}"
+    case Jmp(Sign, label)               => s"js ${stringifyOperand(label)}"
+    case Jmp(NotSign, label)            => s"jns ${stringifyOperand(label)}"
+    case Jmp(Parity, label)             => s"jp ${stringifyOperand(label)}"
+    case Jmp(NotParity, label)          => s"jnp ${stringifyOperand(label)}"
+    case Jmp(Above, label)              => s"ja ${stringifyOperand(label)}"
+    case Jmp(AboveEqual, label)         => s"jae ${stringifyOperand(label)}"
+    case Jmp(Below, label)              => s"jb ${stringifyOperand(label)}"
+    case Jmp(BelowEqual, label)         => s"jbe ${stringifyOperand(label)}"
     case And(dest, src)                 => s"and ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
     case Or(dest, src)                  => s"or ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
     case Xor(dest, src)                 => s"xor ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
@@ -103,7 +103,7 @@ class x86Stringifier {
     case SignedDiv(src)                 => s"idiv ${stringifyOperand(src)}"
     case Mul(src)                       => s"mul ${stringifyOperand(src)}"
     case SignedMul(dest, src1, src2) =>
-      s"imul ${stringifyOperand(dest, postfix = ", ")}${stringifyOperand(src1)}${stringifyOperand(src2, prefix = ", ")}"
+      s"imul ${stringifyOptionalOperand(dest, postfix = ", ")}${stringifyOperand(src1)}${stringifyOptionalOperand(src2, prefix = ", ")}"
     case Neg(dest)             => s"neg ${stringifyOperand(dest)}"
     case Not(dest)             => s"not ${stringifyOperand(dest)}"
     case Sub(dest, src)        => s"sub ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
@@ -122,14 +122,14 @@ class x86Stringifier {
   }
 
   /**
-    * Converts an operand into a string representation iff it is defined
+    * Converts an optional operand into a string representation iff it is defined, with a prefix and postfix
     *
-    * @param operand
-    * @param prefix
-    * @param postfix
+    * @param operand The operand to convert
+    * @param prefix The prefix to add to the operand string
+    * @param postfix The postfix to add to the operand string
     * @return a string representation of the operand
     */
-  private def stringifyOperand(
+  private def stringifyOptionalOperand(
       operand: Option[Operand],
       prefix: String = "",
       postfix: String = ""
@@ -141,22 +141,20 @@ class x86Stringifier {
   /**
     * Converts an operand into a string representation
     *
-    * @param operand
-    * @param prefix
-    * @param postfix
+    * @param operand The operand to convert
     * @return a string representation of the operand
     */
   private def stringifyOperand(operand: Operand): String = operand match {
     case n: Immediate => s"$n"
     case r: Register  => stringifyRegister(r)
     case p: Pointer   => stringifyPointer(p)
-    case s: String    => s
+    case Label(s)     => s
   }
 
   /**
     * Converts a pointer into a string representation
     *
-    * @param pointer
+    * @param pointer The pointer to stringify
     * @return a string representation of the pointer
     * @example `RegImm(Reg(RAX), Imm(4))(W64)` -> `qword ptr [rax+4]`
     */
@@ -176,7 +174,7 @@ class x86Stringifier {
   /**
     * Converts pointer arithmetic into string representation (without a pointer size prefix)
     *
-    * @param pointer
+    * @param pointer The pointer to stringify
     * @return a string representation of the pointer arithmetic
     * @example `RegImm(Reg(RAX), Imm(4))(W64)` -> `[rax+4]`
     */
@@ -199,7 +197,7 @@ class x86Stringifier {
   /**
     * Converts a size into a string representation
     *
-    * @param size
+    * @param size The Size to convert
     * @return a string representation of the size as a ptr
     */
   private def ptrSize(size: Size): String = s"${size match {
@@ -212,7 +210,7 @@ class x86Stringifier {
   /**
     * Converts a register into a string representation
     *
-    * @param register
+    * @param register The register to stringify
     * @return a string representation of the register
     */
   private def stringifyRegister(register: Register): String = register match {
@@ -238,15 +236,15 @@ class x86Stringifier {
   /**
     * Prepends a size to a register
     *
-    * @param size
-    * @param register
-    * @param keepTail
+    * @param size The size to prepend
+    * @param register The register onto which the size should be prepended
+    * @param keepTail Whether the tail of the size register should be kept (defaults to true)
     * @return the register with the size prepended
     */
   private def prependSize(size: Size, register: String, keepTail: Boolean = true): String = size match {
     /* Some registers, like RAX converts to AL whilst ones like RSI converts to SIL and therefore for RSI we keep the
      * tail ('I') whilst we chop the 'X' off RAX */
-    case W8  => s"${(if keepTail then register else register.slice(0, register.length - 1))}l"
+    case W8  => s"${if keepTail then register else register.slice(0, register.length - 1)}l"
     case W16 => register
     case W32 => s"e$register"
     case W64 => s"r$register"
@@ -255,8 +253,8 @@ class x86Stringifier {
   /**
     * Appends a size to a register
     *
-    * @param size
-    * @param register
+    * @param size The size to append
+    * @param register The register onto which the size is appended
     * @return the register with the size appended
     */
   private def appendSize(size: Size, register: String): String = size match {
