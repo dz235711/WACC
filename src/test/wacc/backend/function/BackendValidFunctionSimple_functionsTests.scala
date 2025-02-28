@@ -14,13 +14,13 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute asciiTable.wacc" taggedAs Backend in pending /*{
+  it should "execute asciiTable.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "asciiTable.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  } */
+  }
 
   it should "execute functionDeclaration.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "functionDeclaration.wacc")

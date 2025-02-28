@@ -6,13 +6,13 @@ import org.scalatest.matchers.should.Matchers.*
 class BackendValidArrayTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/array/"
 
-  it should "execute array.wacc" taggedAs Backend in pending /*{
+  it should "execute array.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "array.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute arrayBasic.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "arrayBasic.wacc")
@@ -30,13 +30,13 @@ class BackendValidArrayTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute arrayIndexMayBeArrayIndex.wacc" taggedAs Backend in pending /*{
+  it should "execute arrayIndexMayBeArrayIndex.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "arrayIndexMayBeArrayIndex.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute arrayLength.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "arrayLength.wacc")
@@ -46,15 +46,15 @@ class BackendValidArrayTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute arrayLookup.wacc" taggedAs Backend in pending /*{
+  it should "execute arrayLookup.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "arrayLookup.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
-  it should "execute arrayNested.wacc" taggedAs Backend in pending /*{
+  it should "execute arrayNested.wacc" taggedAs Backend in pending /* {
     val programTester = new ProgramTester(dir + "arrayNested.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
@@ -62,7 +62,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }*/
 
-  it should "execute arrayOnHeap.wacc" taggedAs Backend in pending /*{
+  it should "execute arrayOnHeap.wacc" taggedAs Backend in pending /* {
     val programTester = new ProgramTester(dir + "arrayOnHeap.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
@@ -70,21 +70,21 @@ class BackendValidArrayTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }*/
 
-  it should "execute arrayPrint.wacc" taggedAs Backend in pending /*{
+  it should "execute arrayPrint.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "arrayPrint.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
-  it should "execute arraySimple.wacc" taggedAs Backend in pending /*{
+  it should "execute arraySimple.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "arraySimple.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute charArrayInStringArray.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "charArrayInStringArray.wacc")

@@ -782,10 +782,10 @@ class Translator {
       val dest = locationCtx.getNext(typeToSize(elem.getType))
 
       locationCtx.regInstr2(
-        dest,
         loc,
+        dest,
         { (reg1, reg2) =>
-          Mov(reg1(typeToSize(elem.getType)), RegPointer(reg2(POINTER_SIZE))(typeToSize(elem.getType)))
+          Mov(reg2(typeToSize(elem.getType)), RegPointer(reg1(POINTER_SIZE))(typeToSize(elem.getType)))
         }
       )
 
