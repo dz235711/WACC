@@ -473,7 +473,13 @@ class Translator {
       // Move the divisor to the eventual destination of the result (first available location)
       translateExpr(divisorExp)
       val modDest = locationCtx.reserveNext(typeToSize(IntType))
-      // TODO: runtime error if divide by 0
+
+      // Check for division by zero runtime error
+      locationCtx.regInstr1(
+        modDest,
+        { reg => Compare(reg, 0) }
+      )
+      instructionCtx.addInstruction(JmpEqual(Clib.errDivZeroLabel))
 
       // Move the dividend to the next available location
       translateExpr(dividendExp)
@@ -500,7 +506,13 @@ class Translator {
       // Move the divisor to the eventual destination of the result (first available location)
       translateExpr(divisorExp)
       val divDest = locationCtx.reserveNext(typeToSize(IntType))
-      // TODO: runtime error if divide by 0
+
+      // Check for division by zero runtime error
+      locationCtx.regInstr1(
+        divDest,
+        { reg => Compare(reg, 0) }
+      )
+      instructionCtx.addInstruction(JmpEqual(Clib.errDivZeroLabel))
 
       // Move the dividend to the next available location
       translateExpr(dividendExp)
@@ -1021,12 +1033,15 @@ object Clib {
   /// ---- ERRORS ----
   private val outOfMemoryLabel = "_outOfMemory"
   val errNullLabel = "_errNull"
+  val errDivZeroLabel = "_errDivZero"
 
   private val OutOfMemoryStringLabel = ".outOfMemoryString"
   private val NullPairStringLabel = ".nullPairString"
+  private val DivZeroStringLabel = ".divZeroString"
 
   private val OutOfMemoryString = "fatal error: out of memory\n"
   private val NullPairString = "fatal error: null pair dereferenced or freed\n"
+  private val DivZeroString = "fatal error: division or modulo by zero\n"
 
   /** Subroutine for an out of memory error. */
   private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
@@ -1046,6 +1061,17 @@ object Clib {
     Comment("Align stack to 16 bytes for external calls"),
     And(RSP(W64), -16),
     Lea(RDI(W64), RegImmPointer(RIP, NullPairStringLabel)(W64)),
+    Call(printsLabel),
+    Mov(RDI(W8), -1),
+    Call(ClibExit)
+  )
+
+  /** Subroutine for a division by zero error. */
+  private val _errDivZero = createReadOnlyString(DivZeroStringLabel, DivZeroString) ::: List(
+    DefineLabel(errDivZeroLabel),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, DivZeroStringLabel)(W64)),
     Call(printsLabel),
     Mov(RDI(W8), -1),
     Call(ClibExit)
