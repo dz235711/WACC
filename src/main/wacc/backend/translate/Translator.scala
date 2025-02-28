@@ -515,12 +515,15 @@ class Translator {
       // Call the function
       instructionCtx.addInstruction(Call(getFunctionName(v.id)))
       // Restore caller-save registers
-      locationCtx.cleanUpCall(None)
+      val returnDest = locationCtx.cleanUpCall(Some(typeToSize(ty)))
 
       // Free argument temp locations
       argLocations.foreach { _ =>
         locationCtx.unreserveLast()
       }
+
+      val resultLoc = locationCtx.getNext(typeToSize(ty))
+      locationCtx.movLocLoc(resultLoc, returnDest)
 
     case e: Expr => translateExpr(e)
     case _       => throw new UnexpectedException("Unexpected Error: Invalid RValue")
