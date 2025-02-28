@@ -1,6 +1,6 @@
 package wacc
 
-import java.io.{File, FileNotFoundException, PrintWriter}
+import java.io.{File, FileNotFoundException}
 
 // Regex to match addresses in the output of the compiled program
 private val AddrRegex = "0x[0-9a-fA-F]+".r

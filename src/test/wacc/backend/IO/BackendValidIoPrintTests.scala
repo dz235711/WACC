@@ -20,15 +20,15 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  } */
 
-  it should "execute print-backspace.wacc" taggedAs Backend in pending /*{
+  it should "execute print-backspace.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "print-backspace.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute print.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "print.wacc")
@@ -54,21 +54,21 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute printCharArray.wacc" taggedAs Backend in pending /*{
+  it should "execute printCharArray.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "printCharArray.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
-  it should "execute printCharAsString.wacc" taggedAs Backend in pending /*{
+  it should "execute printCharAsString.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "printCharAsString.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute printEscChar.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "printEscChar.wacc")
