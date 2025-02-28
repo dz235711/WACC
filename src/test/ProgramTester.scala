@@ -105,14 +105,11 @@ class ProgramTester(path: String) {
 
     // Run the program
     val command =
-      if sys.env.get("USE_DOCKER").contains("true") then dockerCommand("timeout 1s ./test")
-      else pBuilder.command("timeout", "1s", "./test")
-    val process = command.start()
-
+      val bashCmd = s"echo -e \"$input\" | ./test"
+      if sys.env.get("USE_DOCKER").contains("true") then dockerCommand("timeout 1s " + bashCmd)
+      else pBuilder.command("timeout", "1s", bashCmd)
     // Feed input to the process
-    val iStream = process.getOutputStream
-    iStream.write(input.getBytes())
-    iStream.flush()
+    val process = command.start()
 
     // Read output
     val output = new String(process.getInputStream.readAllBytes())
