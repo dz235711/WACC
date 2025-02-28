@@ -54,21 +54,21 @@ class BackendValidArrayTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute arrayNested.wacc" taggedAs Backend in pending /* {
+  it should "execute arrayNested.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "arrayNested.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
-  it should "execute arrayOnHeap.wacc" taggedAs Backend in pending /* {
+  it should "execute arrayOnHeap.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "arrayOnHeap.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute arrayPrint.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "arrayPrint.wacc")
@@ -92,7 +92,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  } */
 
   it should "execute emptyArrayAloneIsFine.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "emptyArrayAloneIsFine.wacc")
@@ -142,13 +142,13 @@ class BackendValidArrayTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute lenArrayIndex.wacc" taggedAs Backend in pending /*{
+  it should "execute lenArrayIndex.wacc" taggedAs Backend in pending /* {
     val programTester = new ProgramTester(dir + "lenArrayIndex.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  } */
 
   it should "execute modifyString.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "modifyString.wacc")
