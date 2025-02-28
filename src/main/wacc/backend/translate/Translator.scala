@@ -36,7 +36,7 @@ sealed class InstructionContext {
    */
   def getStringLabel: Label =
     stringCounter += 1
-    s".string_$stringCounter"
+    s".L.str$stringCounter"
 
   /** Get the the strings and list of instructions
    * 
@@ -60,7 +60,7 @@ sealed class InstructionContext {
     *
     * @param funcBody The body of the library function to be added
     */
-  def addLibraryFunction(funcLabel: Label): Unit = Clib.labelToFunc(funcLabel)
+  def addLibraryFunction(funcLabel: Label): Unit = libFunctions += Clib.labelToFunc(funcLabel)
 
   def getLibraryFunctions: Set[List[Instruction]] = libFunctions.toSet
 }
@@ -98,6 +98,7 @@ class Translator {
 
     // Return 0 from main body
     translateCtx.addInstruction(Mov(RAX(W64), 0))
+    translateCtx.addInstruction(Pop(RBP(W64)))
     translateCtx.addInstruction(Ret(None))
 
     // Translate all functions in the program
@@ -974,6 +975,7 @@ object Clib {
     List(
       Comment("Align stack to 16 bytes for external calls"),
       And(RSP(W64), -16),
+      Mov(RDX(W64), RDI(W64)),
       Mov(RSI(W32), RegImmPointer(RDI(W64), -4)(W32)),
       Lea(RDI(W64), RegImmPointer(RIP, StringFormatLabel)(W64)),
       Mov(RAX(W8), 0),

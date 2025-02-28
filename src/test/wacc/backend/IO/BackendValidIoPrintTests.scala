@@ -30,13 +30,13 @@ class BackendValidIoPrintTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }*/
 
-  it should "execute print.wacc" taggedAs Backend in pending /*{
+  it should "execute print.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "print.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.getOrElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute printBool.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "printBool.wacc")

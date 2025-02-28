@@ -27,7 +27,11 @@ class x86Stringifier {
           Asciz(string)
         )
       }) ++
-      List(Text, DefineLabel("main")) ++
+      List(
+        Text,
+        DefineLabel("main"),
+        Push(RBP(W64))
+      ) ++
       instructions)
       .map(instr => {
         // we first convert the instruction to a string
@@ -156,6 +160,16 @@ class x86Stringifier {
   private def stringifyPointer(pointer: Pointer): String =
     s"${ptrSize(pointer.size)} ${stringifyPointerArithmetic(pointer)}"
 
+  /** Returns the sign symbol of an operand
+   * 
+   * @param operand The operand to check
+   * @return The sign symbol of the operand
+   */
+  def signSymbol(operand: Immediate | Label): String = operand match {
+    case n: Immediate if n < 0 => ""
+    case _                     => "+"
+  }
+
   /**
     * Converts pointer arithmetic into string representation (without a pointer size prefix)
     *
@@ -166,7 +180,7 @@ class x86Stringifier {
   private def stringifyPointerArithmetic(pointer: Pointer): String = {
     val arithmetic = pointer match {
       case RegPointer(reg)           => s"${stringifyOperand(reg)}"
-      case RegImmPointer(reg, imm)   => s"${stringifyOperand(reg)}+${stringifyOperand(imm)}"
+      case RegImmPointer(reg, imm)   => s"${stringifyOperand(reg)}${signSymbol(imm)}${stringifyOperand(imm)}"
       case RegRegPointer(reg1, reg2) => s"${stringifyOperand(reg1)}+${stringifyOperand(reg2)}"
       case RegScaleRegPointer(reg1, scale, reg2) =>
         s"${stringifyOperand(reg1)}+${stringifyOperand(scale)}*${stringifyOperand(reg2)}"
