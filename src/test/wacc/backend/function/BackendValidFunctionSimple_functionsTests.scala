@@ -6,21 +6,21 @@ import org.scalatest.matchers.should.Matchers.*
 class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
   val dir = "src/test/examples/valid/function/simple_functions/"
 
-  it should "execute argScopeCanBeShadowed.wacc" taggedAs Backend in pending /* {
+  it should "execute argScopeCanBeShadowed.wacc" taggedAs Backend in  {
     val programTester = new ProgramTester(dir + "argScopeCanBeShadowed.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  } */
+  }
 
-  it should "execute asciiTable.wacc" taggedAs Backend in pending /* {
+  it should "execute asciiTable.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "asciiTable.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  } */
+  }*/
 
   it should "execute functionDeclaration.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "functionDeclaration.wacc")
@@ -52,7 +52,7 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  } */
+  }*/
 
   it should "execute functionMultiReturns.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "functionMultiReturns.wacc")
@@ -78,13 +78,13 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute functionSimpleLoop.wacc" taggedAs Backend in pending /*{
+  it should "execute functionSimpleLoop.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "functionSimpleLoop.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  } */
+  }
 
   it should "execute functionUpdateParameter.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "functionUpdateParameter.wacc")
@@ -126,13 +126,13 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }*/
 
-  it should "execute negFunction.wacc" taggedAs Backend in pending /*{
+  it should "execute negFunction.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "negFunction.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute punning.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "punning.wacc")
