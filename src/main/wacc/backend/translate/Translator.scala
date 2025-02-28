@@ -179,6 +179,7 @@ class Translator {
       // Move the original value to RDI in case the read fails
       locationCtx.setUpCall(List(readParamLoc))
       // Fetch the correct read label
+      // TODO: Factor out duplication
       val readLabel = h.getType match {
         case IntType  => Clib.readiLabel // TODO: Set correct flags.
         case CharType => Clib.readcLabel
@@ -218,12 +219,14 @@ class Translator {
       instructionCtx.addInstruction(Ret(None))
 
     case Exit(e) =>
+      // TODO: Set flag
       val dest = locationCtx.getNext(typeToSize(e.getType))
       translateExpr(e)
 
       // Call exit
       locationCtx.setUpCall(List(dest))
-    // TODO: clib exit
+      instructionCtx.addInstruction(Call(Clib.exitLabel))
+      locationCtx.cleanUpCall()
 
     case Print(e) =>
       val dest = locationCtx.getNext(typeToSize(e.getType))
