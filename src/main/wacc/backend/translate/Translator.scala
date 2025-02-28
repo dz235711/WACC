@@ -54,7 +54,9 @@ sealed class InstructionContext {
    * 
    * @param string The string to add
    */
-  def addString(string: String, label: Label): Unit = stringCtx.add((string, label))
+  def addString(string: String, label: Label): Unit =
+    println(string)
+    stringCtx.add((string.replace("\\", "\\\\"), label))
 
   /** Add a library function to the list of instructions
     *
@@ -273,7 +275,6 @@ class Translator {
       translateExpr(e)
 
       // Call the print function corresponding to the type of the expression
-      locationCtx.setUpCall(List(dest))
       val printLabel = e.getType match {
         case IntType => {
           instructionCtx.addLibraryFunction(Clib.printiLabel)
@@ -291,6 +292,15 @@ class Translator {
           instructionCtx.addLibraryFunction(Clib.printsLabel)
           Clib.printsLabel
         }
+        case ArrayType(CharType) => {
+          // Increment the pointer to the start of the string (skip the size)
+          instructionCtx.addInstruction(dest match {
+            case r: Register => Add(r, INT_SIZE)
+            case p: Pointer  => Add(p, INT_SIZE)
+          })
+          instructionCtx.addLibraryFunction(Clib.printsLabel)
+          Clib.printsLabel
+        }
         case ArrayType(_) => {
           instructionCtx.addLibraryFunction(Clib.printpLabel)
           Clib.printpLabel
@@ -301,6 +311,7 @@ class Translator {
         }
         case _ => throw new RuntimeException("Invalid type")
       }
+      locationCtx.setUpCall(List(dest))
       instructionCtx.addInstruction(Call(printLabel))
       locationCtx.cleanUpCall()
 
@@ -371,12 +382,13 @@ class Translator {
       instructionCtx: InstructionContext,
       locationCtx: LocationContext
   ): Unit = value match {
-    case ArrayLiter(es, ty) =>
+    case ArrayLiter(es, ArrayType(eTy)) =>
       instructionCtx.addLibraryFunction(Clib.mallocLabel)
       instructionCtx.addLibraryFunction(Clib.outOfMemoryLabel)
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
 
       // Calculate size needed for the array
-      val size = (typeToSize(ty).toBytes * es.size) + INT_SIZE
+      val size = (typeToSize(eTy).toBytes * es.size) + INT_SIZE
 
       // Allocate memory for the array and get the pointer to the array
       val tempSizeLocation = locationCtx.getNext(W32)
@@ -418,6 +430,7 @@ class Translator {
     case NewPair(e1, e2, PairType(t1, t2)) =>
       instructionCtx.addLibraryFunction(Clib.mallocLabel)
       instructionCtx.addLibraryFunction(Clib.outOfMemoryLabel)
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
 
       // Move the size of the pair to the next available location
       val tempSizeLocation = locationCtx.getNext(W32)
@@ -991,7 +1004,7 @@ object Clib {
       Comment("Align stack to 16 bytes for external calls"),
       And(RSP(W64), -16),
       Mov(RSI(W64), RDI(W64)),
-      Lea(RDI(W64), RegImmPointer(RIP, PointerFormatSpecifier)(W64)),
+      Lea(RDI(W64), RegImmPointer(RIP, PointerFormatLabel)(W64)),
       Mov(RAX(W8), 0),
       Call(ClibPrintf),
       Mov(RDI(W64), 0),
@@ -1060,6 +1073,39 @@ object Clib {
     )
   )
 
+  /// ---- ERRORS ----
+  val outOfMemoryLabel = "_outOfMemory"
+  val errNullLabel = "_errNull"
+
+  private val OutOfMemoryStringLabel = ".outOfMemoryString"
+  private val NullPairStringLabel = ".nullPairString"
+
+  private val OutOfMemoryString = "fatal error: out of memory\\n"
+  private val NullPairString = "fatal error: null pair dereferenced or freed\\n"
+
+  /** Subroutine for an out of memory error. */
+  private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
+    DefineLabel(outOfMemoryLabel),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, OutOfMemoryStringLabel)(W64)),
+    Call(printsLabel),
+    Mov(RDI(W8), -1),
+    Call(ClibExit),
+    Ret(None)
+  )
+
+  /** Subroutine for a null pair error. */
+  private val _errNull = createReadOnlyString(NullPairStringLabel, NullPairString) ::: List(
+    DefineLabel(errNullLabel),
+    Comment("Align stack to 16 bytes for external calls"),
+    And(RSP(W64), -16),
+    Lea(RDI(W64), RegImmPointer(RIP, NullPairStringLabel)(W64)),
+    Call(printsLabel),
+    Mov(RDI(W8), -1),
+    Call(ClibExit)
+  )
+
   // ---- EXIT AND HEAP FUNCTIONS ----
   val exitLabel = "_exit"
   val mallocLabel = "_malloc"
@@ -1108,39 +1154,6 @@ object Clib {
       JmpEqual(errNullLabel),
       Call(ClibFree)
     )
-  )
-
-  /// ---- ERRORS ----
-  val outOfMemoryLabel = "_outOfMemory"
-  val errNullLabel = "_errNull"
-
-  private val OutOfMemoryStringLabel = ".outOfMemoryString"
-  private val NullPairStringLabel = ".nullPairString"
-
-  private val OutOfMemoryString = "fatal error: out of memory\n"
-  private val NullPairString = "fatal error: null pair dereferenced or freed\n"
-
-  /** Subroutine for an out of memory error. */
-  private val _outOfMemory = createReadOnlyString(OutOfMemoryStringLabel, OutOfMemoryString) ::: List(
-    DefineLabel(outOfMemoryLabel),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, OutOfMemoryStringLabel)(W64)),
-    Call(printsLabel),
-    Mov(RDI(W8), -1),
-    Call(ClibExit),
-    Ret(None)
-  )
-
-  /** Subroutine for a null pair error. */
-  private val _errNull = createReadOnlyString(NullPairStringLabel, NullPairString) ::: List(
-    DefineLabel(errNullLabel),
-    Comment("Align stack to 16 bytes for external calls"),
-    And(RSP(W64), -16),
-    Lea(RDI(W64), RegImmPointer(RIP, NullPairStringLabel)(W64)),
-    Call(printsLabel),
-    Mov(RDI(W8), -1),
-    Call(ClibExit)
   )
 
   val labelToFunc: Map[Label, List[Instruction]] = Map(

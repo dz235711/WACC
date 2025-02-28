@@ -2,7 +2,7 @@ package wacc
 
 import wacc.Size.*
 
-type Operand = Register | Pointer | Immediate | String
+type Operand = Register | Pointer | Immediate | Label
 
 class x86Stringifier {
 

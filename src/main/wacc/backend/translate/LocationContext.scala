@@ -6,7 +6,7 @@ import wacc.Size.*
 
 import scala.collection.mutable
 import wacc.RenamedAST.KnownType.{ArrayType, BoolType, CharType, IntType, PairType, StringType}
-import wacc.RenamedAST.{?, KnownType, SemType}
+import wacc.RenamedAST.{KnownType, SemType}
 
 import java.rmi.UnexpectedException
 
@@ -59,7 +59,7 @@ class LocationContext {
 
   // Register constants
   private val ReturnReg = RAX(W64)
-  private val EmptyRegs = List(RAX(W64), RDX(W64)) // never used as a location
+  private val EmptyRegs = List(RAX.apply, RDX.apply) // never used as a location
   private val StackPointer = RSP(W64)
   private val BasePointer = RBP(W64)
   private val ArgRegs = List(RDI.apply, RSI.apply, RDX.apply, RCX.apply, R8.apply, R9.apply)
@@ -280,8 +280,9 @@ class LocationContext {
         src match {
           case srcR: Register => instructionCtx.addInstruction(Mov(destP, srcR))
           case srcP: Pointer =>
-            instructionCtx.addInstruction(Mov(EmptyRegs.head, srcP))
-            instructionCtx.addInstruction(Mov(destP, EmptyRegs.head))
+            val emptyReg = EmptyRegs.head(srcP.size)
+            instructionCtx.addInstruction(Mov(emptyReg, srcP))
+            instructionCtx.addInstruction(Mov(destP, emptyReg))
         }
     }
 
@@ -292,12 +293,17 @@ class LocationContext {
    * @param op   The operation to perform on the two locations, where the first location is guaranteed to be a register
    */
   def regInstr1(loc1: Location, op: Register => Instruction)(using instructionCtx: InstructionContext): Unit =
+    val emptyReg = EmptyRegs.head(loc1 match {
+      case r: Register => r.width
+      case p: Pointer  => p.size
+    })
+
     // Move the location to a register, perform the operation, then move the result back
-    instructionCtx.addInstruction(Mov(EmptyRegs.head, loc1))
-    instructionCtx.addInstruction(op(EmptyRegs.head))
+    instructionCtx.addInstruction(Mov(emptyReg, loc1))
+    instructionCtx.addInstruction(op(emptyReg))
     instructionCtx.addInstruction(loc1 match {
-      case r: Register => Mov(r, EmptyRegs.head)
-      case p: Pointer  => Mov(p, EmptyRegs.head)
+      case r: Register => Mov(r, emptyReg)
+      case p: Pointer  => Mov(p, emptyReg)
     })
 
   /** Perform some operation that forces the use of 2 registers.
@@ -310,17 +316,26 @@ class LocationContext {
   def regInstr2(loc1: Location, loc2: Location, op: (Register, Register) => Instruction)(using
       instructionCtx: InstructionContext
   ): Unit =
+    val emptyReg1 = EmptyRegs.head(loc1 match {
+      case r: Register => r.width
+      case p: Pointer  => p.size
+    })
+    val emptyReg2 = EmptyRegs.head(loc2 match {
+      case r: Register => r.width
+      case p: Pointer  => p.size
+    })
+
     // Move the locations to registers, perform the operation, then move the results back
-    instructionCtx.addInstruction(Mov(EmptyRegs(0), loc1))
-    instructionCtx.addInstruction(Mov(EmptyRegs(1), loc2))
-    instructionCtx.addInstruction(op(EmptyRegs(0), EmptyRegs(1)))
+    instructionCtx.addInstruction(Mov(emptyReg1, loc1))
+    instructionCtx.addInstruction(Mov(emptyReg2, loc2))
+    instructionCtx.addInstruction(op(emptyReg1, emptyReg2))
     instructionCtx.addInstruction(loc1 match {
-      case r: Register => Mov(r, EmptyRegs(0))
-      case p: Pointer  => Mov(p, EmptyRegs(0))
+      case r: Register => Mov(r, emptyReg1)
+      case p: Pointer  => Mov(p, emptyReg1)
     })
     instructionCtx.addInstruction(loc2 match {
-      case r: Register => Mov(r, EmptyRegs(1))
-      case p: Pointer  => Mov(p, EmptyRegs(1))
+      case r: Register => Mov(r, emptyReg2)
+      case p: Pointer  => Mov(p, emptyReg2)
     })
 
   /** Perform some operation that forces the use of division registers (rax, rdx). They are guaranteed to be free.
