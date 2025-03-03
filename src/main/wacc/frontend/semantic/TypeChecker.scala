@@ -373,8 +373,7 @@ sealed class TypeChecker {
           if ty == Some(StringType) && elTy == CharType then
             val esTyped = es.map(checkExpr(_, Is(CharType))._2)
             (Some(StringType), TypedAST.ArrayLiter(esTyped, ArrayType(elTy)))
-          else
-            (None, TypedAST.ArrayLiter(es.map(checkExpr(_, Unconstrained)._2), ?))
+          else (None, TypedAST.ArrayLiter(es.map(checkExpr(_, Unconstrained)._2), ?))
       }
     case RenamedAST.NewPair(e1, e2) =>
       PairType(?, ?).satisfies(rval.pos)(c) match {

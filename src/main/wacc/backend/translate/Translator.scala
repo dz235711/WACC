@@ -557,7 +557,7 @@ class Translator {
       locationCtx.movLocLoc(resultLoc, returnDest)
 
     case e: Expr => translateExpr(e)
-    case v       => 
+    case v =>
       println(v)
       throw new UnexpectedException("Unexpected Error: Invalid RValue")
   }
