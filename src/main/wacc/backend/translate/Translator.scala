@@ -558,8 +558,7 @@ class Translator {
 
     case e: Expr => translateExpr(e)
     case v =>
-      println(v)
-      throw new UnexpectedException("Unexpected Error: Invalid RValue")
+      throw new UnexpectedException(s"Unexpected Error: Invalid RValue \"$v\"")
   }
 
   /** Translates an expression. The result of the expression is stored in the next available location at the time of
