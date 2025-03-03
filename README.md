@@ -47,7 +47,9 @@ chmod +x .git/hooks/commit-msg
 
 ## Commit messages
 
-Commit messages should be of the form `tag:description`. These tags could be any of the following:
+Commit messages should be of the form `tag:description [class/function or file]`.
+
+Tags could be any of the following:
 - `feat`
 - `chore`
 - `ci`
@@ -59,6 +61,8 @@ Commit messages should be of the form `tag:description`. These tags could be any
 - `wip`
 - `revert`
 - `style`
+
+An example of a commit message would be `feat: implement setting up stack frames before function calls [LocationContext/setupCall, Translator/translateStmt, README.md]`
 
 The description should be imperative and lowercase, with no full-stop.
 
