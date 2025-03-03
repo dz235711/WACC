@@ -32,7 +32,11 @@ sealed class InstructionContext {
   private val stringCtx = new ListContext[(String, Label)]()
   private var stringCounter = 0
 
+  /** The number of while loops so each jump label is unique */
   private var whileLoopCounter = 0
+
+  /** The number of if statements so each jump label is unique */
+  private var ifCounter = 0
 
   /** Stores library functions in a set to prevent duplicates. */
   private val libFunctions: mutable.Set[List[Instruction]] = mutable.Set()
@@ -46,9 +50,27 @@ sealed class InstructionContext {
     stringCounter += 1
     toReturn
 
-  def getWhileLoopId: Int =
+  /** Get the next while loop labels
+   * 
+   * @return A tuple of the start and end labels of a while loop
+   */
+  def getWhileLoopLabels(): (Label, Label) = {
+    val startLabel = Label(s"while_start_$whileLoopCounter")
+    val endLabel = Label(s"while_end_$whileLoopCounter")
     whileLoopCounter += 1
-    whileLoopCounter
+    (startLabel, endLabel)
+  }
+
+  /** Get the next if labels
+   * 
+   * @return A tuple of the false and end labels of an if statement
+   */
+  def getIfLabels(): (Label, Label) = {
+    val falseLabel = Label(s"if_false_$ifCounter")
+    val endLabel = Label(s"if_end_$ifCounter")
+    ifCounter += 1
+    (falseLabel, endLabel)
+  }
 
   /** Get the the strings and list of instructions
    * 
@@ -121,9 +143,6 @@ class Translator {
 
   /** The label for a user-defined function */
   private val FUNCTION_LABEL = "wacc_func_"
-
-  /** The number of if statements so each jump label is unique */
-  private var ifCounter = 0
 
   def translate(program: Program): (List[(String, Label)], List[Instruction]) = {
     given translateCtx: InstructionContext = new InstructionContext()
@@ -364,17 +383,14 @@ class Translator {
       locationCtx.cleanUpCall(None)
 
     case If(cond, s1, s2) =>
-      val falseLabel = Label(s"if_false_${ifCounter}")
-      val endLabel = Label(s"if_end_${ifCounter}")
-      ifCounter += 1
+      val (falseLabel, endLabel) = instructionCtx.getIfLabels()
 
       branch(endLabel, falseLabel, cond, s1)
       translateStmt(s2)
       instructionCtx.addInstruction(DefineLabel(endLabel))
 
     case While(cond, body) =>
-      val startLabel = Label(s"while_start_${instructionCtx.getWhileLoopId}")
-      val endLabel = Label(s"while_end_${instructionCtx.getWhileLoopId}")
+      val (startLabel, endLabel) = instructionCtx.getWhileLoopLabels()
 
       instructionCtx.addInstruction(DefineLabel(startLabel))
       branch(startLabel, endLabel, cond, body)
