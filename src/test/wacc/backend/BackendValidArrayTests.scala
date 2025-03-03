@@ -142,13 +142,13 @@ class BackendValidArrayTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute lenArrayIndex.wacc" taggedAs Backend in pending /* {
+  it should "execute lenArrayIndex.wacc" taggedAs Debug in {
     val programTester = new ProgramTester(dir + "lenArrayIndex.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  } */
+  }
 
   it should "execute modifyString.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "modifyString.wacc")
