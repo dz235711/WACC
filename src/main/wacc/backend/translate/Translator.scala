@@ -50,6 +50,10 @@ sealed class InstructionContext {
     stringCounter += 1
     toReturn
 
+  /** Get the next while loop labels
+   * 
+   * @return A tuple of the start and end labels of a while loop
+   */
   def getWhileLoopLabels(): (Label, Label) = {
     val startLabel = Label(s"while_start_$whileLoopCounter")
     val endLabel = Label(s"while_end_$whileLoopCounter")
@@ -57,6 +61,10 @@ sealed class InstructionContext {
     (startLabel, endLabel)
   }
 
+  /** Get the next if labels
+   * 
+   * @return A tuple of the false and end labels of an if statement
+   */
   def getIfLabels(): (Label, Label) = {
     val falseLabel = Label(s"if_false_$ifCounter")
     val endLabel = Label(s"if_end_$ifCounter")
