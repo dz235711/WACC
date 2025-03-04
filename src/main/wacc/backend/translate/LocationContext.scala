@@ -35,7 +35,7 @@ class LocationContext {
   private val reservedRegs = mutable.ListBuffer[Register]()
 
   /** Number of stack locations which have been reserved */
-  private var reservedStackLocs = 0
+  private var reservedStackLocs = 1
 
   /** Map from identifiers to locations */
   private val identMap = mutable.Map[Ident, Location]()
@@ -55,7 +55,7 @@ class LocationContext {
    */
   def getNext: Location =
     if (freeRegs.nonEmpty) freeRegs.last
-    else RegImmPointer(BasePointer, reservedStackLocs * PointerSize.asBytes)
+    else RegImmPointer(BasePointer, -reservedStackLocs * PointerSize.asBytes)
 
   /** Get the location to use and reserve it
    *
@@ -67,7 +67,7 @@ class LocationContext {
       reservedRegs += reg
       reg
     } else {
-      val loc = RegImmPointer(BasePointer, reservedStackLocs * PointerSize.asBytes)
+      val loc = RegImmPointer(BasePointer, -reservedStackLocs * PointerSize.asBytes)
       reservedStackLocs += 1
       // decrement the stack pointer
       instructionCtx.addInstruction(Sub(StackPointer, PointerSize.asBytes)(PointerSize))
@@ -77,7 +77,7 @@ class LocationContext {
 
   /** Move the getNext pointer to the last location */
   def unreserveLast()(using instructionCtx: InstructionContext): Unit = {
-    if (reservedStackLocs > 0) {
+    if (reservedStackLocs > 1) {
       reservedStackLocs -= 1
       // increment the stack pointer
       instructionCtx.addInstruction(Add(StackPointer, PointerSize.asBytes)(PointerSize))
@@ -153,10 +153,12 @@ class LocationContext {
     // For the remaining parameters, assign them to the next available locations
     params
       .drop(ArgRegs.length)
+      .reverse
       .zipWithIndex
       .foreach((id, index) => {
         val destLoc = getNext
-        val currLoc = RegImmPointer(BasePointer, PointerSize.asBytes * (index + CalleeSaved.length + 2))
+        // The location of the parameter is the base pointer + the size of the callee-saved registers + 2 (base pointer and return address) + the index of the parameter (they are in reverse order)
+        val currLoc = RegImmPointer(BasePointer, PointerSize.asBytes * (CalleeSaved.length + 2 + index))
         movLocLoc(destLoc, currLoc, Size(id.getType))
         addLocation(id)
       })
@@ -237,15 +239,18 @@ class LocationContext {
    * @note Run this just after calling a function.
    * @return The location of the result
    */
-  def cleanUpCall()(using instructionCtx: InstructionContext): Location =
+  def cleanUpCall(numArgs: Int)(using instructionCtx: InstructionContext): Location =
     instructionCtx.addInstruction(Comment("Cleaning up function call"))
 
-    // 1. Restore caller registers
+    // 1. Discard arguments
+    instructionCtx.addInstruction(Add(StackPointer, PointerSize.asBytes * (numArgs - ArgRegs.length).max(0))(PointerSize))
+
+    // 2. Restore caller registers
     popLocs(CallerSaved)
 
     instructionCtx.addInstruction(Comment("Function call clean up complete"))
 
-    // 2. Return result location
+    // 3. Return result location
     ReturnReg
 
   /** Move a value from one location to another

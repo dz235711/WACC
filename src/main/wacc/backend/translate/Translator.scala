@@ -194,7 +194,8 @@ class Translator {
 
     case Read(id: Ident) =>
       // Move the original value to RDI in case the read fails
-      locationCtx.setUpCall(List(locationCtx.getLocation(id)))
+      val args = List(locationCtx.getLocation(id))
+      locationCtx.setUpCall(args)
       // Fetch the correct read label
       val readLabel = id.getType match {
         case IntType => {
@@ -209,7 +210,7 @@ class Translator {
       }
       // Call the read function
       instructionCtx.addInstruction(Call(readLabel))
-      val resultLoc = locationCtx.cleanUpCall()
+      val resultLoc = locationCtx.cleanUpCall(args.length)
       val idDest = locationCtx.getLocation(id)
       locationCtx.movLocLoc(idDest, resultLoc, Size(id.getType))
 
@@ -225,7 +226,8 @@ class Translator {
       )
 
       // Move the original value to RDI in case the read fails
-      locationCtx.setUpCall(List(readParamLoc))
+      val args = List(readParamLoc)
+      locationCtx.setUpCall(args)
       // Fetch the correct read label
       // TODO: Factor out duplication
       val readLabel = h.getType match {
@@ -243,7 +245,7 @@ class Translator {
       instructionCtx.addInstruction(Call(readLabel))
 
       // Clean up and save the result.
-      val resultLoc = locationCtx.cleanUpCall()
+      val resultLoc = locationCtx.cleanUpCall(args.length)
 
       // Move the result into the original location.
       locationCtx.regInstr2(
@@ -280,12 +282,12 @@ class Translator {
           instructionCtx.addInstruction(Jmp(Equal, Clib.errNullLabel))
 
           // Call free
-          locationCtx.setUpCall(List(l))
+          val args = List(l)
+          locationCtx.setUpCall(args)
           instructionCtx.addInstruction(Call(freeLabel))
+          locationCtx.cleanUpCall(args.length)
         }
       )
-
-      locationCtx.cleanUpCall()
 
     case Return(e) =>
       unary(e, l => locationCtx.cleanUpFunc(l, Size(e.getType)))
@@ -298,9 +300,10 @@ class Translator {
       translateExpr(e)
 
       // Call exit
-      locationCtx.setUpCall(List(dest))
+      val args = List(dest)
+      locationCtx.setUpCall(args)
       instructionCtx.addInstruction(Call(Clib.exitLabel))
-      locationCtx.cleanUpCall()
+      locationCtx.cleanUpCall(args.length)
 
     case Print(e) =>
       val dest = locationCtx.getNext
@@ -343,9 +346,10 @@ class Translator {
         }
         case _ => throw new RuntimeException("Invalid type")
       }
-      locationCtx.setUpCall(List(dest))
+      val args = List(dest)
+      locationCtx.setUpCall(args)
       instructionCtx.addInstruction(Call(printLabel))
-      locationCtx.cleanUpCall()
+      locationCtx.cleanUpCall(args.length)
 
     case PrintLn(e) =>
       instructionCtx.addLibraryFunction(Clib.printlnLabel)
@@ -353,9 +357,10 @@ class Translator {
       translateStmt(Print(e))
 
       // Print a newline
-      locationCtx.setUpCall(List()) // TODO: You can call println right after print, so this can be optimised
+      val args = List()
+      locationCtx.setUpCall(args) // TODO: You can call println right after print, so this can be optimised
       instructionCtx.addInstruction(Call(Clib.printlnLabel))
-      locationCtx.cleanUpCall()
+      locationCtx.cleanUpCall(args.length)
 
     case If(cond, s1, s2) =>
       val falseLabel = Label(s"if_false_${ifCounter}")
@@ -434,9 +439,10 @@ class Translator {
         case r: Register => Mov(r, size)(Size(IntType))
         case p: Pointer  => Mov(p, size)(Size(IntType))
       })
-      locationCtx.setUpCall(List(tempSizeLocation))
+      val args = List(tempSizeLocation)
+      locationCtx.setUpCall(args)
       instructionCtx.addInstruction(Call(Clib.mallocLabel))
-      val ptrLoc: Location = locationCtx.cleanUpCall()
+      val ptrLoc: Location = locationCtx.cleanUpCall(args.length)
 
       // Move the pointer to the array to the next available location
       val arrayLoc = locationCtx.reserveNext()
@@ -481,9 +487,10 @@ class Translator {
       })
 
       // Malloc memory for the pair to get the pointer to the pair
-      locationCtx.setUpCall(List(tempSizeLocation))
+      val args = List(tempSizeLocation)
+      locationCtx.setUpCall(args)
       instructionCtx.addInstruction(Call(Clib.mallocLabel))
-      val ptrLoc = locationCtx.cleanUpCall()
+      val ptrLoc = locationCtx.cleanUpCall(args.length)
 
       // Move the pointer to the pair to the next available location
       val pairLoc = locationCtx.reserveNext()
@@ -556,7 +563,7 @@ class Translator {
       // Call the function
       instructionCtx.addInstruction(Call(getFunctionName(v.id)))
       // Restore caller-save registers
-      val returnDest = locationCtx.cleanUpCall()
+      val returnDest = locationCtx.cleanUpCall(argLocations.length)
 
       // Free argument temp locations
       argLocations.foreach { _ =>
