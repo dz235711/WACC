@@ -38,7 +38,7 @@ class BackendValidWhileTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute max.wacc" taggedAs Backend in {
+  it should "execute max.wacc" taggedAs Debug in {
     val programTester = new ProgramTester(dir + "max.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 

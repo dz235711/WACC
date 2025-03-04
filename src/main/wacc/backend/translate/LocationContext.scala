@@ -208,7 +208,7 @@ class LocationContext {
           if (CallerSaved.contains(r))
             // If the location is a caller-saved register, it is now in the stack
             val newStackLoc =
-              RegImmPointer(StackPointer, PointerSize.asBytes * (CallerSaved.length - CallerSaved.indexOf(r)))
+              RegImmPointer(StackPointer, PointerSize.asBytes * (CallerSaved.length - CallerSaved.indexOf(r) - 1))
             instructionCtx.addInstruction(Mov(argReg, newStackLoc)(PointerSize))
           else instructionCtx.addInstruction(Mov(argReg, r)(PointerSize))
         case p: Pointer => instructionCtx.addInstruction(Mov(argReg, p)(PointerSize))
@@ -222,7 +222,7 @@ class LocationContext {
           if (CallerSaved.contains(r))
             // If the location is a caller-saved register, it is now in the stack
             val newStackLoc =
-              RegImmPointer(StackPointer, PointerSize.asBytes * (CallerSaved.length + index - CallerSaved.indexOf(r)))
+              RegImmPointer(StackPointer, PointerSize.asBytes * (CallerSaved.length + index - CallerSaved.indexOf(r) - 1))
             instructionCtx.addInstruction(Push(newStackLoc)(PointerSize))
           else instructionCtx.addInstruction(Push(r)(PointerSize))
         case p: Pointer => instructionCtx.addInstruction(Push(p)(PointerSize))
