@@ -55,7 +55,7 @@ class LocationContext {
   private var reservedStackLocs = 0
 
   /** Map from identifiers to locations */
-  private val identMap = mutable.Map[Ident, Location]()
+  private val identMap = mutable.Map[Int, Location]()
 
   // Register constants
   private val ReturnReg = RAX.apply
@@ -113,7 +113,7 @@ class LocationContext {
    */
   def addLocation(v: Ident, size: Size)(using instruction: InstructionContext): Unit = {
     val loc = reserveNext(size)
-    identMap(v) = loc
+    identMap(v.id) = loc
   }
 
   /** Get the location associated with an identifier
@@ -121,7 +121,7 @@ class LocationContext {
    * @param v The identifier to get the location of
    * @return The location associated with the identifier
    */
-  def getLocation(v: Ident): Location = identMap(v)
+  def getLocation(v: Ident): Location = identMap(v.id)
 
   private def pushLocs(regs: List[Size => Register])(using instructionCtx: InstructionContext): Unit = {
     for (r <- regs)
@@ -163,11 +163,11 @@ class LocationContext {
             instructionCtx.addInstruction(Mov(CallerSaved.head(W64), rdx))
 
             freeRegs -= CallerSaved.head
-            identMap(id) = CallerSaved.head(typeToSize(id.getType))
+            identMap(id.id) = CallerSaved.head(typeToSize(id.getType))
           case r =>
             // move the parameter to the register
             freeRegs -= r
-            identMap(id) = r(typeToSize(id.getType))
+            identMap(id.id) = r(typeToSize(id.getType))
         }
       })
 
