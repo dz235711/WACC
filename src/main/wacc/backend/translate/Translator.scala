@@ -186,7 +186,7 @@ class Translator {
           locationCtx.regInstr2(
             hDest,
             resultLoc,
-            Size(l.getType),
+            PointerSize,
             Size(l.getType),
             { (reg1, reg2) => Mov(RegPointer(reg1), reg2)(Size(l.getType)) }
           )
@@ -899,7 +899,7 @@ class Translator {
                   else
                     // If the next type is not an array, we are at the last element of the array
                     // so we don't need to scale the index
-                    Lea(reg1, RegScaleRegImmPointer(reg1, tySize, reg2, IntSize.asBytes))(Size(nextTy))
+                    Lea(reg1, RegScaleRegImmPointer(reg1, tySize, reg2, IntSize.asBytes))(PointerSize)
                 }
               )
               nextTy
