@@ -933,7 +933,7 @@ class Translator {
             locationCtx.regInstr1(
               pairPtrLoc,
               PointerSize,
-              { reg => Lea(reg, RegPointer(reg))(Size(ty)) }
+              { reg => Lea(reg, RegPointer(reg))(PointerSize) }
             )
           case _ =>
             locationCtx.regInstr1(
@@ -972,7 +972,7 @@ class Translator {
             locationCtx.regInstr1(
               sndDest,
               PointerSize,
-              { reg => Lea(reg, RegImmPointer(reg, offset))(Size(ty)) }
+              { reg => Lea(reg, RegImmPointer(reg, offset))(PointerSize) }
             )
           case _ =>
             locationCtx.regInstr1(
