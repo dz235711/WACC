@@ -191,6 +191,7 @@ class Translator {
             { (reg1, reg2) => Mov(RegPointer(reg1), reg2)(Size(l.getType)) }
           )
       }
+      locationCtx.unreserveLast()
 
     case Read(id: Ident) =>
       // Move the original value to RDI in case the read fails
@@ -306,8 +307,8 @@ class Translator {
       locationCtx.cleanUpCall(args.length)
 
     case Print(e) =>
-      val dest = locationCtx.getNext
       translateExpr(e)
+      val dest = locationCtx.reserveNext()
 
       // Call the print function corresponding to the type of the expression
       val printLabel = e.getType match {
@@ -350,6 +351,7 @@ class Translator {
       locationCtx.setUpCall(args)
       instructionCtx.addInstruction(Call(printLabel))
       locationCtx.cleanUpCall(args.length)
+      locationCtx.unreserveLast()
 
     case PrintLn(e) =>
       instructionCtx.addLibraryFunction(Clib.printlnLabel)
@@ -605,7 +607,7 @@ class Translator {
       instructionCtx.addInstruction(Jmp(Overflow, Clib.errOverflowLabel))
     case Len(e) =>
       val lenDest = locationCtx.reserveNext()
-      e match
+      e match {
         case id: Ident =>
           val idLoc = locationCtx.getLocation(id)
           locationCtx.regInstr2(
@@ -616,6 +618,8 @@ class Translator {
             { (reg1, reg2) => Mov(reg2, RegPointer(reg1))(IntSize) }
           )
         case _ => throw new RuntimeException("Unexpected Error: Invalid expression for Len")
+      }
+      locationCtx.unreserveLast()
 
     case Ord(e) =>
       val ordDest = locationCtx.reserveNext()
