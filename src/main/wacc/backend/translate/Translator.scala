@@ -626,11 +626,11 @@ class Translator {
         { l =>
           // Check that the value is greater than the minimum char value
           locationCtx.regInstr1(l, IntSize, { reg => Compare(reg, MinChar)(IntSize) })
-          instructionCtx.addInstruction(Jmp(LessEqual, Clib.errBadCharLabel))
+          instructionCtx.addInstruction(Jmp(Less, Clib.errBadCharLabel))
 
           // Check that the value is less than the maximum char value
           locationCtx.regInstr1(l, IntSize, { reg => Compare(reg, MaxChar)(IntSize) })
-          instructionCtx.addInstruction(Jmp(GreaterEqual, Clib.errBadCharLabel))
+          instructionCtx.addInstruction(Jmp(Greater, Clib.errBadCharLabel))
 
           locationCtx.movLocLoc(chrDest, l, CharSize)
         }
