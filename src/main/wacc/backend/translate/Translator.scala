@@ -622,7 +622,7 @@ class Translator {
       // Move the result of the expression to the next available location
       unary(e, { l => locationCtx.movLocLoc(ordDest, l, IntSize) })
       // Zero extend the result
-      locationCtx.regInstr1(ordDest, IntSize, { reg => Movzx(reg, reg)(IntSize) })
+      locationCtx.regInstr1(ordDest, IntSize, { reg => Movzx(reg, reg)(IntSize)(CharSize) })
       locationCtx.unreserveLast()
 
     case Chr(e) =>

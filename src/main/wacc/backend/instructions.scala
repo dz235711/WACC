@@ -114,7 +114,7 @@ object Mov {
   def apply(dest: Pointer, src: Immediate | Register)(size: Size): Mov = new Mov(dest, src)(size)
   def apply(dest: Register, src: Immediate | Register | Pointer)(size: Size): Mov = new Mov(dest, src)(size)
 }
-case class Movzx(dest: Register, src: Register | Pointer)(val size: Size) extends Instruction
+case class Movzx(dest: Register, src: Register | Pointer)(val destSize: Size)(val size: Size) extends Instruction
 case class Push(src: Register | Pointer | Immediate)(val size: Size) extends Instruction
 case class Pop(dest: Register | Pointer)(val size: Size) extends Instruction
 case class Lea(dest: Register, src: Pointer)(val size: Size) extends Instruction

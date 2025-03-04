@@ -157,7 +157,8 @@ class LocationContext {
       .zipWithIndex
       .foreach((id, index) => {
         val destLoc = getNext
-        // The location of the parameter is the base pointer + the size of the callee-saved registers + 2 (base pointer and return address) + the index of the parameter (they are in reverse order)
+        /* The location of the parameter is the base pointer + the size of the callee-saved registers + 2 (base pointer
+         * and return address) + the index of the parameter (they are in reverse order) */
         val currLoc = RegImmPointer(BasePointer, PointerSize.asBytes * (CalleeSaved.length + 2 + index))
         movLocLoc(destLoc, currLoc, Size(id.getType))
         addLocation(id)
@@ -224,7 +225,10 @@ class LocationContext {
           if (CallerSaved.contains(r))
             // If the location is a caller-saved register, it is now in the stack
             val newStackLoc =
-              RegImmPointer(StackPointer, PointerSize.asBytes * (CallerSaved.length + index - CallerSaved.indexOf(r) - 1))
+              RegImmPointer(
+                StackPointer,
+                PointerSize.asBytes * (CallerSaved.length + index - CallerSaved.indexOf(r) - 1)
+              )
             instructionCtx.addInstruction(Push(newStackLoc)(PointerSize))
           else instructionCtx.addInstruction(Push(r)(PointerSize))
         case p: Pointer => instructionCtx.addInstruction(Push(p)(PointerSize))
@@ -243,7 +247,9 @@ class LocationContext {
     instructionCtx.addInstruction(Comment("Cleaning up function call"))
 
     // 1. Discard arguments
-    instructionCtx.addInstruction(Add(StackPointer, PointerSize.asBytes * (numArgs - ArgRegs.length).max(0))(PointerSize))
+    instructionCtx.addInstruction(
+      Add(StackPointer, PointerSize.asBytes * (numArgs - ArgRegs.length).max(0))(PointerSize)
+    )
 
     // 2. Restore caller registers
     popLocs(CallerSaved)

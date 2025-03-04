@@ -50,6 +50,7 @@ class x86Stringifier {
     instr match {
       case DefineLabel(Label(s)) => s"$s:"
       case Comment(s)            => s"# $s"
+      case m @ Movzx(dest, src)  => s"movzx ${stringifyOperand(dest, m.destSize)}, ${stringifyOperand(src, m.size)}"
       case _ =>
         val operands: List[Operand] = instr.productIterator.toList.asInstanceOf[List[Operand]] // ew
         val size = instr.size
