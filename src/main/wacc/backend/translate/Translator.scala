@@ -327,8 +327,8 @@ class Translator {
         case ArrayType(CharType) => {
           // Increment the pointer to the start of the string (skip the size)
           instructionCtx.addInstruction(dest match {
-            case r: Register => Add(r, IntSize.asBytes)(IntSize)
-            case p: Pointer  => Add(p, IntSize.asBytes)(IntSize)
+            case r: Register => Add(r, IntSize.asBytes)(PointerSize)
+            case p: Pointer  => Add(p, IntSize.asBytes)(PointerSize)
           })
           instructionCtx.addLibraryFunction(Clib.printsLabel)
           Clib.printsLabel
@@ -445,7 +445,7 @@ class Translator {
       // Store the size of the array
       locationCtx.regInstr1(
         arrayLoc,
-        Size(IntType),
+        PointerSize,
         { reg => Mov(RegPointer(reg), es.size)(Size(IntType)) }
       )
 
