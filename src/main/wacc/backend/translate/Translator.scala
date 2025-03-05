@@ -607,18 +607,21 @@ class Translator {
       instructionCtx.addInstruction(Jmp(Overflow, Clib.errOverflowLabel))
     case Len(e) =>
       val lenDest = locationCtx.reserveNext()
-      e match {
+      val loc = e match {
         case id: Ident =>
-          val idLoc = locationCtx.getLocation(id)
-          locationCtx.regInstr2(
-            idLoc,
-            lenDest,
-            PointerSize,
-            IntSize,
-            { (reg1, reg2) => Mov(reg2, RegPointer(reg1))(IntSize) }
-          )
-        case _ => throw new RuntimeException("Unexpected Error: Invalid expression for Len")
+          locationCtx.getLocation(id)
+        case x => 
+          translateExpr(x)
+          locationCtx.getNext
       }
+      
+      locationCtx.regInstr2(
+        loc,
+        lenDest,
+        PointerSize,
+        IntSize,
+        { (reg1, reg2) => Mov(reg2, RegPointer(reg1))(IntSize) }
+      )
       locationCtx.unreserveLast()
 
     case Ord(e) =>
