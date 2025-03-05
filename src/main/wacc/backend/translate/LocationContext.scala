@@ -2,14 +2,9 @@ package wacc
 
 import wacc.TypedAST.Ident
 
-import wacc.Size.*
 import wacc.Register.*
 
 import scala.collection.mutable
-import wacc.RenamedAST.KnownType.{ArrayType, BoolType, CharType, IntType, PairType, StringType}
-import wacc.RenamedAST.{KnownType, SemType}
-
-import java.rmi.UnexpectedException
 
 type Location = Register | Pointer
 

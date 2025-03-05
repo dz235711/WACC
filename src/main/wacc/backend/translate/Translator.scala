@@ -11,7 +11,6 @@ import TypedAST.{
   *
 }
 import wacc.RenamedAST.KnownType.{ArrayType, BoolType, CharType, IntType, PairType, StringType}
-import wacc.RenamedAST.{?, KnownType, SemType}
 import wacc.Size.*
 import wacc.Condition.*
 
@@ -539,35 +538,51 @@ class Translator {
 
       // Unreserve the pair location
       locationCtx.unreserveLast()
-    case f @ Fst(_, ty) =>
-      // Get the current location in the map of the Fst
-      val fstLoc = getHeapLocation(f)
+    case f @ Fst(lv, ty) =>
+      // Move this into the expected result location
+      val dest = locationCtx.reserveNext()
+      
+      lv match {
+        case nested: (Fst | Snd) => 
+          translateRValue(nested)
+          locationCtx.regInstr1(dest, Size(ty), { reg => Mov(reg, RegPointer(reg))(Size(ty)) })
+        case _ => 
+          // Get the current location in the map of the Fst
+          val fstLoc = getHeapLocation(f)
+          locationCtx.regInstr2(
+            dest,
+            fstLoc,
+            Size(ty),
+            PointerSize,
+            { (reg1, reg2) => Mov(reg1, RegPointer(reg2))(Size(ty)) }
+          )
+      }
+
+      locationCtx.unreserveLast()
+
+    case s @ Snd(lv, ty) =>
+      
 
       // Move this into the expected result location
-      val dest = locationCtx.getNext
+      val dest = locationCtx.reserveNext()
 
-      locationCtx.regInstr2(
-        dest,
-        fstLoc,
-        Size(ty),
-        PointerSize,
-        { (reg1, reg2) => Mov(reg1, RegPointer(reg2))(Size(ty)) }
-      )
+      lv match {
+        case nested: (Fst | Snd) => 
+          translateRValue(nested)
+          locationCtx.regInstr1(dest, PointerSize, { reg => Mov(reg, RegImmPointer(reg, PairBytes / 2))(Size(ty)) })
+        case _ => 
+          // Get the current location in the map of the Snd
+          val sndLoc = getHeapLocation(s)
+          locationCtx.regInstr2(
+            sndLoc,
+            dest,
+            PointerSize,
+            Size(ty),
+            { (reg1, reg2) => Mov(reg2, RegPointer(reg1))(Size(ty)) }
+          )
+      }
 
-    case s @ Snd(_, ty) =>
-      // Get the current location in the map of the Snd
-      val sndLoc = getHeapLocation(s)
-
-      // Move this into the expected result location
-      val dest = locationCtx.getNext
-
-      locationCtx.regInstr2(
-        sndLoc,
-        dest,
-        PointerSize,
-        Size(ty),
-        { (reg1, reg2) => Mov(reg2, RegPointer(reg1))(Size(ty)) }
-      )
+      locationCtx.unreserveLast()
 
     case TypedCall(v, args, ty) =>
       // Translate arguments into temporary locations
@@ -626,11 +641,11 @@ class Translator {
       val loc = e match {
         case id: Ident =>
           locationCtx.getLocation(id)
-        case x => 
+        case x =>
           translateExpr(x)
           locationCtx.getNext
       }
-      
+
       locationCtx.regInstr2(
         loc,
         lenDest,
