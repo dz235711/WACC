@@ -150,9 +150,6 @@ class Translator {
   /** The label for a user-defined function */
   private val FunctionLabel = "wacc_func_"
 
-  /** The number of if statements so each jump label is unique */
-  private var ifCounter = 0
-
   def translate(program: Program): (List[(String, Label)], List[Instruction]) = {
     given translateCtx: InstructionContext = new InstructionContext()
     given locationCtx: LocationContext = new LocationContext()
