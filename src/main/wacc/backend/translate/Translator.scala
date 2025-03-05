@@ -538,47 +538,49 @@ class Translator {
 
       // Unreserve the pair location
       locationCtx.unreserveLast()
-    case f @ Fst(lv, ty) =>
-      // Move this into the expected result location
-      val dest = locationCtx.reserveNext()
-      
+
+    case fs @ (Fst(_, _) | Snd(_, _)) =>
+      val lv = fs match {
+        case Fst(lv, _) => lv
+        case Snd(lv, _) => lv
+      }
+
+      // Get the pair pointer location
+      val pairPtrLoc = locationCtx.reserveNext()
+
       lv match {
-        case nested: (Fst | Snd) => 
-          translateRValue(nested)
-          locationCtx.regInstr1(dest, Size(ty), { reg => Mov(reg, RegPointer(reg))(Size(ty)) })
-        case _ => 
-          // Get the current location in the map of the Fst
-          val fstLoc = getHeapLocation(f)
+        case id: Ident =>
+          locationCtx.movLocLoc(pairPtrLoc, locationCtx.getLocation(id), PointerSize)
+        case h: HeapLValue =>
+          // The pointer to the pair is stored in the heap (not in a location)
+          val pairPtrPtr = getHeapLocation(h)
           locationCtx.regInstr2(
-            dest,
-            fstLoc,
-            Size(ty),
+            pairPtrPtr,
+            pairPtrLoc,
             PointerSize,
-            { (reg1, reg2) => Mov(reg1, RegPointer(reg2))(Size(ty)) }
+            PointerSize,
+            { (reg1, reg2) => Mov(reg2, RegPointer(reg1))(PointerSize) }
           )
       }
 
-      locationCtx.unreserveLast()
+      // Check for null pair runtime error
+      instructionCtx.addLibraryFunction(Clib.printsLabel)
+      instructionCtx.addLibraryFunction(Clib.errNullLabel)
+      pairPtrLoc match {
+        case r: Register => instructionCtx.addInstruction(Compare(r, Null)(PointerSize))
+        case p: Pointer  => instructionCtx.addInstruction(Compare(p, Null)(PointerSize))
+      }
+      instructionCtx.addInstruction(Jmp(Equal, Clib.errNullLabel))
 
-    case s @ Snd(lv, ty) =>
-      
-
-      // Move this into the expected result location
-      val dest = locationCtx.reserveNext()
-
-      lv match {
-        case nested: (Fst | Snd) => 
-          translateRValue(nested)
-          locationCtx.regInstr1(dest, PointerSize, { reg => Mov(reg, RegImmPointer(reg, PairBytes / 2))(Size(ty)) })
-        case _ => 
-          // Get the current location in the map of the Snd
-          val sndLoc = getHeapLocation(s)
-          locationCtx.regInstr2(
-            sndLoc,
-            dest,
+      // Dereference the pair pointer location into itself
+      fs match {
+        case Fst(_, _) =>
+          locationCtx.regInstr1(pairPtrLoc, PointerSize, { reg => Mov(reg, RegPointer(reg))(PointerSize) })
+        case Snd(_, _) =>
+          locationCtx.regInstr1(
+            pairPtrLoc,
             PointerSize,
-            Size(ty),
-            { (reg1, reg2) => Mov(reg2, RegPointer(reg1))(Size(ty)) }
+            { reg => Mov(reg, RegImmPointer(reg, PairBytes / 2))(PointerSize) }
           )
       }
 
