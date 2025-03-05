@@ -93,6 +93,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
   }
+  }
 
   it should "execute emptyArrayAloneIsFine.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "emptyArrayAloneIsFine.wacc")
@@ -143,11 +144,13 @@ class BackendValidArrayTests extends AnyFlatSpec {
   }
 
   it should "execute lenArrayIndex.wacc" taggedAs Backend in {
+  it should "execute lenArrayIndex.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "lenArrayIndex.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
+  }
   }
 
   it should "execute modifyString.wacc" taggedAs Backend in {
@@ -167,11 +170,13 @@ class BackendValidArrayTests extends AnyFlatSpec {
   }
 
   it should "execute stringFromArray.wacc" taggedAs Backend in {
+  it should "execute stringFromArray.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "stringFromArray.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
+  }
   }
 
 }

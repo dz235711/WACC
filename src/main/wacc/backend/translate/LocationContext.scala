@@ -39,6 +39,7 @@ class LocationContext {
 
   /** Map from identifiers to locations */
   private val identMap = mutable.Map[Int, Location]()
+  private val identMap = mutable.Map[Int, Location]()
 
   // Register constants
   private val ReturnReg = RAX
@@ -100,6 +101,7 @@ class LocationContext {
    * @param v The identifier to get the location of
    * @return The location associated with the identifier
    */
+  def getLocation(v: Ident): Location = identMap(v.id)
   def getLocation(v: Ident): Location = identMap(v.id)
 
   private def pushLocs(regs: List[Register])(using instructionCtx: InstructionContext): Unit = {
