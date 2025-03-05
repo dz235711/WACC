@@ -86,7 +86,7 @@ class BackendValidArrayTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute charArrayInStringArray.wacc" taggedAs Debug in {
+  it should "execute charArrayInStringArray.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "charArrayInStringArray.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
