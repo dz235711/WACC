@@ -366,6 +366,9 @@ sealed class TypeChecker {
         }
 
       ArrayType(elTy).satisfies(rval.pos)(c) match {
+        case Some(StringType) if elTy == CharType =>
+          val esTyped = es.map(checkExpr(_, Is(CharType))._2)
+          (Some(ArrayType(CharType)), TypedAST.ArrayLiter(esTyped, ArrayType(CharType)))
         case Some(ArrayType(ty)) =>
           val esTyped = es.map(checkExpr(_, Is(ty))._2)
           (Some(ArrayType(ty)), TypedAST.ArrayLiter(esTyped, ArrayType(ty)))
