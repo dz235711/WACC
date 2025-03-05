@@ -18,20 +18,42 @@ case class ArrayValue(es: List[Value])
 
 final class Interpreter {
 
+  // CONSTANTS
+
+  /** Exit message */
   private val ExitString = "Exiting interpreter..."
 
+  /** Message for system call exit error */
   private val ExitErrorString = "Exit expression must evaluate to an integer"
 
+  // VARIABLES
+
+  /** The return value of a function, initialised once it is called */
   private var returnValue: Value = uninitialized
 
+  // TODO: Change documentation after scope inheritance is implemented.
+  /** Interprets a program within a new scope.
+    *
+    * @param program The program to be interpreted
+    */
   def interpret(program: Program): Unit = {
     val globalScope = new MapContext[Id, Value]()
     ???
   }
 
+  /** Interprets a function, adding it to the scope of functions
+    *
+    * @param func The function to be interpreted
+    * @return The function scope with `func` added.
+    */
   def interpretFunction(func: Func)(using scope: VariableScope)(using funcScope: FunctionScope): FunctionScope =
     funcScope.add(func.v.id, (func.params, func.body))
 
+  /** Interprets a statement and returns the scope, regardless of if the scope has changed or not.
+    *
+    * @param stmt The statement to be interpreted
+    * @return The scope after interpreting the statement
+    */
   def interpretStmt(stmt: Stmt)(using scope: VariableScope)(using funcScope: FunctionScope): VariableScope =
     stmt match {
       case Skip       => scope
@@ -58,6 +80,11 @@ final class Interpreter {
       case Semi(s1, s2)      => ???
     }
 
+  /** Interprets an RValue into an evaluated value.
+    *
+    * @param r The RValue to interpret
+    * @result The value of the evaluated RValue
+    */
   def interpretRValue(r: RValue)(using scope: VariableScope)(using funcScope: FunctionScope): Value = r match {
     case ArrayLiter(es, _)  => ???
     case NewPair(e1, e2, _) => ???
@@ -86,7 +113,17 @@ final class Interpreter {
     case e: Expr => interpretExpr(e)
   }
 
+  /** Interprets an LValue into its corresponding id.
+    *
+    * @param l The LValue to interpret
+    * @return The id of the LValue
+    */
   def interpretLValue(l: LValue)(using scope: VariableScope)(using funcScope: FunctionScope): Id = ???
 
+  /** Interprets an expression into an evaluated value.
+    *
+    * @param e Expression to intrepret
+    * @return The value of the evaluated expression
+    */
   def interpretExpr(e: Expr)(using scope: VariableScope)(using funcScope: FunctionScope): Value = ???
 }
