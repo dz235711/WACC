@@ -38,13 +38,13 @@ class BackendValidScopeTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute printAllTypes.wacc" taggedAs Backend in pending /*{
+  it should "execute printAllTypes.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "printAllTypes.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute scope.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "scope.wacc")

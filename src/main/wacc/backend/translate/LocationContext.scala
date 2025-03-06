@@ -191,30 +191,31 @@ class LocationContext {
   /** Saves caller registers and moves arguments to their intended registers/on the stack.
    *
    * @note Run this just before calling a function.
-   * @param argLocations The temporary locations of the arguments
+   * @param argLocations The location-size pairs of the arguments
+   * @note argument locations must be reserved before calling this function
    */
-  def setUpCall(argLocations: List[Location])(using instructionCtx: InstructionContext): Unit = {
+  def setUpCall(argLocations: List[(Location, Size)])(using instructionCtx: InstructionContext): Unit = {
     instructionCtx.addInstruction(Comment("Setting up function call"))
 
     // 1. Save caller registers
     pushLocs(CallerSaved)
 
     // 2. Move first 6 arguments to their intended registers
-    for ((argLoc, argReg) <- argLocations.zip(ArgRegs)) {
+    for (((argLoc, argSize), argReg) <- argLocations.zip(ArgRegs)) {
       argLoc match {
         case r: Register =>
           if (CallerSaved.contains(r))
             // If the location is a caller-saved register, it is now in the stack
             val newStackLoc =
               RegImmPointer(StackPointer, PointerSize.asBytes * (CallerSaved.length - CallerSaved.indexOf(r) - 1))
-            instructionCtx.addInstruction(Mov(argReg, newStackLoc)(PointerSize))
-          else instructionCtx.addInstruction(Mov(argReg, r)(PointerSize))
-        case p: Pointer => instructionCtx.addInstruction(Mov(argReg, p)(PointerSize))
+            instructionCtx.addInstruction(Mov(argReg, newStackLoc)(argSize))
+          else instructionCtx.addInstruction(Mov(argReg, r)(argSize))
+        case p: Pointer => instructionCtx.addInstruction(Mov(argReg, p)(argSize))
       }
     }
 
     // 3. Move remaining arguments to the stack
-    for ((argLoc, index) <- argLocations.drop(ArgRegs.length).zipWithIndex) {
+    for (((argLoc, _), index) <- argLocations.drop(ArgRegs.length).zipWithIndex) {
       argLoc match {
         case r: Register =>
           if (CallerSaved.contains(r))
@@ -224,6 +225,7 @@ class LocationContext {
                 StackPointer,
                 PointerSize.asBytes * (CallerSaved.length + index - CallerSaved.indexOf(r) - 1)
               )
+            // WARN: These pushes being of size PointerSize may not be correct - they should be the size of the argument
             instructionCtx.addInstruction(Push(newStackLoc)(PointerSize))
           else instructionCtx.addInstruction(Push(r)(PointerSize))
         case p: Pointer => instructionCtx.addInstruction(Push(p)(PointerSize))

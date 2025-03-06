@@ -213,7 +213,7 @@ class Translator {
 
     case Read(id: Ident) =>
       // Move the original value to RDI in case the read fails
-      val args = List(locationCtx.getLocation(id))
+      val args = List((locationCtx.getLocation(id), Size(id.getType)))
       locationCtx.setUpCall(args)
       // Fetch the correct read label
       val readLabel = id.getType match {
@@ -234,7 +234,7 @@ class Translator {
       locationCtx.movLocLoc(idDest, resultLoc, Size(id.getType))
 
     case Read(h: HeapLValue) =>
-      val readParamLoc = locationCtx.getNext
+      val readParamLoc = locationCtx.reserveNext()
       val pointerLoc = getHeapLocation(h)
       locationCtx.regInstr2(
         readParamLoc,
@@ -244,9 +244,6 @@ class Translator {
         { (reg1, reg2) => Mov(reg1, RegPointer(reg2))(Size(h.getType)) }
       )
 
-      // Move the original value to RDI in case the read fails
-      val args = List(readParamLoc)
-      locationCtx.setUpCall(args)
       // Fetch the correct read label
       // TODO: Factor out duplication
       val readLabel = h.getType match {
@@ -260,11 +257,14 @@ class Translator {
         }
         case _ => throw new RuntimeException("Unexpected Error: Invalid type for read")
       }
-      // Call the read function
-      instructionCtx.addInstruction(Call(readLabel))
 
-      // Clean up and save the result.
+      // Move the original value to RDI in case the read fails
+      val args = List((readParamLoc, Size(h.getType)))
+      locationCtx.setUpCall(args)
+      instructionCtx.addInstruction(Call(readLabel))
       val resultLoc = locationCtx.cleanUpCall(args.length)
+
+      locationCtx.unreserveLast()
 
       // Move the result into the original location.
       locationCtx.regInstr2(
@@ -301,7 +301,7 @@ class Translator {
           instructionCtx.addInstruction(Jmp(Equal, Clib.errNullLabel))
 
           // Call free
-          val args = List(l)
+          val args = List((l, Size(e.getType)))
           locationCtx.setUpCall(args)
           instructionCtx.addInstruction(Call(freeLabel))
           locationCtx.cleanUpCall(args.length)
@@ -315,14 +315,16 @@ class Translator {
     case Exit(e) =>
       instructionCtx.addLibraryFunction(Clib.exitLabel)
 
-      val dest = locationCtx.getNext
       translateExpr(e)
+      val dest = locationCtx.reserveNext()
 
       // Call exit
-      val args = List(dest)
+      val args = List((dest, Size(e.getType)))
       locationCtx.setUpCall(args)
       instructionCtx.addInstruction(Call(Clib.exitLabel))
       locationCtx.cleanUpCall(args.length)
+
+      locationCtx.unreserveLast()
 
     case Print(e) =>
       translateExpr(e)
@@ -365,10 +367,11 @@ class Translator {
         }
         case _ => throw new RuntimeException("Invalid type")
       }
-      val args = List(dest)
+      val args = List((dest, Size(e.getType)))
       locationCtx.setUpCall(args)
       instructionCtx.addInstruction(Call(printLabel))
       locationCtx.cleanUpCall(args.length)
+
       locationCtx.unreserveLast()
 
     case PrintLn(e) =>
@@ -378,7 +381,7 @@ class Translator {
 
       // Print a newline
       val args = List()
-      locationCtx.setUpCall(args) // TODO: You can call println right after print, so this can be optimised
+      locationCtx.setUpCall(args)
       instructionCtx.addInstruction(Call(Clib.printlnLabel))
       locationCtx.cleanUpCall(args.length)
 
@@ -451,15 +454,16 @@ class Translator {
       val size = (Size(eTy).asBytes * es.size) + IntSize.asBytes
 
       // Malloc memory for the array to get the pointer to the array
-      val tempSizeLocation = locationCtx.getNext
+      val tempSizeLocation = locationCtx.reserveNext()
       instructionCtx.addInstruction(tempSizeLocation match {
         case r: Register => Mov(r, size)(Size(IntType))
         case p: Pointer  => Mov(p, size)(Size(IntType))
       })
-      val args = List(tempSizeLocation)
+      val args = List((tempSizeLocation, Size(IntType)))
       locationCtx.setUpCall(args)
       instructionCtx.addInstruction(Call(Clib.mallocLabel))
       val ptrLoc: Location = locationCtx.cleanUpCall(args.length)
+      locationCtx.unreserveLast()
 
       // Move the pointer to the array to the next available location
       val arrayLoc = locationCtx.reserveNext()
@@ -497,17 +501,19 @@ class Translator {
       instructionCtx.addLibraryFunction(Clib.printsLabel)
 
       // Move the size of the pair to the next available location
-      val tempSizeLocation = locationCtx.getNext
+      val tempSizeLocation = locationCtx.reserveNext()
       instructionCtx.addInstruction(tempSizeLocation match {
         case r: Register => Mov(r, PairBytes)(Size(IntType))
         case p: Pointer  => Mov(p, PairBytes)(Size(IntType))
       })
 
       // Malloc memory for the pair to get the pointer to the pair
-      val args = List(tempSizeLocation)
+      val args = List((tempSizeLocation, Size(IntType)))
       locationCtx.setUpCall(args)
       instructionCtx.addInstruction(Call(Clib.mallocLabel))
       val ptrLoc = locationCtx.cleanUpCall(args.length)
+
+      locationCtx.unreserveLast()
 
       // Move the pointer to the pair to the next available location
       val pairLoc = locationCtx.reserveNext()
@@ -588,10 +594,10 @@ class Translator {
 
     case TypedCall(v, args, ty) =>
       // Translate arguments into temporary locations
-      val argLocations: List[Location] = args.map { arg =>
+      val argLocations: List[(Location, Size)] = args.map { arg =>
         translateExpr(arg)
         val dest = locationCtx.reserveNext()
-        dest
+        (dest, Size(arg.getType))
       }
       // Save caller-save registers and set up arguments
       locationCtx.setUpCall(argLocations)
@@ -1035,9 +1041,10 @@ class Translator {
       instructionCtx: InstructionContext,
       locationCtx: LocationContext
   ): Unit =
-    val dest = locationCtx.getNext
     translateExpr(e)
+    val dest = locationCtx.reserveNext()
     instr(dest)
+    locationCtx.unreserveLast()
 
   /**
     * Translate a binary operation and store the result in the next available location at the time of invocation.
