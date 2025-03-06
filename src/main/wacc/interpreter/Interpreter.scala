@@ -1,10 +1,12 @@
 package wacc
 
+import wacc.RenamedAST.KnownType
 import wacc.TypedAST._
 
 import scala.compiletime.uninitialized
 import scala.collection.mutable.Map as MMap
 import java.rmi.UnexpectedException
+import wacc.lexer.int
 
 type Id = Int
 type BaseValue = Int | Boolean | Char | String
@@ -13,8 +15,12 @@ type Value = BaseValue | PairValue | ArrayValue
 type VariableScope = MapContext[Id, Value]
 type FunctionScope = MapContext[Id, (List[Ident], Stmt)]
 
-case class PairValue(fst: Value, snd: Value)
-case class ArrayValue(es: List[Value])
+case class PairValue(fst: Value, snd: Value) {
+  override def toString: String = s"($fst, $snd)"
+}
+case class ArrayValue(es: List[Value]) {
+  override def toString: String = es.mkString("[", ", ", "]")
+}
 
 final class Interpreter {
 
@@ -23,13 +29,28 @@ final class Interpreter {
   /** Exit message */
   private val ExitString = "Exiting interpreter..."
 
-  /** Message for system call exit error */
+  /** System call exit error message */
   private val ExitErrorString = "Exit expression must evaluate to an integer"
+
+  /** Read error message */
+  private val ReadErrorString = "Read must be called on object of type int or char"
+
+  /** Condition error message */
+  private val ConditionErrorString = "Condition must evaluate to a boolean"
 
   // VARIABLES
 
   /** The return value of a function, initialised once it is called */
   private var returnValue: Value = uninitialized
+
+  // Helper functions
+
+  /** Returns an error message for when a function is not found in the function scope
+    *
+    * @param id The id of the function that was not found
+    * @return The error message
+    */
+  private def getFuncErrorString(id: Id): String = s"Function with id $id not found"
 
   // TODO: Change documentation after scope inheritance is implemented.
   /** Interprets a program within a new scope.
@@ -57,27 +78,63 @@ final class Interpreter {
   def interpretStmt(stmt: Stmt)(using scope: VariableScope)(using funcScope: FunctionScope): VariableScope =
     stmt match {
       case Skip       => scope
-      case Decl(v, r) => scope.add(v.id, interpretRValue(r)) // x = call f()
+      case Decl(v, r) => scope.add(v.id, interpretRValue(r))
       case Asgn(l, r) => scope.add(interpretLValue(l), interpretRValue(r))
-      case Read(l)    => ??? // TODO: Prompt user for input
-      case Free(e)    => ??? // TODO: Keep track of freed identifiers
-      case Return(e) => {
+      case Read(l) =>
+        val readValue = l.getType match {
+          case KnownType.IntType  => scala.io.StdIn.readInt()
+          case KnownType.CharType => scala.io.StdIn.readChar()
+          case _                  => throw new UnexpectedException(ReadErrorString)
+        }
+        val lId = interpretLValue(l)
+        scope.add(lId, readValue)
+      case Free(e) =>
+        ???
+      case Return(e) =>
         // Set the class-wide return value
         returnValue = interpretExpr(e)
         scope
-      }
       case Exit(e) =>
         println(ExitString)
         interpretExpr(e) match {
           case i: Int => sys.exit(i)
           case _      => throw new UnexpectedException(ExitErrorString)
         }
-      case Print(e)          => ???
-      case PrintLn(e)        => ???
-      case If(cond, s1, s2)  => ???
-      case While(cond, body) => ???
-      case Begin(body)       => ???
-      case Semi(s1, s2)      => ???
+      case Print(e) =>
+        val value = interpretExpr(e)
+        print(value.toString())
+        scope
+      case PrintLn(e) =>
+        val value = interpretExpr(e)
+        println(value.toString())
+        scope
+      case If(cond, s1, s2) =>
+        val evaluatedCond = interpretExpr(cond) match {
+          case b: Boolean => b
+          case _          => throw new UnexpectedException(ConditionErrorString)
+        }
+
+        if (evaluatedCond) {
+          interpretStmt(s1)
+        } else {
+          interpretStmt(s2)
+        }
+      case While(cond, body) =>
+        val evaluatedCond = interpretExpr(cond) match {
+          case b: Boolean => b
+          case _          => throw new UnexpectedException(ConditionErrorString)
+        }
+
+        if (evaluatedCond) {
+          val newScope = interpretStmt(body)
+          interpretStmt(While(cond, body))(using newScope)
+        } else {
+          scope
+        }
+      case Begin(body) => interpretStmt(body)
+      case Semi(s1, s2) =>
+        val newScope = interpretStmt(s1)
+        interpretStmt(s2)(using newScope)
     }
 
   /** Interprets an RValue into an evaluated value.
@@ -90,12 +147,11 @@ final class Interpreter {
     case NewPair(e1, e2, _) => ???
     case Fst(l, _)          => ???
     case Snd(l, _)          => ???
-    case Call(v, args, _) =>
-      ???
+    case Call(v, args, _)   =>
       // Fetch parameters and body of function
       val (params, body) = funcScope.get(v.id) match {
         case Some(value) => value
-        case None        => throw new UnexpectedException(s"Function ${v.id} not found")
+        case None        => throw new UnexpectedException(getFuncErrorString(v.id))
       }
 
       // Evaluate arguments and put them into a new scope for the function
