@@ -56,8 +56,9 @@ final class Interpreter {
   /** Interprets a program within a new scope.
     *
     * @param program The program to be interpreted
+    * @return The variable and function scopes after interpreting the program
     */
-  def interpret(program: Program): Unit = {
+  def interpret(program: Program): (VariableScope, FunctionScope) = {
     val globalScope = new MapContext[Id, Value]()
     ???
   }
@@ -88,8 +89,7 @@ final class Interpreter {
         }
         val lId = interpretLValue(l)
         scope.add(lId, readValue)
-      case Free(e) =>
-        ???
+      case Free(e)   => ???
       case Return(e) =>
         // Set the class-wide return value
         returnValue = interpretExpr(e)
