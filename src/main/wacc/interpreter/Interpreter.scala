@@ -30,6 +30,9 @@ final class Interpreter {
 
   // CONSTANTS
 
+  /** String representation of null pointer */
+  private val NullPointerString = "(nil)"
+
   /** Exit message */
   private val ExitString = "Exiting interpreter..."
 
@@ -112,6 +115,7 @@ final class Interpreter {
         value match {
           // WACC prints the pointers of arrays and pairs, but the closest we can get in Scala is the hashcode
           case pointer: (ArrayValue | PairValue) => print(pointer.hashCode)
+          case nullPointer: UninitalizedPair     => print(NullPointerString)
           case _                                 => print(value)
         }
         print(value.toString())
@@ -263,6 +267,7 @@ final class Interpreter {
         nestedArray.es(lastIndex) = newValue
 
         scope
+      // Fetch the pair to set its values
       case Fst(l, _) =>
         unpackAsPair(getLValue(l)).fst = interpretRValue(r)
         scope
