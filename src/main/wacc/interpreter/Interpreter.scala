@@ -5,8 +5,8 @@ import wacc.TypedAST._
 
 import scala.compiletime.uninitialized
 import scala.collection.mutable.Map as MMap
+import scala.collection.mutable.ListBuffer
 import java.rmi.UnexpectedException
-import wacc.lexer.int
 
 type Id = Int
 type BaseValue = Int | Boolean | Char | String
@@ -15,14 +15,14 @@ type Value = BaseValue | PairValue | UninitalizedPair | ArrayValue
 type VariableScope = MapContext[Id, Value]
 type FunctionScope = MapContext[Id, (List[Ident], Stmt)]
 
-case class PairValue(fst: Value, snd: Value) {
+case class PairValue(var fst: Value, var snd: Value) {
   override def toString: String = s"($fst, $snd)"
 }
 class UninitalizedPair private ()
 object UninitalizedPair {
   val instance = UninitalizedPair()
 }
-case class ArrayValue(es: List[Value]) {
+case class ArrayValue(es: ListBuffer[Value]) {
   override def toString: String = es.mkString("[", ", ", "]")
 }
 
@@ -83,8 +83,8 @@ final class Interpreter {
   def interpretStmt(stmt: Stmt)(using scope: VariableScope)(using funcScope: FunctionScope): VariableScope =
     stmt match {
       case Skip       => scope
-      case Decl(v, r) => scope.add(v.id, interpretRValue(r))
-      case Asgn(l, r) => scope.add(interpretLValue(l), interpretRValue(r))
+      case Decl(v, r) => handleAssignment(v, r)
+      case Asgn(l, r) => handleAssignment(l, r)
       case Read(l) =>
         val readValue = l.getType match {
           case KnownType.IntType  => scala.io.StdIn.readInt()
@@ -147,11 +147,10 @@ final class Interpreter {
     * @result The value of the evaluated RValue
     */
   def interpretRValue(r: RValue)(using scope: VariableScope)(using funcScope: FunctionScope): Value = r match {
-    case ArrayLiter(es, _)  => ???
-    case NewPair(e1, e2, _) => ???
-    case Fst(l, _)          => ???
-    case Snd(l, _)          => ???
-    case Call(v, args, _)   =>
+    case ArrayLiter(es, _)    => ArrayValue(es.map(interpretExpr).to(ListBuffer))
+    case NewPair(e1, e2, _)   => PairValue(interpretExpr(e1), interpretExpr(e2))
+    case pairVal: (Fst | Snd) => getLValue(pairVal)
+    case Call(v, args, _)     =>
       // Fetch parameters and body of function
       val (params, body) = funcScope.get(v.id) match {
         case Some(value) => value
@@ -193,7 +192,7 @@ final class Interpreter {
       case Ord(e)    => (e.asInstanceOf[Char]).toInt // TODO: Check if this is consistent with WACC ord
       case Chr(e)    => (e.asInstanceOf[Int]).toChar // TODO: Check if this is consistent with WACC chr
 
-      case Mult(e1, e2)      => e1.asInstanceOf[Int] * e2.asInstanceOf[Int]
+      case Mult(e1, e2)      => e1.asInstanceOf[Int] * e2.asInstanceOf[Int] // TODO: Is there a way to avoid this cast?
       case Mod(e1, e2)       => e1.asInstanceOf[Int] % e2.asInstanceOf[Int]
       case Add(e1, e2)       => e1.asInstanceOf[Int] + e2.asInstanceOf[Int]
       case Div(e1, e2)       => e1.asInstanceOf[Int] / e2.asInstanceOf[Int]
@@ -241,5 +240,36 @@ final class Interpreter {
       case i1: Int  => intComparator(i1, evalExpr2.asInstanceOf[Int])
       case c1: Char => charComparator(c1, evalExpr2.asInstanceOf[Char])
       case _        => throw new UnexpectedException("Unexpected type for comparison")
+    }
+
+  def handleAssignment(l: LValue, r: RValue)(using
+      scope: VariableScope
+  )(using funcScope: FunctionScope): VariableScope =
+    l match {
+      case Ident(id, _) =>
+        scope.add(id, interpretRValue(r))
+      case ArrayElem(v, es, semType) =>
+        val nestedArray =
+          interpretExpr(ArrayElem(v, es.init, semType))
+            .asInstanceOf[ArrayValue] // Index through to the array that we want to change.
+        val lastIndex = interpretExpr(es.last).asInstanceOf[Int]
+
+        val newValue = interpretRValue(r)
+        nestedArray.es(lastIndex) = newValue
+
+        scope
+      case Fst(l, _) =>
+        getLValue(l).asInstanceOf[PairValue].fst = interpretRValue(r)
+        scope
+      case Snd(l, _) =>
+        getLValue(l).asInstanceOf[PairValue].snd = interpretRValue(r)
+        scope
+    }
+
+  def getLValue(l: LValue)(using scope: VariableScope): Value =
+    l match {
+      case idArr: (Ident | ArrayElem) => interpretExpr(idArr)
+      case Fst(l, _)                  => getLValue(l).asInstanceOf[PairValue].fst
+      case Snd(l, _)                  => getLValue(l).asInstanceOf[PairValue].snd
     }
 }
