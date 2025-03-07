@@ -173,6 +173,14 @@ sealed class TypeChecker {
     case RenamedAST.Begin(body) => TypedAST.Begin(checkStmt(body, retC))
     case RenamedAST.Semi(s1, s2) =>
       TypedAST.Semi(checkStmt(s1, retC), checkStmt(s2, retC))
+    case RenamedAST.Throw(e) => TypedAST.Throw(checkExpr(e, Is(IntType))._2)
+    case RenamedAST.TryCatchFinally(t, c, cBody, f) =>
+      TypedAST.TryCatchFinally(
+        checkStmt(t, retC),
+        checkIdent(c, Is(IntType))._2,
+        checkStmt(cBody, retC),
+        checkStmt(f, retC)
+      )
   }
 
   private def checkExpr(
