@@ -42,6 +42,9 @@ final class Interpreter {
   /** Condition error message */
   private val ConditionErrorString = "Condition must evaluate to a boolean"
 
+  /** Null dereference error message */
+  private val NullDereferenceErrorString = "Cannot dereference null pointer"
+
   // VARIABLES
 
   /** The return value of a function, initialised once it is called */
@@ -261,17 +264,24 @@ final class Interpreter {
 
         scope
       case Fst(l, _) =>
-        getLValue(l).asInstanceOf[PairValue].fst = interpretRValue(r)
+        unpackAsPair(getLValue(l)).fst = interpretRValue(r)
         scope
       case Snd(l, _) =>
-        getLValue(l).asInstanceOf[PairValue].snd = interpretRValue(r)
+        unpackAsPair(getLValue(l)).snd = interpretRValue(r)
         scope
     }
 
   def getLValue(l: LValue)(using scope: VariableScope): Value =
     l match {
       case idArr: (Ident | ArrayElem) => interpretExpr(idArr)
-      case Fst(l, _)                  => getLValue(l).asInstanceOf[PairValue].fst
-      case Snd(l, _)                  => getLValue(l).asInstanceOf[PairValue].snd
+      case Fst(l, _)                  => unpackAsPair(getLValue(l)).fst
+      case Snd(l, _)                  => unpackAsPair(getLValue(l)).snd
+    }
+
+  def unpackAsPair(value: Value): PairValue =
+    value match {
+      case pair: PairValue       => pair
+      case nil: UninitalizedPair => throw new UnexpectedException(NullDereferenceErrorString)
+      case _                     => throw new UnexpectedException("Expected pair, got something else")
     }
 }
