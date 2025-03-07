@@ -181,5 +181,49 @@ final class Interpreter {
     * @param e Expression to intrepret
     * @return The value of the evaluated expression
     */
-  def interpretExpr(e: Expr)(using scope: VariableScope)(using funcScope: FunctionScope): Value = ???
+  def interpretExpr(e: Expr)(using scope: VariableScope)(using funcScope: FunctionScope): Value =
+    e match {
+      case Not(e)    => !unpackExprAs[Boolean](e)
+      case Negate(e) => -unpackExprAs[Int](e)
+      case Len(e)    => unpackExprAs[ArrayValue](e).es.length
+      case Ord(e)    => unpackExprAs[Char](e).toInt // TODO: Check if this is consistent with WACC ord
+      case Chr(e)    => unpackExprAs[Int](e).toChar // TODO: Check if this is consistent with WACC ord
+
+      case Mult(e1, e2) => unpackExprAs[Int](e1) * unpackExprAs[Int](e2)
+      case Mod(e1, e2)  => unpackExprAs[Int](e1) % unpackExprAs[Int](e2)
+      case Add(e1, e2)  => unpackExprAs[Int](e1) + unpackExprAs[Int](e2)
+      case Div(e1, e2)  => unpackExprAs[Int](e1) / unpackExprAs[Int](e2)
+      case Sub(e1, e2)  => unpackExprAs[Int](e1) - unpackExprAs[Int](e2)
+      case Greater(e1, e2) =>
+        interpretExpr(e1) match {
+          case i1: Int  => i1 > unpackExprAs[Int](e2)
+          case c1: Char => c1 > unpackExprAs[Char](e2)
+          case _        => throw new UnexpectedException("Unexpected type for comparison")
+        }
+      case GreaterEq(e1, e2) => ???
+      case Smaller(e1, e2)   => ???
+      case SmallerEq(e1, e2) => ???
+      case Equals(e1, e2)    => ???
+      case NotEquals(e1, e2) => ???
+      case And(e1, e2)       => unpackExprAs[Boolean](e1) && unpackExprAs[Boolean](e2)
+      case Or(e1, e2)        => unpackExprAs[Boolean](e1) || unpackExprAs[Boolean](e2)
+
+      case IntLiter(x)    => x
+      case BoolLiter(b)   => b
+      case CharLiter(c)   => c
+      case StringLiter(s) => s
+      case PairLiter      => ???
+
+      case Ident(id, _) =>
+        scope
+          .get(id)
+          .getOrElse(throw new UnexpectedException(s"Variable with id $id not found")) // TODO: Proper free handling
+      case ArrayElem(v, es, _) => ???
+      case NestedExpr(e, _)    => interpretExpr(e)
+    }
+
+    def unpackExprAs[T <: Value](e: Expr): T = interpretExpr(e) match {
+      case v: T => v
+      case _    => throw new UnexpectedException(s"Unexpected type unpacked")
+    }
 }
