@@ -1,0 +1,26 @@
+# make sure the finally block runs regardless of whether an exception is thrown
+
+# Output:
+# finally 1
+# finally 2
+#
+
+# Program:
+
+begin
+  try
+    skip
+  catch e
+    skip
+  finally
+    println "finally 1"
+  yrt;
+
+  try
+    throw 1
+  catch e
+    skip
+  finally
+    println "finally 2"
+  yrt
+end

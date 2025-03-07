@@ -1,0 +1,8 @@
+# uncaught throw should exit with the associated code
+
+# Output:
+# 415
+
+begin
+  throw 415
+end

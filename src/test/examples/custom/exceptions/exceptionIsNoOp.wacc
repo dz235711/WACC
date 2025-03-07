@@ -1,0 +1,19 @@
+# if an rval is an exception, an assignment to a variable should not change the value of the variable
+
+# Output:
+# 20
+#
+
+begin
+  int nothing() is throw 123 end
+  int x = 20;
+
+  try
+    x = nothing()
+  catch e
+    skip
+  finally
+    println x
+  yrt
+end
+ 

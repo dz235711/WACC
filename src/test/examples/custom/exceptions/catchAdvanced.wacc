@@ -1,0 +1,59 @@
+# contrived example to test advanced catch statements
+
+# Output:
+# calling with 13
+# caught with exception code: 112358
+# finally calling with 9
+# it's not a fibonacci number
+#
+
+# Exit:
+# 33
+
+begin
+  # throw an exception when the next fibonacci number is equal to n, otherwise return the next fibonacci number
+  int nextFib(int prev2, int prev1, int n) is
+    int next = prev2 + prev1;
+    if next == n then
+      throw 112358
+    else
+      return next
+    fi
+  end
+
+  # throw an exception when n is a fibonacci number, otherwise return a message
+  string throwWhenFib(int n) is
+    int prev2 = 0;
+    int prev1 = 1;
+    while true do
+      prev2 = prev1;
+      prev1 = nextFib(prev2, prev1, n);
+      if prev1 > n then
+        return "it's not a fibonacci number"
+      else
+        skip
+      fi
+    done
+    throw 0 # unreachable
+  end
+  
+  bool shouldError = false;
+  
+  try
+    println "calling with 13";
+    throwWhenFib(13)
+  catch e
+    print "caught with exception code: ";
+    println e;
+    shouldError = true
+  finally
+    println "finally calling with 9";
+    println throwWhenFib(9)
+  yrt;
+  
+  if shouldError then
+    exit 33
+  else
+    exit 0
+  fi
+end  

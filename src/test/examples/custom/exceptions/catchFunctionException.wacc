@@ -1,0 +1,22 @@
+# exceptions thrown in functions can be caught by the caller
+
+# Output:
+# caught
+#
+
+begin
+  int f() is
+    throw 1
+  end
+
+  try
+    f()
+  catch e
+    println "caught";
+    exit 0
+  finally
+    skip
+  yrt;
+  
+  println "uncaught"
+end
