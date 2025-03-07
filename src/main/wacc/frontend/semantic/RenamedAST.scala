@@ -91,6 +91,9 @@ object RenamedAST {
   case class While(cond: Expr, body: Stmt)(val pos: (Int, Int)) extends Stmt
   case class Begin(body: Stmt)(val pos: (Int, Int)) extends Stmt
   case class Semi(s1: Stmt, s2: Stmt)(val pos: (Int, Int)) extends Stmt
+  case class Throw(e: Expr)(val pos: (Int, Int)) extends Stmt
+  case class TryCatchFinally(body: Stmt, catchIdent: Ident, catchBody: Stmt, finallyBody: Stmt)(val pos: (Int, Int))
+      extends Stmt
 
   case class Func(v: Ident, params: List[Ident], body: Stmt)(val pos: (Int, Int))
 
