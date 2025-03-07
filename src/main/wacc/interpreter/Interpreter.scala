@@ -10,13 +10,17 @@ import wacc.lexer.int
 
 type Id = Int
 type BaseValue = Int | Boolean | Char | String
-type Value = BaseValue | PairValue | ArrayValue
+type Value = BaseValue | PairValue | UninitalizedPair | ArrayValue
 
 type VariableScope = MapContext[Id, Value]
 type FunctionScope = MapContext[Id, (List[Ident], Stmt)]
 
 case class PairValue(fst: Value, snd: Value) {
   override def toString: String = s"($fst, $snd)"
+}
+class UninitalizedPair private ()
+object UninitalizedPair {
+  val instance = UninitalizedPair()
 }
 case class ArrayValue(es: List[Value]) {
   override def toString: String = es.mkString("[", ", ", "]")
@@ -181,49 +185,61 @@ final class Interpreter {
     * @param e Expression to intrepret
     * @return The value of the evaluated expression
     */
-  def interpretExpr(e: Expr)(using scope: VariableScope)(using funcScope: FunctionScope): Value =
+  def interpretExpr(e: Expr)(using scope: VariableScope): Value =
     e match {
-      case Not(e)    => !unpackExprAs[Boolean](e)
-      case Negate(e) => -unpackExprAs[Int](e)
-      case Len(e)    => unpackExprAs[ArrayValue](e).es.length
-      case Ord(e)    => unpackExprAs[Char](e).toInt // TODO: Check if this is consistent with WACC ord
-      case Chr(e)    => unpackExprAs[Int](e).toChar // TODO: Check if this is consistent with WACC ord
+      case Not(e)    => !(e.asInstanceOf[Boolean])
+      case Negate(e) => -(e.asInstanceOf[Int])
+      case Len(e)    => (e.asInstanceOf[ArrayValue]).es.length
+      case Ord(e)    => (e.asInstanceOf[Char]).toInt // TODO: Check if this is consistent with WACC ord
+      case Chr(e)    => (e.asInstanceOf[Int]).toChar // TODO: Check if this is consistent with WACC chr
 
-      case Mult(e1, e2) => unpackExprAs[Int](e1) * unpackExprAs[Int](e2)
-      case Mod(e1, e2)  => unpackExprAs[Int](e1) % unpackExprAs[Int](e2)
-      case Add(e1, e2)  => unpackExprAs[Int](e1) + unpackExprAs[Int](e2)
-      case Div(e1, e2)  => unpackExprAs[Int](e1) / unpackExprAs[Int](e2)
-      case Sub(e1, e2)  => unpackExprAs[Int](e1) - unpackExprAs[Int](e2)
-      case Greater(e1, e2) =>
-        interpretExpr(e1) match {
-          case i1: Int  => i1 > unpackExprAs[Int](e2)
-          case c1: Char => c1 > unpackExprAs[Char](e2)
-          case _        => throw new UnexpectedException("Unexpected type for comparison")
-        }
-      case GreaterEq(e1, e2) => ???
-      case Smaller(e1, e2)   => ???
-      case SmallerEq(e1, e2) => ???
-      case Equals(e1, e2)    => ???
-      case NotEquals(e1, e2) => ???
-      case And(e1, e2)       => unpackExprAs[Boolean](e1) && unpackExprAs[Boolean](e2)
-      case Or(e1, e2)        => unpackExprAs[Boolean](e1) || unpackExprAs[Boolean](e2)
+      case Mult(e1, e2)      => e1.asInstanceOf[Int] * e2.asInstanceOf[Int]
+      case Mod(e1, e2)       => e1.asInstanceOf[Int] % e2.asInstanceOf[Int]
+      case Add(e1, e2)       => e1.asInstanceOf[Int] + e2.asInstanceOf[Int]
+      case Div(e1, e2)       => e1.asInstanceOf[Int] / e2.asInstanceOf[Int]
+      case Sub(e1, e2)       => e1.asInstanceOf[Int] - e2.asInstanceOf[Int]
+      case Greater(e1, e2)   => binaryCompare(e1, e2, _ > _, _ > _)
+      case GreaterEq(e1, e2) => binaryCompare(e1, e2, _ >= _, _ >= _)
+      case Smaller(e1, e2)   => binaryCompare(e1, e2, _ < _, _ < _)
+      case SmallerEq(e1, e2) => binaryCompare(e1, e2, _ <= _, _ <= _)
+      case Equals(e1, e2)    => interpretExpr(e1) == interpretExpr(e2)
+      case NotEquals(e1, e2) => interpretExpr(e1) != interpretExpr(e2)
+      case And(e1, e2)       => e1.asInstanceOf[Boolean] && e2.asInstanceOf[Boolean]
+      case Or(e1, e2)        => e1.asInstanceOf[Boolean] || e2.asInstanceOf[Boolean]
 
       case IntLiter(x)    => x
       case BoolLiter(b)   => b
       case CharLiter(c)   => c
       case StringLiter(s) => s
-      case PairLiter      => ???
+      case PairLiter      => UninitalizedPair.instance
 
       case Ident(id, _) =>
         scope
           .get(id)
           .getOrElse(throw new UnexpectedException(s"Variable with id $id not found")) // TODO: Proper free handling
-      case ArrayElem(v, es, _) => ???
-      case NestedExpr(e, _)    => interpretExpr(e)
+      case ArrayElem(v, es, _) =>
+        // Evaluate the expression indices
+        val indices = es.map(interpretExpr(_).asInstanceOf[Int])
+
+        // Index through the array(s)
+        var currentValue =
+          scope.get(v.id).getOrElse(throw new UnexpectedException(s"Variable with id ${v.id} not found"))
+        for (ind <- indices) {
+          val ArrayValue(arrayVals) = currentValue: @unchecked // TODO: Idiomatic?
+          currentValue = arrayVals(ind)
+        }
+
+        currentValue
+      case NestedExpr(e, _) => interpretExpr(e)
     }
 
-    def unpackExprAs[T <: Value](e: Expr): T = interpretExpr(e) match {
-      case v: T => v
-      case _    => throw new UnexpectedException(s"Unexpected type unpacked")
+  def binaryCompare(e1: Expr, e2: Expr, intComparator: (Int, Int) => Boolean, charComparator: (Char, Char) => Boolean)(
+      using scope: VariableScope
+  ): Boolean =
+    val evalExpr2 = interpretExpr(e2)
+    interpretExpr(e1) match {
+      case i1: Int  => intComparator(i1, evalExpr2.asInstanceOf[Int])
+      case c1: Char => charComparator(c1, evalExpr2.asInstanceOf[Char])
+      case _        => throw new UnexpectedException("Unexpected type for comparison")
     }
 }
