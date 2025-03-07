@@ -157,18 +157,15 @@ final class Interpreter {
     case pairVal: (Fst | Snd) => getLValue(pairVal)
     case Call(v, args, _)     =>
       // Fetch parameters and body of function
-      val (params, body) = funcScope.get(v.id) match {
-        case Some(value) => value
-        case None        => throw new UnexpectedException(getFuncErrorString(v.id))
-      }
+      val (params, body) = funcScope.get(v.id).getOrElse(throw new UnexpectedException(getFuncErrorString(v.id)))
 
       // Evaluate arguments and put them into a new scope for the function
-      val evaluatedArgs = args.map(interpretExpr(_))
+      val evaluatedArgs = args.map(interpretExpr)
       val newMap = MMap.newBuilder[Id, Value]
       for (evaluatedParam <- params.map(_.id).zip(evaluatedArgs)) {
         newMap += evaluatedParam
       }
-      val newScope: VariableScope = MapContext(newMap.result()) // TODO: figure out what the fuck is happening here
+      val newScope: VariableScope = MapContext(newMap.result())
 
       // Call the function. The result will be stored in returnValue as per the Return case in interpretStmt
       interpretStmt(body)(using newScope)
