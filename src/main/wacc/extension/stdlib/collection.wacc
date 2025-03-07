@@ -1,0 +1,195 @@
+begin
+
+pair(int, pair) _intListContents(pair(int, pair) intList) is
+pair(int, pair) node = snd intList;
+return node
+end
+
+pair(int, pair) _nextNode(pair(int, pair) node) is
+pair(int, pair) nextNode = snd node;
+return nextNode
+end
+
+int _nodeVal(pair(int, pair) node) is
+int v = fst node;
+return v
+end
+
+bool _asgnNextNode(pair(int, pair) node, pair(int, pair) newNode) is
+snd node = newNode;
+return true
+end
+
+bool _asgnVal(pair(int, pair) node, int v) is
+fst node = v;
+return true
+end
+
+pair(int, pair) _intList(int length, pair(int, pair) node) is
+pair(int, pair) lenNode = newpair(length, node);
+return lenNode
+end
+
+pair(int, pair) _node(int v, pair(int, pair) node) is
+pair(int, pair) newNode = newpair(v, node);
+return newNode
+end
+
+pair(int, pair) _leafNode() is
+return null
+end
+
+int intListLen(pair(int, pair) intList) is
+int l = fst intList;
+return l
+end
+
+bool isEmpty(pair(int, pair) intList) is
+int length = call intListLen(intList);
+return length == 0
+end
+
+pair(int, pair) intListSingleton(int v) is
+  pair(int, pair) leaf = call _leafNode();
+  pair(int, pair) node = call _node(v, leaf);
+  pair(int, pair) intList = call _intList(1, node);
+  bool _ = call _asgnNextNode(intList, node);
+  return intList
+end
+
+pair(int, pair) intListInsert(pair(int, pair) intList, int index, int v) is
+  pair(int, pair) dropped = call intListDrop(intList, index);
+  pair(int, pair) taken = call intListTake(intList, index);
+  pair(int, pair) newList = call intListSingleton(v);
+  pair(int, pair) newNode = call _intListContents(newList);
+  pair(int, pair) droppedContents = call _intListContents(dropped);
+  bool _ = call _asgnNextNode(newNode, droppedContents);
+  pair(int, pair) concat = call intListConcat(taken, newList);
+  return concat
+end
+
+pair(int, pair) intListConcat(pair(int, pair) intList1, pair(int, pair) intList2) is
+pair(int, pair) intList1Copy = call intListCopy(intList1);
+pair(int, pair) intList2Copy = call intListCopy(intList2);
+pair(int, pair) node1 = intList1Copy;
+pair(int, pair) nextNode1 = call _intListContents(node1);
+pair(int, pair) leafNode = call _leafNode();
+while nextNode1 != leafNode do
+  node1 = nextNode1;
+  nextNode1 = call _nextNode(node1)
+done;
+pair(int, pair) node2 = call _intListContents(intList2Copy);
+bool _ = call _asgnNextNode(node1, node2);
+return intList1Copy
+end
+
+
+pair(int, pair) toIntList(int[] arr) is
+  int length = len arr;
+  pair(int, pair) intList = call _intList(length, null);
+  int i = 0;
+  pair(int, pair) node = intList;
+  while i < length do
+    pair(int, pair) newNode = call _node(arr[i], null);
+    bool _ = call _asgnNextNode(node, newNode);
+    node = newNode;
+    i = i + 1
+  done;
+  return intList
+end
+
+pair(int, pair) intListTake(pair(int, pair) intList, int index) is
+  pair(int, pair) intListCopy = call intListCopy(intList);
+  pair(int, pair) node = call _intListContents(intListCopy);
+  int i = 0;
+  while i < index - 1 do
+    node = call _nextNode(node);
+    i = i + 1
+  done;
+  snd node = call _leafNode();
+  return intListCopy
+end
+
+pair(int, pair) intListDrop(pair(int, pair) intList, int index) is
+  pair(int, pair) node = call _intListContents(intList);
+  int i = 0;
+  while i < index do
+    node = call _nextNode(node);
+    i = i + 1
+  done;
+  int length = call intListLen(intList);
+  pair(int, pair) wrapped = call _intList(length, node);
+  wrapped = call intListCopy(wrapped);
+  return wrapped
+end
+
+int intListGet(pair(int, pair) intList, int index) is
+  pair(int, pair) p = call intListDrop(intList, index + 1);
+  int v = call _nodeVal(p);
+  return v
+end
+
+bool intListPrint(pair(int, pair) intList) is
+  pair(int, pair) node = call _intListContents(intList);
+  int v = call _nodeVal(node);
+  pair(int, pair) nextNode = call _nextNode(node);
+  print '[';
+  pair(int, pair) leafNode = call _leafNode();
+  while nextNode != leafNode do
+    print v;
+    print ", ";
+    node = nextNode;
+    v = call _nodeVal(node);
+    nextNode = call _nextNode(node)
+  done;
+  print v;
+  println "]";
+  return true
+end
+
+pair(int, pair) intListCopy(pair(int, pair) intList) is
+  int length = call intListLen(intList);
+  pair(int, pair) intListCopy = call _intList(length, null);
+  pair(int, pair) node = call _intListContents(intList);
+  pair(int, pair) copyNode = intListCopy;
+  pair(int, pair) leafNode = call _leafNode();
+  while node != leafNode do
+    int v = call _nodeVal(node);
+    pair(int, pair) newNode = call _node(v, null);
+    bool _ = call _asgnNextNode(copyNode, newNode);
+    copyNode = newNode;
+    node = call _nextNode(node)
+  done;
+  return intListCopy
+end
+
+pair(int, pair) intListReplace(pair(int, pair) intList, int index, int value) is
+pair(int, pair) taken = call intListTake(intList, index);
+  pair(int, pair) dropped = call intListDrop(intList, index + 1);
+  pair(int, pair) node = call _intListContents(dropped);
+  bool _ = call _asgnVal(node, value);
+  pair(int, pair) concat = call intListConcat(taken, dropped);
+  return concat
+end
+
+
+bool _ = true;
+int[] arr = [1, 2, 3, 4, 5];
+
+pair(int, pair) intList0 = call toIntList(arr);
+pair(int, pair) intList2 = call intListCopy(intList0);
+pair(int, pair) intList3 = call intListConcat(intList0, intList2);
+pair(int, pair) intList4 = call intListTake(intList3, 3);
+pair(int, pair) intList5 = call intListDrop(intList3, 3);
+pair(int, pair) intList6 = call intListReplace(intList3, 3, 10);
+pair(int, pair) intlist7 = call intListInsert(intList3, 5, 3);
+
+_ = call intListPrint(intList0);
+_ = call intListPrint(intList2);
+_ = call intListPrint(intList3);
+_ = call intListPrint(intList4);
+_ = call intListPrint(intList5);
+_ = call intListPrint(intList6);
+_ = call intListPrint(intlist7)
+
+end
