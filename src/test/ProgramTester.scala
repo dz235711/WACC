@@ -20,7 +20,7 @@ class ProgramTester(path: String) {
    * @return A tuple of the input, output, and exit status
    */
   private def parseTestFile(fileContents: String): (String, String, Option[Int]) = {
-    val sections = fileContents.split("\n\n")
+    val sections = fileContents.trim.split("\n\n")
 
     var input = ""
     var output = ""
