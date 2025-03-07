@@ -106,11 +106,16 @@ final class Interpreter {
         }
       case Print(e) =>
         val value = interpretExpr(e)
+        value match {
+          // WACC prints the pointers of arrays and pairs, but the closest we can get in Scala is the hashcode
+          case pointer: (ArrayValue | PairValue) => print(pointer.hashCode)
+          case _                                 => print(value)
+        }
         print(value.toString())
         scope
       case PrintLn(e) =>
-        val value = interpretExpr(e)
-        println(value.toString())
+        interpretStmt(Print(e))
+        println()
         scope
       case If(cond, s1, s2) =>
         val evaluatedCond = interpretExpr(cond) match {
