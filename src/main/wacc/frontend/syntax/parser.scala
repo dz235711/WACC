@@ -118,7 +118,14 @@ object parser {
         PrintLn("println" ~> expr),
         If("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi"),
         While("while" ~> expr, "do" ~> stmt <~ "done"),
-        Begin("begin" ~> stmt <~ "end")
+        Begin("begin" ~> stmt <~ "end"),
+        Throw("throw" ~> expr),
+        TryCatchFinally(
+          "try" ~> stmt,
+          "catch" ~> Ident(ident),
+          stmt,
+          "finally" ~> stmt <~ "yrt"
+        )
       )
     )(Semi <# ";")
   private lazy val lvalue: Parsley[LValue] = choice(
