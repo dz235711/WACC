@@ -18,6 +18,7 @@ object parser {
   private def endsInReturn(s: Stmt): Boolean = s match {
     case Exit(_)     => true
     case Return(_)   => true
+    case Throw(_)    => true
     case Semi(_, b)  => endsInReturn(b)
     case Begin(b)    => endsInReturn(b)
     case If(_, t, e) => endsInReturn(t) && endsInReturn(e)
