@@ -152,7 +152,7 @@ final class Interpreter {
     * @param func The function to be interpreted
     * @return The function scope with `func` added.
     */
-  private def interpretFunction(func: Func)(using scope: VariableScope)(using funcScope: FunctionScope): FunctionScope =
+  private def interpretFunction(func: Func)(using funcScope: FunctionScope): FunctionScope =
     funcScope.add(func.v.id, (func.params, func.body))
 
   /** Interprets a statement and returns the scope, regardless of if the scope has changed or not.
@@ -160,7 +160,7 @@ final class Interpreter {
     * @param stmt The statement to be interpreted
     * @return The scope after interpreting the statement
     */
-  private def interpretStmt(stmt: Stmt)(using scope: VariableScope)(using funcScope: FunctionScope): VariableScope =
+  private def interpretStmt(stmt: Stmt)(using scope: VariableScope, funcScope: FunctionScope): VariableScope =
     stmt match {
       case Skip       => scope
       case Decl(v, r) => handleAssignment(v, r)
@@ -237,7 +237,7 @@ final class Interpreter {
     * @param r The RValue to interpret
     * @result The value of the evaluated RValue
     */
-  private def interpretRValue(r: RValue)(using scope: VariableScope)(using funcScope: FunctionScope): Value = r match {
+  private def interpretRValue(r: RValue)(using scope: VariableScope, funcScope: FunctionScope): Value = r match {
     case ArrayLiter(es, _)    => ArrayValue(es.map(interpretExpr).to(ListBuffer))
     case NewPair(e1, e2, _)   => PairValue(interpretExpr(e1), interpretExpr(e2))
     case pairVal: (Fst | Snd) => getLValue(pairVal)
@@ -265,7 +265,7 @@ final class Interpreter {
     * @param l The LValue to interpret
     * @return The id of the LValue
     */
-  private def interpretLValue(l: LValue)(using scope: VariableScope)(using funcScope: FunctionScope): Id = ???
+  private def interpretLValue(l: LValue)(using scope: VariableScope, funcScope: FunctionScope): Id = ???
 
   /** Interprets an expression into an evaluated value.
     *
@@ -352,8 +352,9 @@ final class Interpreter {
     * @return The variable scope after the assignment
     */
   private def handleAssignment(l: LValue, r: RValue)(using
-      scope: VariableScope
-  )(using funcScope: FunctionScope): VariableScope =
+      scope: VariableScope,
+      funcScope: FunctionScope
+  ): VariableScope =
     l match {
       case Ident(id, _) =>
         scope.add(id, interpretRValue(r))
