@@ -26,6 +26,13 @@ begin
     return acc
   end
 
-    int x = call fact(4);
+  int comb(int n, int k) is
+    int nFact = call fact(n);
+    int kFact = call fact(k);
+    int nMinusKFact = call fact(n - k);
+    return nFact / (kFact * nMinusKFact)
+  end
+
+    int x = call comb(5, 2);
     println x
 end
