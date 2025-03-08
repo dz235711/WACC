@@ -15,15 +15,55 @@ type Value = BaseValue | PairValue | UninitalizedPair | ArrayValue
 type VariableScope = MapContext[Id, Value]
 type FunctionScope = MapContext[Id, (List[Ident], Stmt)]
 
-case class PairValue(var fst: Value, var snd: Value) {
+trait Freeable {
+  var isFreed: Boolean = true
+}
+
+case class PairValue(private var fst: Value, private var snd: Value) extends Freeable {
   override def toString: String = s"($fst, $snd)"
+
+  def checkFreed(): Unit = if (isFreed) throw new UnexpectedException("Cannot dereference freed pair")
+
+  def getFst: Value = {
+    checkFreed()
+    fst
+  }
+
+  def getSnd: Value = {
+    checkFreed()
+    snd
+  }
+
+  def setFst(value: Value): Unit = {
+    checkFreed()
+    fst = value
+  }
+
+  def setSnd(value: Value): Unit = {
+    checkFreed()
+    snd = value
+  }
 }
 class UninitalizedPair private ()
 object UninitalizedPair {
   val instance = UninitalizedPair()
 }
-case class ArrayValue(es: ListBuffer[Value]) {
+case class ArrayValue(private val es: ListBuffer[Value]) extends Freeable {
   override def toString: String = es.mkString("[", ", ", "]")
+
+  def checkFreed(): Unit = if (isFreed) throw new UnexpectedException("Cannot dereference freed array")
+
+  def get(index: Int): Value = {
+    checkFreed()
+    es(index)
+  }
+
+  def set(index: Int, value: Value): Unit = {
+    checkFreed()
+    es(index) = value
+  }
+
+  def length: Int = es.length
 }
 
 final class Interpreter {
@@ -99,7 +139,12 @@ final class Interpreter {
         }
         val lId = interpretLValue(l)
         scope.add(lId, readValue)
-      case Free(e)   => ???
+      case Free(e) =>
+        interpretExpr(e) match {
+          case freeable: Freeable => freeable.isFreed = true
+          case _                  => throw new UnexpectedException("Cannot free non-freeable value")
+        }
+        scope
       case Return(e) =>
         // Set the class-wide return value
         returnValue = interpretExpr(e)
@@ -197,7 +242,7 @@ final class Interpreter {
     e match {
       case Not(e)    => !(e.asInstanceOf[Boolean])
       case Negate(e) => -(e.asInstanceOf[Int])
-      case Len(e)    => (e.asInstanceOf[ArrayValue]).es.length
+      case Len(e)    => (e.asInstanceOf[ArrayValue]).length
       case Ord(e)    => (e.asInstanceOf[Char]).toInt // TODO: Check if this is consistent with WACC ord
       case Chr(e)    => (e.asInstanceOf[Int]).toChar // TODO: Check if this is consistent with WACC chr
 
@@ -264,23 +309,23 @@ final class Interpreter {
         val lastIndex = interpretExpr(es.last).asInstanceOf[Int]
 
         val newValue = interpretRValue(r)
-        nestedArray.es(lastIndex) = newValue
+        nestedArray.set(lastIndex, newValue)
 
         scope
       // Fetch the pair to set its values
       case Fst(l, _) =>
-        unpackAsPair(getLValue(l)).fst = interpretRValue(r)
+        unpackAsPair(getLValue(l)).setFst(interpretRValue(r))
         scope
       case Snd(l, _) =>
-        unpackAsPair(getLValue(l)).snd = interpretRValue(r)
+        unpackAsPair(getLValue(l)).setSnd(interpretRValue(r))
         scope
     }
 
   def getLValue(l: LValue)(using scope: VariableScope): Value =
     l match {
       case idArr: (Ident | ArrayElem) => interpretExpr(idArr)
-      case Fst(l, _)                  => unpackAsPair(getLValue(l)).fst
-      case Snd(l, _)                  => unpackAsPair(getLValue(l)).snd
+      case Fst(l, _)                  => unpackAsPair(getLValue(l)).getFst
+      case Snd(l, _)                  => unpackAsPair(getLValue(l)).getSnd
     }
 
   def unpackAsPair(value: Value): PairValue =
