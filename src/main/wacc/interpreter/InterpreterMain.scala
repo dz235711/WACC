@@ -17,10 +17,42 @@ def interpreterMain(): Unit = {
 }
 
 def promptInputAndRunFrontend(): TypedAST.Program = {
-  // ==============
-  // SYNTAX PARSING
-  // ==============
+  given ErrorBuilder[WaccError] = new WaccErrorBuilder
+  var errCtx: ListContext[WaccError] = new ListContext()
 
+  // ==========================
+  // RENAMING AND TYPE CHECKING
+  // ==========================
+
+  var typedProgram = TypedAST.Program(List(), TypedAST.Skip)
+  var lines: List[String] = List()
+
+  // Parse input until you get a valid typed program.
+  while
+    // Prompt and parse for input
+    val result = promptInputAndParse()
+    val parsedProgram = result._1
+    lines = result._2
+
+    // Rename and type check
+    val renamedProgram = Renamer.rename(parsedProgram)(using errCtx)
+    typedProgram = TypeChecker().checkProg(renamedProgram)(using errCtx)
+
+    // If there are errors, print them and then prompt for input again.
+    !errCtx.get.isEmpty
+  do
+    println(
+      errCtx.get
+        .map(e => setLines(format(e, None, ErrType.Semantic), lines))
+        .foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc))
+        .result()
+    )
+    errCtx = new ListContext()
+
+  typedProgram
+}
+
+def promptInputAndParse()(using wErr: ErrorBuilder[WaccError]): (SyntaxAST.Program, List[String]) = {
   var parserResult: Result[WaccError, SyntaxAST.Program] = Failure(
     WaccErrorBuilder().constructSpecialised((0, 0), 0, "")
   ) // Dummy value.
@@ -62,30 +94,5 @@ def promptInputAndRunFrontend(): TypedAST.Program = {
     // Clear input.
     input = StringBuilder()
 
-  given ErrorBuilder[WaccError] = new WaccErrorBuilder
-  var errCtx: ListContext[WaccError] = new ListContext()
-
-  // ==========================
-  // RENAMING AND TYPE CHECKING
-  // ==========================
-
-  var typedProgram = TypedAST.Program(List(), TypedAST.Skip)
-
-  // Parse input until you get a valid typed program.
-  while
-    val renamedProgram = Renamer.rename(program)(using errCtx)
-
-    typedProgram = TypeChecker().checkProg(renamedProgram)(using errCtx)
-
-    !errCtx.get.isEmpty
-  do
-    println(
-      errCtx.get
-        .map(e => setLines(format(e, None, ErrType.Semantic), input.result().split("\n").toList))
-        .foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc))
-        .result()
-    )
-    errCtx = new ListContext()
-
-  typedProgram
+  (program, input.result().split("\n").toList)
 }
