@@ -38,6 +38,16 @@ begin
     return nFact / nMinusKFact
   end
 
-    int x = call perm(5, 2);
+  int inf() is
+    int uBound = call pow(2, 30);
+    return uBound + (uBound - 1)
+  end
+
+  int ninf() is
+    int lBound = call pow(2, 30);
+    return (-lBound) * 2
+  end
+
+    int x = call ninf();
     println x
 end
