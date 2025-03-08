@@ -143,8 +143,13 @@ final class Interpreter {
     * @return The variable and function scopes after interpreting the program
     */
   def interpret(program: Program): (VariableScope, FunctionScope) = {
-    val globalScope = new MapContext[Id, Value]()
-    ???
+    given globalScope: VariableScope = new MapContext[Id, Value]()
+    given functionScope: FunctionScope = new MapContext[Id, (List[Ident], Stmt)]()
+
+    program.fs.foreach(interpretFunction)
+    interpretStmt(program.body)
+
+    (globalScope, functionScope)
   }
 
   /** Interprets a function, adding it to the scope of functions
