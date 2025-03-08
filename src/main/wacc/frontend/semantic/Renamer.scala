@@ -6,11 +6,14 @@ import WaccErrorBuilder.constructSpecialised
 
 type Scope = Map[String, QualifiedName]
 
-class Renamer private {
-  private var uid: Int = 0
+class Renamer private (inheritedFunctionScope: Option[Map[String, (QualifiedName, Int)]], inheritedUid: Option[Int]) {
+  private var uid: Int = inheritedUid.getOrElse(0)
   // Map of function names to their qualified names and number of parameters
   private val functionIds: mutable.Map[String, (QualifiedName, Int)] =
-    mutable.Map()
+    inheritedFunctionScope match {
+      case Some(scope) => mutable.Map(scope.toSeq*)
+      case None        => mutable.Map()
+    }
 
   /** Generates a unique identifier.
    *
@@ -24,9 +27,12 @@ class Renamer private {
   /** Renames all functions and variables in the program.
    *
    * @param p The program to rename (ast)
+   * @param inheritedScope An inherited scope, used for the interpreter to preserve scopes between user inputs
    * @return The renamed program (RenamedAST)
    */
-  def renameProgram(p: SyntaxAST.Program)(using ctx: ListContext[WaccError]): RenamedAST.Program = {
+  def renameProgram(p: SyntaxAST.Program, inheritedScope: Option[Scope])(using
+      ctx: ListContext[WaccError]
+  ): (RenamedAST.Program, Scope, Map[String, (QualifiedName, Int)], Int) = {
     // Generate unique identifiers for all functions
     val fids = p.fs.map(f => {
       val (t, id) = f.decl
@@ -52,11 +58,13 @@ class Renamer private {
     })
 
     // Rename all functions and the body
+    val parentScope = inheritedScope.getOrElse(Map())
+
     val renamedFuncs = p.fs.zip(fids).map(renameFunc)
-    val renamedBody = renameStmt(p.body, Map(), Map(), false)._1
+    val (renamedBody, renamedScope) = renameStmt(p.body, parentScope, Map(), false)
 
     // Return the renamed program
-    RenamedAST.Program(renamedFuncs, renamedBody)(p.pos)
+    (RenamedAST.Program(renamedFuncs, renamedBody)(p.pos), parentScope ++ renamedScope, functionIds.toMap, uid)
   }
 
   /** Translates between a syntactic type and a semantic type.
@@ -390,8 +398,15 @@ class Renamer private {
     }
 }
 
-object Renamer extends Renamer {
-  def rename(p: SyntaxAST.Program)(using ctx: ListContext[WaccError]): RenamedAST.Program =
-    val renamer = new Renamer()
-    renamer.renameProgram(p)
+object Renamer {
+  def rename(
+      p: SyntaxAST.Program,
+      inheritedScope: Option[Scope] = None,
+      inheritedFunctionScope: Option[Map[String, (QualifiedName, Int)]] = None,
+      inheritedUid: Option[Int] = None
+  )(using
+      ctx: ListContext[WaccError]
+  ): (RenamedAST.Program, Scope, Map[String, (QualifiedName, Int)], Int) =
+    val renamer = new Renamer(inheritedFunctionScope, inheritedUid)
+    renamer.renameProgram(p, inheritedScope)
 }

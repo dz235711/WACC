@@ -30,7 +30,7 @@ def runFrontend(linesList: List[String], verbose: Boolean): Either[(Int, List[Wa
     _ = printVerboseInfo(verbose, "Pretty-Printed AST", prettyPrint(syntaxAST), Console.GREEN)
 
     // Semantic analysis
-    renamedAST = Renamer.rename(syntaxAST)
+    renamedAST = Renamer.rename(syntaxAST)._1
     _ = printVerboseInfo(verbose, "Renamed AST", renamedAST, Console.BLUE)
 
     typedAST = TypeChecker().checkProg(renamedAST)

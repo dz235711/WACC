@@ -67,6 +67,13 @@ def writeFile(path: String, content: String): File = {
 def main(args: Array[String]): Unit = {
   println("Hello, WACC! 👋😃👍\n")
   val verbose = args.contains("--verbose") || args.contains("-v")
+  val enterInterpreter = args.contains("--interpreter") || args.contains("-I")
+
+  // Enter the interpreter main function if the interpreter flag is set
+  if (enterInterpreter) {
+    interpreterMain()
+    exit(0)
+  }
 
   val path = args.headOption
 
@@ -76,6 +83,7 @@ def main(args: Array[String]): Unit = {
     println("Options:")
     println("  --verbose, -v  Print verbose output")
     println("  --help, -h     Print this message")
+    println("  --interpreter, -I, Launch the interpreter")
     exit(1)
   }
 

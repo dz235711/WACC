@@ -62,14 +62,18 @@ final class Interpreter {
     * @param program The program to be interpreted
     * @return The variable and function scopes after interpreting the program
     */
-  def interpret(program: Program): (VariableScope, FunctionScope) = {
-    given globalScope: VariableScope = new MapContext[Id, Value]()
-    given functionScope: FunctionScope = new MapContext[Id, (List[Ident], Stmt)]()
+  def interpret(
+      program: Program,
+      inheritedScope: Option[VariableScope],
+      inheritedFunctionScope: Option[FunctionScope]
+  ): (VariableScope, FunctionScope) = {
+    given scope: VariableScope = inheritedScope.getOrElse(new MapContext[Id, Value]())
+    given functionScope: FunctionScope = inheritedFunctionScope.getOrElse(new MapContext[Id, (List[Ident], Stmt)]())
 
     program.fs.foreach(interpretFunction)
     interpretStmt(program.body)
 
-    (globalScope, functionScope)
+    (scope, functionScope)
   }
 
   /** Interprets a function, adding it to the scope of functions
@@ -204,19 +208,19 @@ final class Interpreter {
       case Ord(e)    => (e.asInstanceOf[Char]).toInt // TODO: Check if this is consistent with WACC ord
       case Chr(e)    => (e.asInstanceOf[Int]).toChar // TODO: Check if this is consistent with WACC chr
 
-      case Mult(e1, e2)      => e1.asInstanceOf[Int] * e2.asInstanceOf[Int] // TODO: Is there a way to avoid this cast?
-      case Mod(e1, e2)       => e1.asInstanceOf[Int] % e2.asInstanceOf[Int]
-      case Add(e1, e2)       => e1.asInstanceOf[Int] + e2.asInstanceOf[Int]
-      case Div(e1, e2)       => e1.asInstanceOf[Int] / e2.asInstanceOf[Int]
-      case Sub(e1, e2)       => e1.asInstanceOf[Int] - e2.asInstanceOf[Int]
+      case Mult(e1, e2)      => binaryArithmetic(e1, e2, _ * _)
+      case Mod(e1, e2)       => binaryArithmetic(e1, e2, _ % _)
+      case Add(e1, e2)       => binaryArithmetic(e1, e2, _ + _)
+      case Div(e1, e2)       => binaryArithmetic(e1, e2, _ / _)
+      case Sub(e1, e2)       => binaryArithmetic(e1, e2, _ - _)
       case Greater(e1, e2)   => binaryCompare(e1, e2, _ > _, _ > _)
       case GreaterEq(e1, e2) => binaryCompare(e1, e2, _ >= _, _ >= _)
       case Smaller(e1, e2)   => binaryCompare(e1, e2, _ < _, _ < _)
       case SmallerEq(e1, e2) => binaryCompare(e1, e2, _ <= _, _ <= _)
       case Equals(e1, e2)    => interpretExpr(e1) == interpretExpr(e2)
       case NotEquals(e1, e2) => interpretExpr(e1) != interpretExpr(e2)
-      case And(e1, e2)       => e1.asInstanceOf[Boolean] && e2.asInstanceOf[Boolean]
-      case Or(e1, e2)        => e1.asInstanceOf[Boolean] || e2.asInstanceOf[Boolean]
+      case And(e1, e2)       => interpretExpr(e1).asInstanceOf[Boolean] && interpretExpr(e2).asInstanceOf[Boolean]
+      case Or(e1, e2)        => interpretExpr(e1).asInstanceOf[Boolean] || interpretExpr(e2).asInstanceOf[Boolean]
 
       case IntLiter(x)    => x
       case BoolLiter(b)   => b
@@ -245,6 +249,12 @@ final class Interpreter {
         currentValue
       case NestedExpr(e, _) => interpretExpr(e)
     }
+
+  private def binaryArithmetic(e1: Expr, e2: Expr, op: (Int, Int) => Int)(using scope: VariableScope): Int =
+    op(
+      interpretExpr(e1).asInstanceOf[Int],
+      interpretExpr(e2).asInstanceOf[Int]
+    ) // TODO: Is there a way to avoid this cast?
 
   /** Compares two expressions, either integers or characters, using the given comparators. 
    *
@@ -327,7 +337,11 @@ final class Interpreter {
 }
 
 object Interpreter {
-  def interpret(p: Program): (VariableScope, FunctionScope) =
+  def interpret(
+      p: Program,
+      inheritedScope: Option[VariableScope],
+      inheritedFunctionScope: Option[FunctionScope]
+  ): (VariableScope, FunctionScope) =
     val interpreter = new Interpreter()
-    interpreter.interpret(p)
+    interpreter.interpret(p, inheritedScope, inheritedFunctionScope)
 }
