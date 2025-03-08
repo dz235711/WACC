@@ -21,7 +21,7 @@ trait Freeable {
 case class PairValue(private var fst: Value, private var snd: Value) extends Freeable {
   override def toString: String = s"($fst, $snd)"
 
-  def checkFreed(): Unit = if (isFreed) throw new AccessFreedValueException("Cannot dereference freed pair")
+  def checkFreed(): Unit = if (isFreed) throw new AccessFreedValueException()
 
   def getFst: Value = {
     checkFreed()
@@ -50,7 +50,7 @@ object UninitalizedPair {
 case class ArrayValue(private val es: ListBuffer[Value]) extends Freeable {
   override def toString: String = es.mkString("[", ", ", "]")
 
-  def checkFreed(): Unit = if (isFreed) throw new AccessFreedValueException("Cannot dereference freed array")
+  def checkFreed(): Unit = if (isFreed) throw new AccessFreedValueException()
 
   def get(index: Int): Value = {
     checkFreed()
@@ -84,8 +84,11 @@ final class Interpreter {
   /** Condition error message */
   private val ConditionErrorString = "Condition must evaluate to a boolean"
 
-  /** Null dereference error message */
-  private val NullDereferenceErrorString = "Cannot dereference null pointer"
+  /** Comparison type mismatch error message */
+  private val ComparisonErrorString = "Comparison must be between two values of the same type"
+
+  /** Pair not received error message */
+  private val UnpackPairErrorString = "Expected pair, got something else"
 
   // VARIABLES
 
@@ -93,6 +96,13 @@ final class Interpreter {
   private var returnValue: Value = uninitialized
 
   // Helper functions
+
+  /** Returns an error message for when a variable is not found in the variable scope
+    *
+    * @param id The id of the variable that was not found
+    * @return The error message
+    */
+  private def getVariableErrorString(id: Id): String = s"Variable with id $id not found"
 
   /** Returns an error message for when a function is not found in the function scope
     *
@@ -141,7 +151,7 @@ final class Interpreter {
       case Free(e) =>
         interpretExpr(e) match {
           case freeable: Freeable => freeable.isFreed = true
-          case _                  => throw new FreedNonFreeableValueException("Cannot free non-freeable value")
+          case _                  => throw new FreedNonFreeableValueException()
         }
         scope
       case Return(e) =>
@@ -269,7 +279,7 @@ final class Interpreter {
         scope
           .get(id)
           .getOrElse(
-            throw new VariableNotFoundException(s"Variable with id $id not found")
+            throw new VariableNotFoundException(getVariableErrorString(id))
           ) // TODO: Proper free handling
       case ArrayElem(v, es, _) =>
         // Evaluate the expression indices
@@ -277,7 +287,7 @@ final class Interpreter {
 
         // Index through the array(s)
         var currentValue =
-          scope.get(v.id).getOrElse(throw new VariableNotFoundException(s"Variable with id ${v.id} not found"))
+          scope.get(v.id).getOrElse(throw new VariableNotFoundException(getVariableErrorString(v.id)))
         for (ind <- indices) {
           val ArrayValue(arrayVals) = currentValue: @unchecked // TODO: Idiomatic?
           currentValue = arrayVals(ind)
@@ -294,7 +304,7 @@ final class Interpreter {
     interpretExpr(e1) match {
       case i1: Int  => intComparator(i1, evalExpr2.asInstanceOf[Int])
       case c1: Char => charComparator(c1, evalExpr2.asInstanceOf[Char])
-      case _        => throw new TypeMismatchException("Unexpected type for comparison")
+      case _        => throw new TypeMismatchException(ComparisonErrorString)
     }
 
   def handleAssignment(l: LValue, r: RValue)(using
@@ -332,7 +342,7 @@ final class Interpreter {
   def unpackAsPair(value: Value): PairValue =
     value match {
       case pair: PairValue       => pair
-      case nil: UninitalizedPair => throw new NullDereferencedException(NullDereferenceErrorString)
-      case _                     => throw new TypeMismatchException("Expected pair, got something else")
+      case nil: UninitalizedPair => throw new NullDereferencedException()
+      case _                     => throw new TypeMismatchException(UnpackPairErrorString)
     }
 }
