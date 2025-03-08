@@ -15,7 +15,7 @@ type VariableScope = MapContext[Id, Value]
 type FunctionScope = MapContext[Id, (List[Ident], Stmt)]
 
 trait Freeable {
-  var isFreed: Boolean = true
+  var isFreed: Boolean = false
 }
 
 case class PairValue(private var fst: Value, private var snd: Value) extends Freeable {
