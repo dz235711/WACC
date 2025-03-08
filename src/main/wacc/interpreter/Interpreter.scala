@@ -6,7 +6,6 @@ import wacc.TypedAST._
 import scala.compiletime.uninitialized
 import scala.collection.mutable.Map as MMap
 import scala.collection.mutable.ListBuffer
-import java.rmi.UnexpectedException
 
 type Id = Int
 type BaseValue = Int | Boolean | Char | String
@@ -22,7 +21,7 @@ trait Freeable {
 case class PairValue(private var fst: Value, private var snd: Value) extends Freeable {
   override def toString: String = s"($fst, $snd)"
 
-  def checkFreed(): Unit = if (isFreed) throw new UnexpectedException("Cannot dereference freed pair")
+  def checkFreed(): Unit = if (isFreed) throw new AccessFreedValueException("Cannot dereference freed pair")
 
   def getFst: Value = {
     checkFreed()
@@ -51,7 +50,7 @@ object UninitalizedPair {
 case class ArrayValue(private val es: ListBuffer[Value]) extends Freeable {
   override def toString: String = es.mkString("[", ", ", "]")
 
-  def checkFreed(): Unit = if (isFreed) throw new UnexpectedException("Cannot dereference freed array")
+  def checkFreed(): Unit = if (isFreed) throw new AccessFreedValueException("Cannot dereference freed array")
 
   def get(index: Int): Value = {
     checkFreed()
@@ -135,14 +134,14 @@ final class Interpreter {
         val readValue = l.getType match {
           case KnownType.IntType  => scala.io.StdIn.readInt()
           case KnownType.CharType => scala.io.StdIn.readChar()
-          case _                  => throw new UnexpectedException(ReadErrorString)
+          case _                  => throw new BadInputException(ReadErrorString)
         }
         val lId = interpretLValue(l)
         scope.add(lId, readValue)
       case Free(e) =>
         interpretExpr(e) match {
           case freeable: Freeable => freeable.isFreed = true
-          case _                  => throw new UnexpectedException("Cannot free non-freeable value")
+          case _                  => throw new FreedNonFreeableValueException("Cannot free non-freeable value")
         }
         scope
       case Return(e) =>
@@ -153,7 +152,7 @@ final class Interpreter {
         println(ExitString)
         interpretExpr(e) match {
           case i: Int => sys.exit(i)
-          case _      => throw new UnexpectedException(ExitErrorString)
+          case _      => throw new TypeMismatchException(ExitErrorString)
         }
       case Print(e) =>
         val value = interpretExpr(e)
@@ -172,7 +171,7 @@ final class Interpreter {
       case If(cond, s1, s2) =>
         val evaluatedCond = interpretExpr(cond) match {
           case b: Boolean => b
-          case _          => throw new UnexpectedException(ConditionErrorString)
+          case _          => throw new TypeMismatchException(ConditionErrorString)
         }
 
         if (evaluatedCond) {
@@ -183,7 +182,7 @@ final class Interpreter {
       case While(cond, body) =>
         val evaluatedCond = interpretExpr(cond) match {
           case b: Boolean => b
-          case _          => throw new UnexpectedException(ConditionErrorString)
+          case _          => throw new TypeMismatchException(ConditionErrorString)
         }
 
         if (evaluatedCond) {
@@ -209,7 +208,7 @@ final class Interpreter {
     case pairVal: (Fst | Snd) => getLValue(pairVal)
     case Call(v, args, _)     =>
       // Fetch parameters and body of function
-      val (params, body) = funcScope.get(v.id).getOrElse(throw new UnexpectedException(getFuncErrorString(v.id)))
+      val (params, body) = funcScope.get(v.id).getOrElse(throw new FunctionNotFoundException(getFuncErrorString(v.id)))
 
       // Evaluate arguments and put them into a new scope for the function
       val evaluatedArgs = args.map(interpretExpr)
@@ -269,14 +268,16 @@ final class Interpreter {
       case Ident(id, _) =>
         scope
           .get(id)
-          .getOrElse(throw new UnexpectedException(s"Variable with id $id not found")) // TODO: Proper free handling
+          .getOrElse(
+            throw new VariableNotFoundException(s"Variable with id $id not found")
+          ) // TODO: Proper free handling
       case ArrayElem(v, es, _) =>
         // Evaluate the expression indices
         val indices = es.map(interpretExpr(_).asInstanceOf[Int])
 
         // Index through the array(s)
         var currentValue =
-          scope.get(v.id).getOrElse(throw new UnexpectedException(s"Variable with id ${v.id} not found"))
+          scope.get(v.id).getOrElse(throw new VariableNotFoundException(s"Variable with id ${v.id} not found"))
         for (ind <- indices) {
           val ArrayValue(arrayVals) = currentValue: @unchecked // TODO: Idiomatic?
           currentValue = arrayVals(ind)
@@ -293,7 +294,7 @@ final class Interpreter {
     interpretExpr(e1) match {
       case i1: Int  => intComparator(i1, evalExpr2.asInstanceOf[Int])
       case c1: Char => charComparator(c1, evalExpr2.asInstanceOf[Char])
-      case _        => throw new UnexpectedException("Unexpected type for comparison")
+      case _        => throw new TypeMismatchException("Unexpected type for comparison")
     }
 
   def handleAssignment(l: LValue, r: RValue)(using
@@ -331,7 +332,7 @@ final class Interpreter {
   def unpackAsPair(value: Value): PairValue =
     value match {
       case pair: PairValue       => pair
-      case nil: UninitalizedPair => throw new UnexpectedException(NullDereferenceErrorString)
-      case _                     => throw new UnexpectedException("Expected pair, got something else")
+      case nil: UninitalizedPair => throw new NullDereferencedException(NullDereferenceErrorString)
+      case _                     => throw new TypeMismatchException("Expected pair, got something else")
     }
 }
