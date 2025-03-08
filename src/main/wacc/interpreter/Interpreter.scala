@@ -202,7 +202,6 @@ final class Interpreter {
           case nullPointer: UninitalizedPair     => print(NullPointerString)
           case _                                 => print(value)
         }
-        print(value.toString())
         scope
       case PrintLn(e) =>
         interpretStmt(Print(e))
@@ -405,4 +404,10 @@ final class Interpreter {
       case nil: UninitalizedPair => throw new NullDereferencedException()
       case _                     => throw new TypeMismatchException(UnpackPairErrorString)
     }
+}
+
+object Interpreter {
+  def interpret(p: Program): (VariableScope, FunctionScope) =
+    val interpreter = new Interpreter()
+    interpreter.interpret(p)
 }
