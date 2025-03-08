@@ -21,47 +21,72 @@ trait Freeable {
 case class PairValue(private var fst: Value, private var snd: Value) extends Freeable {
   override def toString: String = s"($fst, $snd)"
 
+  /** Checks if the pair has been freed. If it has, an exception is thrown. */
   def checkFreed(): Unit = if (isFreed) throw new AccessFreedValueException()
 
+  /** Gets the first value of the pair. */
   def getFst: Value = {
     checkFreed()
     fst
   }
 
+  /** Gets the second value of the pair. */
   def getSnd: Value = {
     checkFreed()
     snd
   }
 
+  /** Sets the first parameter of the pair. 
+   *
+   * @param value The value to set the first parameter to 
+   */
   def setFst(value: Value): Unit = {
     checkFreed()
     fst = value
   }
 
+  /** Sets the second parameter of the pair. 
+   *
+   * @param value The value to set the second parameter to 
+   */
   def setSnd(value: Value): Unit = {
     checkFreed()
     snd = value
   }
 }
+
 class UninitalizedPair private ()
 object UninitalizedPair {
   val instance = UninitalizedPair()
 }
+
 case class ArrayValue(private val es: ListBuffer[Value]) extends Freeable {
   override def toString: String = es.mkString("[", ", ", "]")
 
+  /** Checks if the array has been freed. If it has, an exception is thrown. */
   def checkFreed(): Unit = if (isFreed) throw new AccessFreedValueException()
 
+  /** Gets the element at the given index. 
+   *
+   * @param index The index of the value to get
+   * @return The element at the given index
+   */
   def get(index: Int): Value = {
     checkFreed()
     es(index)
   }
 
+  /** Sets the element at the given index. 
+   *
+   * @param index The index of the element to set
+   * @param value The value to set the index element to
+   */
   def set(index: Int, value: Value): Unit = {
     checkFreed()
     es(index) = value
   }
 
+  /** Returns the length of the array. */
   def length: Int = es.length
 }
 
@@ -297,6 +322,14 @@ final class Interpreter {
       case NestedExpr(e, _) => interpretExpr(e)
     }
 
+  /** Compares two expressions, either integers or characters, using the given comparators. 
+   *
+   * @param e1 The first expression to compare
+   * @param e2 The second expression to compare
+   * @param intComparator The comparator for integers
+   * @param charComparator The comparator for characters
+   * @return True if the comparison is true, false otherwise
+   */
   def binaryCompare(e1: Expr, e2: Expr, intComparator: (Int, Int) => Boolean, charComparator: (Char, Char) => Boolean)(
       using scope: VariableScope
   ): Boolean =
@@ -307,6 +340,12 @@ final class Interpreter {
       case _        => throw new TypeMismatchException(ComparisonErrorString)
     }
 
+  /** Handles an assignment statement, updating the variable scope accordingly.
+    *
+    * @param l The LValue to be assigned
+    * @param r The RValue to assign to the LValue
+    * @return The variable scope after the assignment
+    */
   def handleAssignment(l: LValue, r: RValue)(using
       scope: VariableScope
   )(using funcScope: FunctionScope): VariableScope =
@@ -332,6 +371,11 @@ final class Interpreter {
         scope
     }
 
+  /** Gets the value associated with the given LValue.
+   * 
+   * @param l The LValue to get the associated value of
+   * @return The associated value of the LValue
+   */
   def getLValue(l: LValue)(using scope: VariableScope): Value =
     l match {
       case idArr: (Ident | ArrayElem) => interpretExpr(idArr)
@@ -339,6 +383,11 @@ final class Interpreter {
       case Snd(l, _)                  => unpackAsPair(getLValue(l)).getSnd
     }
 
+  /** Unpacks a value as a pair, throwing an exception if the value is not a pair.
+   * 
+   * @param value The value to unpack
+   * @return The value as a pair
+   */
   def unpackAsPair(value: Value): PairValue =
     value match {
       case pair: PairValue       => pair
