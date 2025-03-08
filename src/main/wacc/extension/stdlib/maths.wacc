@@ -27,12 +27,17 @@ begin
   end
 
   int comb(int n, int k) is
-    int nFact = call fact(n);
+    int p = call perm(n, k);
     int kFact = call fact(k);
-    int nMinusKFact = call fact(n - k);
-    return nFact / (kFact * nMinusKFact)
+    return p / kFact
   end
 
-    int x = call comb(5, 2);
+  int perm(int n, int k) is
+    int nFact = call fact(n);
+    int nMinusKFact = call fact(n - k);
+    return nFact / nMinusKFact
+  end
+
+    int x = call perm(5, 2);
     println x
 end
