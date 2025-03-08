@@ -22,7 +22,7 @@ case class PairValue(private var fst: Value, private var snd: Value) extends Fre
   override def toString: String = s"($fst, $snd)"
 
   /** Checks if the pair has been freed. If it has, an exception is thrown. */
-  def checkFreed(): Unit = if (isFreed) throw new AccessFreedValueException()
+  private def checkFreed(): Unit = if (isFreed) throw new AccessFreedValueException()
 
   /** Gets the first value of the pair. */
   def getFst: Value = {
@@ -64,7 +64,7 @@ case class ArrayValue(private val es: ListBuffer[Value]) extends Freeable {
   override def toString: String = es.mkString("[", ", ", "]")
 
   /** Checks if the array has been freed. If it has, an exception is thrown. */
-  def checkFreed(): Unit = if (isFreed) throw new AccessFreedValueException()
+  private def checkFreed(): Unit = if (isFreed) throw new AccessFreedValueException()
 
   /** Gets the element at the given index. 
    *
@@ -152,7 +152,7 @@ final class Interpreter {
     * @param func The function to be interpreted
     * @return The function scope with `func` added.
     */
-  def interpretFunction(func: Func)(using scope: VariableScope)(using funcScope: FunctionScope): FunctionScope =
+  private def interpretFunction(func: Func)(using scope: VariableScope)(using funcScope: FunctionScope): FunctionScope =
     funcScope.add(func.v.id, (func.params, func.body))
 
   /** Interprets a statement and returns the scope, regardless of if the scope has changed or not.
@@ -160,7 +160,7 @@ final class Interpreter {
     * @param stmt The statement to be interpreted
     * @return The scope after interpreting the statement
     */
-  def interpretStmt(stmt: Stmt)(using scope: VariableScope)(using funcScope: FunctionScope): VariableScope =
+  private def interpretStmt(stmt: Stmt)(using scope: VariableScope)(using funcScope: FunctionScope): VariableScope =
     stmt match {
       case Skip       => scope
       case Decl(v, r) => handleAssignment(v, r)
@@ -237,7 +237,7 @@ final class Interpreter {
     * @param r The RValue to interpret
     * @result The value of the evaluated RValue
     */
-  def interpretRValue(r: RValue)(using scope: VariableScope)(using funcScope: FunctionScope): Value = r match {
+  private def interpretRValue(r: RValue)(using scope: VariableScope)(using funcScope: FunctionScope): Value = r match {
     case ArrayLiter(es, _)    => ArrayValue(es.map(interpretExpr).to(ListBuffer))
     case NewPair(e1, e2, _)   => PairValue(interpretExpr(e1), interpretExpr(e2))
     case pairVal: (Fst | Snd) => getLValue(pairVal)
@@ -265,14 +265,14 @@ final class Interpreter {
     * @param l The LValue to interpret
     * @return The id of the LValue
     */
-  def interpretLValue(l: LValue)(using scope: VariableScope)(using funcScope: FunctionScope): Id = ???
+  private def interpretLValue(l: LValue)(using scope: VariableScope)(using funcScope: FunctionScope): Id = ???
 
   /** Interprets an expression into an evaluated value.
     *
     * @param e Expression to intrepret
     * @return The value of the evaluated expression
     */
-  def interpretExpr(e: Expr)(using scope: VariableScope): Value =
+  private def interpretExpr(e: Expr)(using scope: VariableScope): Value =
     e match {
       case Not(e)    => !(e.asInstanceOf[Boolean])
       case Negate(e) => -(e.asInstanceOf[Int])
@@ -330,8 +330,13 @@ final class Interpreter {
    * @param charComparator The comparator for characters
    * @return True if the comparison is true, false otherwise
    */
-  def binaryCompare(e1: Expr, e2: Expr, intComparator: (Int, Int) => Boolean, charComparator: (Char, Char) => Boolean)(
-      using scope: VariableScope
+  private def binaryCompare(
+      e1: Expr,
+      e2: Expr,
+      intComparator: (Int, Int) => Boolean,
+      charComparator: (Char, Char) => Boolean
+  )(using
+      scope: VariableScope
   ): Boolean =
     val evalExpr2 = interpretExpr(e2)
     interpretExpr(e1) match {
@@ -346,7 +351,7 @@ final class Interpreter {
     * @param r The RValue to assign to the LValue
     * @return The variable scope after the assignment
     */
-  def handleAssignment(l: LValue, r: RValue)(using
+  private def handleAssignment(l: LValue, r: RValue)(using
       scope: VariableScope
   )(using funcScope: FunctionScope): VariableScope =
     l match {
@@ -376,7 +381,7 @@ final class Interpreter {
    * @param l The LValue to get the associated value of
    * @return The associated value of the LValue
    */
-  def getLValue(l: LValue)(using scope: VariableScope): Value =
+  private def getLValue(l: LValue)(using scope: VariableScope): Value =
     l match {
       case idArr: (Ident | ArrayElem) => interpretExpr(idArr)
       case Fst(l, _)                  => unpackAsPair(getLValue(l)).getFst
@@ -388,7 +393,7 @@ final class Interpreter {
    * @param value The value to unpack
    * @return The value as a pair
    */
-  def unpackAsPair(value: Value): PairValue =
+  private def unpackAsPair(value: Value): PairValue =
     value match {
       case pair: PairValue       => pair
       case nil: UninitalizedPair => throw new NullDereferencedException()
