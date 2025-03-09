@@ -48,6 +48,22 @@ begin
     return (-lBound) * 2
   end
 
+  int max(int x, int y) is
+    if x > y then
+      return x
+    else
+      return y
+    fi
+  end
+
+  int min(int x, int y) is
+    if x < y then
+      return x
+    else
+      return y
+    fi
+  end
+
     int x = call ninf();
     println x
 end
