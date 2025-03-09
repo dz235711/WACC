@@ -1,0 +1,35 @@
+# return statement in finally block should take precedence over return statement in try or catch block
+
+# Output:
+# 1
+# 1
+#
+
+# Program:
+
+begin
+  int f1() is
+    try
+      return 0
+    catch e
+      skip
+    finally
+      return 1
+    yrt
+  end
+
+  int f2() is
+    try
+      throw 0
+    catch e
+      return 0
+    finally
+      return 1
+    yrt
+  end
+
+  int x1 = f1();
+  println x1;
+  int x2 = f2();
+  println x2
+end
