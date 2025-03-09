@@ -1,0 +1,46 @@
+begin
+    int getNumerator(pair(int, int) frac) is
+        int num = fst frac;
+        return num
+    end
+
+    int getDenominator(pair(int, int) frac) is
+        int den = snd frac;
+        return den
+    end
+
+    pair(int, int) toFraction(int num, int den) is
+        pair(int, int) frac = newpair(num, den);
+        return frac
+    end
+
+    pair(int, int) multFraction(pair(int, int) frac1, pair(int, int) frac2) is
+        int num1 = call getNumerator(frac1);
+        int den1 = call getDenominator(frac1);
+        int num2 = call getNumerator(frac2);
+        int den2 = call getDenominator(frac2);
+        int num = num1 * num2;
+        int den = den1 * den2;
+        pair(int, int) frac = call toFraction(num, den);
+        return frac
+    end
+
+    pair(int, int) simplifyFraction(pair(int, int) frac) is
+        int num = call getNumerator(frac);
+        int den = call getDenominator(frac);
+        int gcd = call gcd(num, den);
+        num = num / gcd;
+        den = den / gcd;
+        pair(int, int) newFrac = call toFraction(num, den);
+        return newFrac
+    end
+
+    int gcd(int a, int b) is
+        if b == 0 then
+            return a
+        else
+            int gcd = call gcd(b, a % b);
+            return gcd
+        fi
+    end
+end
