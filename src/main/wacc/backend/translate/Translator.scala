@@ -151,7 +151,7 @@ class Translator {
 
   def translate(program: Program): (List[(String, Label)], List[Instruction]) = {
     given translateCtx: InstructionContext = new InstructionContext()
-    given locationCtx: LocationContext = new LocationContext()
+    given locationCtx: LocationContext = new LocationContext(true)
 
     // Translate the program body
     translateStmt(program.body)
@@ -854,7 +854,7 @@ class Translator {
     instructionCtx.addInstruction(DefineLabel(getFunctionName(f.v.id)))
 
     // Set up the location context for the function
-    given locationCtx: LocationContext = new LocationContext()
+    given locationCtx: LocationContext = new LocationContext(false)
 
     // Set up stack frame and save callee-save registers
     locationCtx.setUpFunc(f.params)

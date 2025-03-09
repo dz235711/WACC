@@ -8,7 +8,7 @@ import scala.collection.mutable
 
 type Location = Register | Pointer
 
-class LocationContext {
+class LocationContext(private val isMain: Boolean) {
 
   /** Free registers */
   private val freeRegs: mutable.ListBuffer[Register] = mutable.ListBuffer(
@@ -25,6 +25,18 @@ class LocationContext {
     R14,
     R15
   )
+
+  type ExceptionLabelStruct = Record {
+    /** The label of the catch block */
+    val label: Label
+    /** The number of reserved stack locations before starting the try block */
+    val prevReservedStackLocs: Int
+    /** The registers that were reserved before starting the try block */
+    val prevReservedRegs: List[Register]
+  }
+
+  /** FIFO queue of labels for catch blocks. */
+  private val exceptionLabels = mutable.ListBuffer.empty[ExceptionLabelStruct]
 
   /** Reserved registers in order, i.e. tail is latest reservation */
   private val reservedRegs = mutable.ListBuffer[Register]()
@@ -328,4 +340,19 @@ class LocationContext {
    * @param op The operation to perform on the division registers
    */
   def withDivRegisters(op: => Unit): Unit = op // We've guaranteed that the division registers are free
+
+  /** Register that the code is entering a try block.
+   *
+   * @param catchLabel The label of the catch block to jump to if an exception is thrown
+   */
+  def enterTryBlock(catchLabel: Label): Unit = ???
+
+  /** Register that the code is exiting a try block. */
+  def exitTryBlock(): Unit = ???
+
+  /** Handle an exception being thrown.
+   *
+   * @param exceptionCode The code of the exception to throw
+   */
+  def throwException(exceptionCode: Int)(using instructionCtx: InstructionContext): Unit = ???
 }
