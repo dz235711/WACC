@@ -33,7 +33,7 @@ def runFrontend(linesList: List[String], verbose: Boolean): Either[(Int, List[Wa
     renamedAST = Renamer.rename(syntaxAST)._1
     _ = printVerboseInfo(verbose, "Renamed AST", renamedAST, Console.BLUE)
 
-    typedAST = TypeChecker().checkProg(renamedAST)
+    typedAST = TypeChecker().checkProg(renamedAST)._1
     _ = printVerboseInfo(verbose, "Typed AST", typedAST, Console.MAGENTA)
 
     // Convert list buffer to list to allow mapping

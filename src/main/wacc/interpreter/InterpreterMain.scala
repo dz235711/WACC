@@ -10,6 +10,7 @@ type RenamerUID = Int
 // To distinguish between renamer and interpreter scopes.
 type RenamerScope = Scope
 type RenamerFunctionScope = Map[String, (RenamedAST.QualifiedName, Int)]
+type TypeCheckerFunctionScope = Map[RenamerUID, List[RenamedAST.Ident]]
 type InterpreterVariableScope = VariableScope
 type InterpreterFunctionScope = FunctionScope
 
@@ -20,15 +21,19 @@ def interpreterMain(): Unit = {
   var renamerFunctionScope: Option[RenamerFunctionScope] = None
   var renamerUid: Option[RenamerUID] = None
 
+  var typeCheckerFunctionTable: Option[TypeCheckerFunctionScope] = None
+
   var interpreterScope: Option[InterpreterVariableScope] = None
   var interpreterScopeFunctionScope: Option[InterpreterFunctionScope] = None
 
   while true do
-    val frontendResult = promptInputAndRunFrontend(renamerScope, renamerFunctionScope, renamerUid)
+    val frontendResult =
+      promptInputAndRunFrontend(renamerScope, renamerFunctionScope, renamerUid, typeCheckerFunctionTable)
     val typedProgram = frontendResult._1
     renamerScope = Some(frontendResult._2)
     renamerFunctionScope = Some(frontendResult._3)
     renamerUid = Some(frontendResult._4)
+    typeCheckerFunctionTable = Some(frontendResult._5)
 
     val newInterpreterScopes = Interpreter.interpret(typedProgram, interpreterScope, interpreterScopeFunctionScope)
     interpreterScope = Some(newInterpreterScopes._1)
@@ -39,8 +44,9 @@ def interpreterMain(): Unit = {
 def promptInputAndRunFrontend(
     inheritedRenamerScope: Option[Scope],
     inheritedRenamerFunctionScope: Option[RenamerFunctionScope],
-    inheritedRenamerUid: Option[RenamerUID]
-): (TypedAST.Program, RenamerScope, RenamerFunctionScope, RenamerUID) = {
+    inheritedRenamerUid: Option[RenamerUID],
+    inheritedTypeCheckerFuncTable: Option[TypeCheckerFunctionScope]
+): (TypedAST.Program, RenamerScope, RenamerFunctionScope, RenamerUID, TypeCheckerFunctionScope) = {
   given ErrorBuilder[WaccError] = new WaccErrorBuilder
   var errCtx: ListContext[WaccError] = new ListContext()
 
@@ -48,11 +54,12 @@ def promptInputAndRunFrontend(
   // RENAMING AND TYPE CHECKING
   // ==========================
 
-  var typedProgram = TypedAST.Program(List(), TypedAST.Skip)
   var lines: List[String] = List()
   var newRenamedScope: RenamerScope = Map()
   var newRenamedFunctionScope: RenamerFunctionScope = Map()
   var newUid = 0
+  var typedProgram = TypedAST.Program(List(), TypedAST.Skip)
+  var newTypedFuncTable: TypeCheckerFunctionScope = Map()
 
   // Parse input until you get a valid typed program.
   while
@@ -71,7 +78,9 @@ def promptInputAndRunFrontend(
     newRenamedFunctionScope = renamerResult._3
     newUid = renamerResult._4
 
-    typedProgram = TypeChecker().checkProg(renamedProgram)(using errCtx)
+    val typeCheckerResult = TypeChecker(inheritedTypeCheckerFuncTable).checkProg(renamedProgram)(using errCtx)
+    typedProgram = typeCheckerResult._1
+    newTypedFuncTable = typeCheckerResult._2
 
     // If there are errors, print them and then prompt for input again.
     !errCtx.get.isEmpty
@@ -84,7 +93,7 @@ def promptInputAndRunFrontend(
     )
     errCtx = new ListContext()
 
-  (typedProgram, newRenamedScope, newRenamedFunctionScope, newUid)
+  (typedProgram, newRenamedScope, newRenamedFunctionScope, newUid, newTypedFuncTable)
 }
 
 def promptInputAndParse()(using wErr: ErrorBuilder[WaccError]): (SyntaxAST.Program, List[String]) = {

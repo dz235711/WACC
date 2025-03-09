@@ -4,7 +4,6 @@ import wacc.RenamedAST.KnownType
 import wacc.TypedAST._
 
 import scala.compiletime.uninitialized
-import scala.collection.mutable.Map as MMap
 import scala.collection.mutable.ListBuffer
 
 type VariableScope = MapContext[Id, Value]
@@ -175,11 +174,11 @@ final class Interpreter {
 
       // Evaluate arguments and put them into a new scope for the function
       val evaluatedArgs = args.map(interpretExpr)
-      val newMap = MMap.newBuilder[Id, Value]
-      for (evaluatedParam <- params.map(_.id).zip(evaluatedArgs)) {
-        newMap += evaluatedParam
+
+      val newScope: VariableScope = MapContext()
+      for ((id, value) <- params.map(_.id).zip(evaluatedArgs)) {
+        newScope.add(id, value)
       }
-      val newScope: VariableScope = MapContext(newMap.result())
 
       // Call the function. The result will be stored in returnValue as per the Return case in interpretStmt
       interpretStmt(body)(using newScope)

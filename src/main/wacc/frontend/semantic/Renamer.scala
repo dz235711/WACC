@@ -11,7 +11,7 @@ class Renamer private (inheritedFunctionScope: Option[Map[String, (QualifiedName
   // Map of function names to their qualified names and number of parameters
   private val functionIds: mutable.Map[String, (QualifiedName, Int)] =
     inheritedFunctionScope match {
-      case Some(scope) => mutable.Map(scope.toSeq*)
+      case Some(scope) => mutable.Map.from(scope)
       case None        => mutable.Map()
     }
 
