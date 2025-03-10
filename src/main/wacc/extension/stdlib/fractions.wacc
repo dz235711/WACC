@@ -14,7 +14,7 @@ begin
         return frac
     end
 
-    pair(int, int) multFraction(pair(int, int) frac1, pair(int, int) frac2) is
+    pair(int, int) fractionMult(pair(int, int) frac1, pair(int, int) frac2) is
         int num1 = call getNumerator(frac1);
         int den1 = call getDenominator(frac1);
         int num2 = call getNumerator(frac2);
@@ -22,7 +22,41 @@ begin
         int num = num1 * num2;
         int den = den1 * den2;
         pair(int, int) frac = call toFraction(num, den);
-        return frac
+        pair(int, int) simplified = call simplifyFraction(frac);
+        return simplified
+    end
+
+    pair(int, int) fractionDiv(pair(int, int) frac1, pair(int, int) frac2) is
+        int num2 = call getNumerator(frac2);
+        int den2 = call getDenominator(frac2);
+        pair(int, int) inverted2 = call toFraction(den2, num2);
+        pair(int, int) frac = call fractionMult(frac1, inverted2);
+        pair(int, int) simplified = call simplifyFraction(frac);
+        return simplified
+    end
+
+    pair(int, int) fractionAdd(pair(int, int) frac1, pair(int, int) frac2) is
+        int num1 = call getNumerator(frac1);
+        int den1 = call getDenominator(frac1);
+        int num2 = call getNumerator(frac2);
+        int den2 = call getDenominator(frac2);
+        int num = num1 * den2 + num2 * den1;
+        int den = den1 * den2;
+        pair(int, int) frac = call toFraction(num, den);
+        pair(int, int) simplified = call simplifyFraction(frac);
+        return simplified
+    end
+
+    pair(int, int) fractionSub(pair(int, int) frac1, pair(int, int) frac2) is
+        int num1 = call getNumerator(frac1);
+        int den1 = call getDenominator(frac1);
+        int num2 = call getNumerator(frac2);
+        int den2 = call getDenominator(frac2);
+        int num = num1 * den2 - num2 * den1;
+        int den = den1 * den2;
+        pair(int, int) frac = call toFraction(num, den);
+        pair(int, int) simplified = call simplifyFraction(frac);
+        return simplified
     end
 
     pair(int, int) simplifyFraction(pair(int, int) frac) is
@@ -43,4 +77,7 @@ begin
             return gcd
         fi
     end
+
+    int x = call gcd(10, 20);
+    println(x)
 end
