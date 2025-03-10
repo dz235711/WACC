@@ -347,7 +347,7 @@ class Translator {
       val dest = locationCtx.reserveNext()
 
       // Call exit
-      val args = List((dest, Size(e.getType)))
+      val args = List((dest, W8)) // exit only uses the 8 LSbs
       locationCtx.setUpCall(args)
       instructionCtx.addInstruction(Call(Clib.exitLabel))
       locationCtx.cleanUpCall(args.length)
