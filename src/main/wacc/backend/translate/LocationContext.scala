@@ -8,7 +8,7 @@ import scala.collection.mutable
 
 type Location = Register | Pointer
 
-class LocationContext(private val isMain: Boolean) {
+class LocationContext(val isMain: Boolean) {
 
   /** Free registers */
   private val freeRegs: mutable.ListBuffer[Register] = mutable.ListBuffer(
@@ -19,7 +19,6 @@ class LocationContext(private val isMain: Boolean) {
     R8,
     R9,
     R10,
-    R11,
     R12,
     R13,
     R14,
@@ -48,6 +47,7 @@ class LocationContext(private val isMain: Boolean) {
   private val identMap = mutable.Map[Int, Location]()
 
   // Register constants
+  private val ExceptionReg = R11
   private val ReturnReg = RAX
   private val EmptyRegs = List(RAX, RDX) // never used as a location
   private val StackPointer = RSP
@@ -344,15 +344,25 @@ class LocationContext(private val isMain: Boolean) {
   /** Register that the code is entering a try block.
    *
    * @param catchLabel The label of the catch block to jump to if an exception is thrown
+   * @param finallyLabel The label of the finally block to jump associated with the try block
    */
-  def enterTryBlock(catchLabel: Label): Unit = ???
+  def enterTryCatchBlock(catchLabel: Label, finallyLabel: Label): Unit = ???
 
   /** Register that the code is exiting a try block. */
   def exitTryBlock(): Unit = ???
 
+  /** Register that the code is exiting a catch block. */
+  def exitCatchBlock(): Unit = ???
+
+  /** Set the identifier of the exception code variable for the catch block.
+   * 
+   * @param catchIdent The identifier of the exception code variable
+   */
+  def setCatchIdent(catchIdent: Ident): Unit = identMap(catchIdent.id) = ExceptionReg
+
   /** Handle an exception being thrown.
    *
-   * @param exceptionCode The code of the exception to throw
+   * @note The exception code is assumed to be in the next available location
    */
-  def throwException(exceptionCode: Int)(using instructionCtx: InstructionContext): Unit = ???
+  def throwException()(using instructionCtx: InstructionContext): Unit = ???
 }

@@ -37,6 +37,9 @@ sealed class InstructionContext {
   /** The number of if statements so each jump label is unique */
   private var ifCounter = 0
 
+  /** The number of try statements so each jump label is unique */
+  private var tryCounter = 0
+
   /** Stores library functions in a set to prevent duplicates. */
   private val libFunctions: mutable.Set[List[Instruction]] = mutable.Set()
 
@@ -69,6 +72,17 @@ sealed class InstructionContext {
     val endLabel = Label(s"if_end_$ifCounter")
     ifCounter += 1
     (falseLabel, endLabel)
+  }
+
+  /** Get the next catch-finally labels
+   *
+   * @return A tuple of the catch and finally labels of a try-catch-finally statement
+   */
+  def getTryLabels(): (Label, Label) = {
+    val catchLabel = Label(s"catch_$tryCounter")
+    val finallyLabel = Label(s"finally_$tryCounter")
+    tryCounter += 1
+    (catchLabel, finallyLabel)
   }
 
   /** Get the the strings and list of instructions
@@ -403,6 +417,36 @@ class Translator {
     case Semi(s1, s2) =>
       translateStmt(s1)
       translateStmt(s2)
+
+    case Throw(e) =>
+      if locationCtx.isMain then
+        // call exit
+        translateStmt(Exit(e))
+      else
+        translateExpr(e)
+        locationCtx.throwException()
+
+    case TryCatchFinally(tryBody, catchIdent, catchBody, finallyBody) =>
+      val (catchLabel, finallyLabel) = instructionCtx.getTryLabels()
+
+      locationCtx.enterTryCatchBlock(catchLabel, finallyLabel)
+
+      // Try block
+      translateStmt(tryBody)
+      locationCtx.exitTryBlock()
+
+      instructionCtx.addInstruction(Jmp(NoCond, finallyLabel))
+
+      // Catch block
+      instructionCtx.addInstruction(DefineLabel(catchLabel))
+      locationCtx.setCatchIdent(catchIdent)
+
+      translateStmt(catchBody)
+      locationCtx.exitCatchBlock()
+
+      // Finally block
+      instructionCtx.addInstruction(DefineLabel(finallyLabel))
+      translateStmt(finallyBody)
   }
 
   /**
