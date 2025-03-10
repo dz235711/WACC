@@ -154,6 +154,20 @@ begin
       return true
     end
 
+    pair(int, int) fractionInvert(pair(int, int) frac) is
+      int num = call getNumerator(frac);
+      int den = call getDenominator(frac);
+      pair(int, int) inverted = call toFraction(den, num);
+      return inverted
+    end
+
+    pair(int, int) fractionNegate(pair(int, int) frac) is
+      int num = call getNumerator(frac);
+      int den = call getDenominator(frac);
+      pair(int, int) negated = call toFraction(-num, den);
+      return negated
+    end
+
     bool fractionIsNegative(pair(int, int) frac) is
       int num = call getNumerator(frac);
       int den = call getDenominator(frac);
@@ -217,7 +231,7 @@ begin
       return e
     end
 
-    pair(int, int) fracPow(pair(int, int) frac, int n) is
+    pair(int, int) fractionPow(pair(int, int) frac, int n) is
     if n == 0 then
       pair(int, int) f = call toFraction(1, 1);
       return f
@@ -225,7 +239,7 @@ begin
       if n == 1 then 
         return frac
       else
-        pair(int, int) half = call fracPow(frac, n / 2);
+        pair(int, int) half = call fractionPow(frac, n / 2);
         pair(int, int) f = call fractionMult(half, half);
         if n % 2 == 0 then
           return f
@@ -237,10 +251,81 @@ begin
     fi
     end
 
+    pair(int, int) _sinApprox(int deg) is
+      pair(int, int) x = call toFraction(deg, 100);
+      pair(int, int) two = call toFraction(2, 1);
+      pair(int, int) y = call fractionSub(two, x);
+      pair(int, int) z = call fractionMult(x, y);
+      return z
+    end
+
+    pair(int, int) sin(int deg) is
+      int degPrincipal = deg % 360;
+      if degPrincipal < 0 then
+        degPrincipal = degPrincipal + 360
+      else
+        skip
+      fi;
+      if degPrincipal <= 90 then
+        pair(int, int) x = call _sinApprox(degPrincipal);
+        return x
+      else
+        if degPrincipal <= 180 then
+          pair(int, int) x = call _sinApprox(180 - degPrincipal);
+          return x
+        else
+          pair(int, int) x = call _sinApprox(degPrincipal - 180);
+          x = call fractionNegate(x);
+          return x
+        fi
+      fi
+    end
+
+    pair(int, int) cos(int deg) is
+      pair(int, int) x = call sin(deg + 90);
+      return x
+    end
+
+    pair(int, int) tan(int deg) is
+      pair(int, int) x = call sin(deg);
+      pair(int, int) y = call cos(deg);
+      pair(int, int) z = call fractionDiv(x, y);
+      return z
+    end
+
+    pair(int, int) root(pair(int, int) frac, int n, int iterations) is
+      pair(int, int) coef1 = call toFraction(n - 1, n);
+      pair(int, int) nFrac = call intToFraction(n);
+      pair(int, int) coef2 = call fractionDiv(frac, nFrac);
+      pair(int, int) two = call intToFraction(2);
+      pair(int, int) acc = call fractionDiv(frac, two);
+      int count = 0;
+      while count < iterations do
+        pair(int, int) f = call fractionMult(coef1, acc);
+        pair(int, int) g = call fractionInvert(acc);
+        g = call fractionPow(g, n - 1);
+        g = call fractionMult(coef2, g);
+        acc = call fractionAdd(f, g);
+        count = count + 1
+      done;
+      return acc
+    end
+
+    pair(int, int) intToFraction(int n) is
+      pair(int, int) f = call toFraction(n, 1);
+      return f
+    end
+
+    pair(int, int) fractionCopy(pair(int, int) frac) is
+      int num = call getNumerator(frac);
+      int den = call getDenominator(frac);
+      pair(int, int) f = call toFraction(num, den);
+      return f
+    end
+
     bool _ = true;
 
-    pair(int, int) f = call toFraction(1, 2);
-    f = call fracPow(f, 3);
-    _ = call fractionPrint(f);
-    print("")
+    pair(int, int) f = call toFraction(9, 1);
+    f = call root(f, 2, 3);
+    _ = call fractionPrintAsFloat(f)
 end
