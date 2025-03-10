@@ -38,13 +38,13 @@ class ExceptionBackendTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }*/
 
-  it should "execute exceptionBasic.wacc" taggedAs Backend in pending /*{
+  it should "execute exceptionBasic.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "exceptionBasic.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute exceptionCatch.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "exceptionCatch.wacc")

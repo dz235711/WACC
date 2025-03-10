@@ -432,7 +432,7 @@ class Translator {
       translateStmt(s2)
 
     case Throw(e) =>
-      if locationCtx.isMain then
+      if locationCtx.isMain && !locationCtx.inTryContext then
         // call exit
         translateStmt(Exit(e))
       else
