@@ -208,33 +208,34 @@ class LocationContext(val isMain: Boolean, val id: Int) {
   ): Unit = {
     instructionCtx.addInstruction(Comment("Cleaning up function"))
 
-    // 1. set return value
+    // 1. If we're in a try or catch block, jump to the finally block
+    if (exceptionLabels.nonEmpty) {
+      instructionCtx.addInstruction(Comment("Jumping to finally block"))
+      val labelStruct = exceptionLabels.pop()
+      instructionCtx.addInstruction(Call(labelStruct.finallyLabel))
+      exceptionLabels.push(labelStruct)
+    }
+
+    // 2. set return value
     instructionCtx.addInstruction(Mov(ReturnReg, retVal)(retSize))
 
-    // 2. reset the stack pointer
+    // 3. reset the stack pointer
     instructionCtx.addInstruction(Mov(StackPointer, BasePointer)(PointerSize))
 
-    // 3. pop callee-saved registers
+    // 4. pop callee-saved registers
     popLocs(CalleeSaved)
 
-    // 4. pop base pointer
+    // 5. pop base pointer
     instructionCtx.addInstruction(Pop(BasePointer)(PointerSize))
 
-    // 5. if no exception was thrown, put 0 in the exception register
+    // 6. if no exception was thrown, put 0 in the exception register
     if (!exception) {
       instructionCtx.addInstruction(Comment("No exception was thrown - clear exception register"))
       instructionCtx.addInstruction(Mov(ExceptionReg, 0)(PointerSize))
     }
 
-    // 6. If we're in a try or catch block, jump to the finally block
-    if (exceptionLabels.nonEmpty) {
-      val labelStruct = exceptionLabels.top
-      instructionCtx.addInstruction(Call(labelStruct.finallyLabel))
-    }
-
     // 7. return from function
     instructionCtx.addInstruction(Ret(None))
-
     instructionCtx.addInstruction(Comment("Function clean up complete"))
   }
 
