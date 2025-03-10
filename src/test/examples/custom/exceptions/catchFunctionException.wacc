@@ -6,11 +6,12 @@
 
 begin
   int f() is
-    throw 1
+    throw 1;
+    return 0
   end
 
   try
-    f()
+    int x = call f()
   catch e
     println "caught";
     exit 0
