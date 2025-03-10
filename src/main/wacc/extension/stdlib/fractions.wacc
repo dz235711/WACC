@@ -10,7 +10,6 @@ begin
     end
 
     pair(int, int) toFraction(int num, int den) is
-      int _ = num / den;
       pair(int, int) frac = newpair(num, den);
       return frac
     end
@@ -28,9 +27,7 @@ begin
     end
 
     pair(int, int) fractionDiv(pair(int, int) frac1, pair(int, int) frac2) is
-      int num2 = call getNumerator(frac2);
-      int den2 = call getDenominator(frac2);
-      pair(int, int) inverted2 = call toFraction(den2, num2);
+      pair(int, int) inverted2 = call fractionInvert(frac2);
       pair(int, int) frac = call fractionMult(frac1, inverted2);
       pair(int, int) simplified = call simplify(frac);
       return simplified
@@ -72,10 +69,10 @@ begin
 
     int gcd(int a, int b) is
       if b == 0 then
-          return a
+        return a
       else
-          int gcd = call gcd(b, a % b);
-          return gcd
+        int gcd = call gcd(b, a % b);
+        return gcd
       fi
     end
 
@@ -85,30 +82,28 @@ begin
       return lcm
     end
 
-    int ceil(pair(int, int) frac) is
+    int _roundedDiv(pair(int, int) frac, bool flag, int parity) is
       int num = call getNumerator(frac);
       int den = call getDenominator(frac);
       int ceil = num / den;
-      bool isPos = call fractionIsPositive(frac);
-      if num % den != 0 && isPos then
-        ceil = ceil + 1
+      if num % den != 0 && flag then
+        ceil = ceil + parity
       else
         skip
       fi;
       return ceil
     end
 
+    int ceil(pair(int, int) frac) is
+      bool isPos = call fractionIsPositive(frac);
+      int ceiled = call _roundedDiv(frac, isPos, 1);
+      return ceiled
+    end
+
     int floor(pair(int, int) frac) is
-      int num = call getNumerator(frac);
-      int den = call getDenominator(frac);
-      int floor = num / den;
       bool isNeg = call fractionIsNegative(frac);
-      if num % den != 0 && isNeg then
-        floor = floor - 1
-      else
-        skip
-      fi;
-      return floor
+      int floored = call _roundedDiv(frac, isNeg, -1);
+      return floored
     end
 
     bool fractionPrint(pair(int, int) frac) is
@@ -189,11 +184,8 @@ begin
       int num = call getNumerator(frac);
       int den = call getDenominator(frac);
       int inf = call inf();
-      int quot = inf / num;
-      int factor = 1;
-      while factor * 10 < quot do
-        factor = factor * 10
-      done;
+      int digits = call flooredLog(inf / num, 10);
+      int factor = call pow(10, digits);
       int approx = num * factor / den;
       int nums = approx / factor;
       int decs = approx % factor;
@@ -374,6 +366,8 @@ begin
 
     bool _ = true;
 
-    pair(int, int) x = call floatToFraction(3, 1415);
-    _ = call fractionPrint(x)
+    pair(int, int) x = call floatToFraction(3, 14);
+    _ = call fractionPrint(x);
+    println"";
+    _ = call fractionPrintAsFloat(x)
 end
