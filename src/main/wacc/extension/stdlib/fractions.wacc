@@ -79,6 +79,12 @@ begin
       fi
     end
 
+    int lcm(int a, int b) is
+      int gcd = call gcd(a, b);
+      int lcm = a * (b / gcd);
+      return lcm
+    end
+
     int ceil(pair(int, int) frac) is
       int num = call getNumerator(frac);
       int den = call getDenominator(frac);
