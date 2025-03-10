@@ -40,6 +40,9 @@ sealed class InstructionContext {
   /** The number of try statements so each jump label is unique */
   private var tryCounter = 0
 
+  /** The number of location contexts so each location context can create unique labels internally */
+  private var locationContextCounter = 0
+
   /** Stores library functions in a set to prevent duplicates. */
   private val libFunctions: mutable.Set[List[Instruction]] = mutable.Set()
 
@@ -85,7 +88,17 @@ sealed class InstructionContext {
     (catchLabel, finallyLabel)
   }
 
-  /** Get the the strings and list of instructions
+  /** Generate a unique location context id
+   * 
+   * @return A unique location context id
+   */
+  def generateLocCtxId: Int = {
+    val toReturn = locationContextCounter
+    locationContextCounter += 1
+    toReturn
+  }
+
+  /** Get the strings and list of instructions
    * 
    * @return A tuple of the string-label tuple list and the list of instructions
    */
@@ -165,7 +178,7 @@ class Translator {
 
   def translate(program: Program): (List[(String, Label)], List[Instruction]) = {
     given translateCtx: InstructionContext = new InstructionContext()
-    given locationCtx: LocationContext = new LocationContext(true)
+    given locationCtx: LocationContext = new LocationContext(true, translateCtx.generateLocCtxId)
 
     // Translate the program body
     translateStmt(program.body)
@@ -898,7 +911,7 @@ class Translator {
     instructionCtx.addInstruction(DefineLabel(getFunctionName(f.v.id)))
 
     // Set up the location context for the function
-    given locationCtx: LocationContext = new LocationContext(false)
+    given locationCtx: LocationContext = new LocationContext(false, instructionCtx.generateLocCtxId)
 
     // Set up stack frame and save callee-save registers
     locationCtx.setUpFunc(f.params)
