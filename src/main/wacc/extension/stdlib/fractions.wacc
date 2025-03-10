@@ -217,10 +217,30 @@ begin
       return e
     end
 
+    pair(int, int) fracPow(pair(int, int) frac, int n) is
+    if n == 0 then
+      pair(int, int) f = call toFraction(1, 1);
+      return f
+    else
+      if n == 1 then 
+        return frac
+      else
+        pair(int, int) half = call fracPow(frac, n / 2);
+        pair(int, int) f = call fractionMult(half, half);
+        if n % 2 == 0 then
+          return f
+        else
+          f = call fractionMult(f, frac);
+          return f
+        fi
+      fi
+    fi
+    end
+
     bool _ = true;
 
-    pair(int, int) frac = call e();
-    _ = call fractionPrint(frac);
-    println("");
-    _ = call fractionPrintAsFloat(frac)
+    pair(int, int) f = call toFraction(1, 2);
+    f = call fracPow(f, 3);
+    _ = call fractionPrint(f);
+    print("")
 end
