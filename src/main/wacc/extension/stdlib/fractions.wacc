@@ -10,6 +10,7 @@ begin
     end
 
     pair(int, int) toFraction(int num, int den) is
+        int _ = num / den;
         pair(int, int) frac = newpair(num, den);
         return frac
     end
@@ -22,7 +23,7 @@ begin
         int num = num1 * num2;
         int den = den1 * den2;
         pair(int, int) frac = call toFraction(num, den);
-        pair(int, int) simplified = call simplifyFraction(frac);
+        pair(int, int) simplified = call simplify(frac);
         return simplified
     end
 
@@ -31,7 +32,7 @@ begin
         int den2 = call getDenominator(frac2);
         pair(int, int) inverted2 = call toFraction(den2, num2);
         pair(int, int) frac = call fractionMult(frac1, inverted2);
-        pair(int, int) simplified = call simplifyFraction(frac);
+        pair(int, int) simplified = call simplify(frac);
         return simplified
     end
 
@@ -43,7 +44,7 @@ begin
         int num = num1 * den2 + num2 * den1;
         int den = den1 * den2;
         pair(int, int) frac = call toFraction(num, den);
-        pair(int, int) simplified = call simplifyFraction(frac);
+        pair(int, int) simplified = call simplify(frac);
         return simplified
     end
 
@@ -55,11 +56,11 @@ begin
         int num = num1 * den2 - num2 * den1;
         int den = den1 * den2;
         pair(int, int) frac = call toFraction(num, den);
-        pair(int, int) simplified = call simplifyFraction(frac);
+        pair(int, int) simplified = call simplify(frac);
         return simplified
     end
 
-    pair(int, int) simplifyFraction(pair(int, int) frac) is
+    pair(int, int) simplify(pair(int, int) frac) is
         int num = call getNumerator(frac);
         int den = call getDenominator(frac);
         int gcd = call gcd(num, den);
@@ -78,6 +79,61 @@ begin
         fi
     end
 
-    int x = call gcd(10, 20);
-    println(x)
+    int ceil(pair(int, int) frac) is
+        int num = call getNumerator(frac);
+        int den = call getDenominator(frac);
+        int ceil = num / den;
+        bool isPos = call fractionIsPositive(frac);
+        if num % den != 0 && isPos then
+          ceil = ceil + 1
+        else
+          skip
+        fi;
+        return ceil
+    end
+
+    int floor(pair(int, int) frac) is
+        int num = call getNumerator(frac);
+        int den = call getDenominator(frac);
+        int floor = num / den;
+        bool isNeg = call fractionIsNegative(frac);
+        if num % den != 0 && isNeg then
+          floor = floor - 1
+        else
+          skip
+        fi;
+        return floor
+    end
+
+    bool fractionPrint(pair(int, int) frac) is
+        int num = call getNumerator(frac);
+        int den = call getDenominator(frac);
+        print(num);
+        print("/");
+        print(den);
+        return true
+    end
+
+    bool fractionIsNegative(pair(int, int) frac) is
+      int num = call getNumerator(frac);
+      int den = call getDenominator(frac);
+      if (num < 0 && den > 0) || (num > 0 && den < 0) then
+        return true
+      else
+        return false
+      fi
+    end
+
+    bool fractionIsPositive(pair(int, int) frac) is
+      bool isNeg = call fractionIsNegative(frac);
+      bool isZero = call fractionIsZero(frac);
+      return !isNeg && !isZero
+    end
+
+    bool fractionIsZero(pair(int, int) frac) is
+      int num = call getNumerator(frac);
+      return num == 0
+    end
+
+    bool _ = true
 end

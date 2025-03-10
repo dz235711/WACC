@@ -44,8 +44,8 @@ begin
   end
 
   int ninf() is
-    int lBound = call pow(2, 30);
-    return (-lBound) * 2
+    int lBound = call pow(-2, 31);
+    return lBound
   end
 
   int max(int x, int y) is
