@@ -46,21 +46,21 @@ class ExceptionBackendTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute exceptionCatch.wacc" taggedAs Backend in pending /*{
+  it should "execute exceptionCatch.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "exceptionCatch.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
-  it should "execute exceptionCodeShadowing.wacc" taggedAs Backend in pending /*{
+  it should "execute exceptionCodeShadowing.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "exceptionCodeShadowing.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute exceptionIsNoOp.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "exceptionIsNoOp.wacc")
@@ -70,29 +70,29 @@ class ExceptionBackendTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute exceptionNoThrow.wacc" taggedAs Backend in pending /*{
+  it should "execute exceptionNoThrow.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "exceptionNoThrow.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
-  it should "execute finallyAlwaysRuns.wacc" taggedAs Backend in pending /*{
+  it should "execute finallyAlwaysRuns.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "finallyAlwaysRuns.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
-  it should "execute nestedTry.wacc" taggedAs Backend in pending /*{
+  it should "execute nestedTry.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "nestedTry.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute prioritiseFinallyReturn.wacc" taggedAs Backend in pending /*{
     val programTester = new ProgramTester(dir + "prioritiseFinallyReturn.wacc")
