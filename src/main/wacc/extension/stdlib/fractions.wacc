@@ -170,14 +170,20 @@ begin
       return count
     end
 
-    # bool floatToFraction(int digits, int decimals) is 
-    #   int inf = call inf();
-    #   int quot = inf / num;
-    #   int factor = 1;
-    #   while factor * 10 < quot do
-    #     factor = factor * 10
-    #   done;
-    # end
+    pair(int, int) floatToFraction(int digits, int decimals) is 
+      int inf = call inf();
+      int infDigits = call ceiledLog(inf / 10, 10);
+      int digitsDigits = call ceiledLog(digits, 10);
+      int digitsToShift = infDigits - digitsDigits;
+      int factor = call pow(10, digitsToShift);
+      int num = digits * factor;
+      int decDigits = call ceiledLog(decimals, 10);
+      int decFactor = call pow(10, digitsToShift - decDigits);
+      int dec = decimals * decFactor;
+      pair(int, int) frac = call toFraction(num + dec, factor);
+      frac = call simplify(frac);
+      return frac
+    end
 
     bool fractionPrintAsFloat(pair(int, int) frac) is
       int num = call getNumerator(frac);
@@ -368,6 +374,6 @@ begin
 
     bool _ = true;
 
-    int x = call flooredLog(8, 2);
-    println x
+    pair(int, int) x = call floatToFraction(3, 1415);
+    _ = call fractionPrint(x)
 end
