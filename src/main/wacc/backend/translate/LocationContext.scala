@@ -40,17 +40,16 @@ class LocationContext(val isMain: Boolean, val id: Int) {
     R15
   )
 
-  type ExceptionLabelStruct = Record {
+  private trait ExceptionLabelStruct extends reflect.Selectable {
+
     /** The label of the catch block */
     val catchLabel: Label
+
     /** The label of the finally block */
     val finallyLabel: Label
+
     /** Whether code execution is still within the try block */
-    val inTryBlock: Boolean
-    /** The number of reserved stack locations before starting the try block */
-    val prevReservedStackLocs: Int
-    /** The registers that were reserved before starting the try block */
-    val prevReservedRegs: List[Register]
+    var inTryBlock: Boolean
   }
 
   /** FIFO queue of labels for catch blocks. */
@@ -66,7 +65,7 @@ class LocationContext(val isMain: Boolean, val id: Int) {
   private val identMap = mutable.Map[Int, Location]()
 
   // Register constants
-  private val ExceptionReg = R11
+  private val ExceptionReg = R11 // never used as a location
   private val ReturnReg = RAX
   private val EmptyRegs = List(RAX, RDX) // never used as a location
   private val StackPointer = RSP
@@ -222,7 +221,16 @@ class LocationContext(val isMain: Boolean, val id: Int) {
       instructionCtx.addInstruction(Mov(ExceptionReg, 0)(PointerSize))
     }
 
-    // 6. return from function
+    // 6. If we're in a try or catch block, jump to the finally block
+    if (exceptionLabels.nonEmpty) {
+      val labelStruct = exceptionLabels.remove(exceptionLabels.length - 1)
+      instructionCtx.addInstruction(Jmp(NoCond, labelStruct.finallyLabel))
+      // TODO: jump back from finally block to this return point... somehow
+      //  maybe we can call the finally block from here and ret at the end of the finally block
+      //  (without any stack modifying so that we're in the same location context)
+    }
+
+    // 7. return from function
     instructionCtx.addInstruction(Ret(None))
 
     instructionCtx.addInstruction(Comment("Function clean up complete"))
@@ -387,13 +395,23 @@ class LocationContext(val isMain: Boolean, val id: Int) {
    * @param catchLabel The label of the catch block to jump to if an exception is thrown
    * @param finallyLabel The label of the finally block to jump associated with the try block
    */
-  def enterTryCatchBlock(catchLabel: Label, finallyLabel: Label): Unit = ???
+  def enterTryCatchBlock(catchLabel: Label, finallyLabel: Label): Unit =
+    val catchLabel_ = catchLabel
+    val finallyLabel_ = finallyLabel
+    val newExceptionLabelStruct: ExceptionLabelStruct = new ExceptionLabelStruct {
+      val catchLabel: Label = catchLabel_
+      val finallyLabel: Label = finallyLabel_
+      val inTryBlock: Boolean = true
+    }
+    exceptionLabels += newExceptionLabelStruct
 
   /** Register that the code is exiting a try block. */
-  def exitTryBlock(): Unit = ???
+  def exitTryBlock(): Unit =
+    exceptionLabels.last.inTryBlock = false
 
   /** Register that the code is exiting a catch block. */
-  def exitCatchBlock(): Unit = ???
+  def exitCatchBlock(): Unit =
+    exceptionLabels.remove(exceptionLabels.length - 1)
 
   /** Set the identifier of the exception code variable for the catch block.
    * 
@@ -404,25 +422,24 @@ class LocationContext(val isMain: Boolean, val id: Int) {
   /** Handle an exception being thrown.
    *
    * @note The exception code is assumed to be in the next available location
+   * @note The code is not running in the main function (i.e. we can return from the function)
    */
   def throwException()(using instructionCtx: InstructionContext): Unit =
     val exceptionLoc = getNext
 
+    instructionCtx.addInstruction(Comment("Exception thrown, fill upper bits of exception register with 1 as a flag"))
+    instructionCtx.addInstruction(Mov(ExceptionReg, -1)(PointerSize))
+
     // move the exception code to the exception register
     movLocLoc(ExceptionReg, exceptionLoc, Size(IntType))
 
-    if (exceptionLabels.isEmpty) {
-      // bubble up the exception to the caller (return exception code arbitrarily)
-      cleanUpFunc(ExceptionReg, Size(IntType))
+    // if we are not in a try block, bubble up the exception to the caller
+    if (exceptionLabels.isEmpty || !exceptionLabels.last.inTryBlock) {
+      cleanUpFunc(ExceptionReg, Size(IntType), true)
       instructionCtx.addInstruction(Ret(None))
     } else {
-      // unwind the stack to the previous try block
-      val labelStruct = exceptionLabels.remove(exceptionLabels.length - 1)
-      reservedStackLocs = labelStruct.prevReservedStackLocs
-      reservedRegs.clear()
-      reservedRegs ++= labelStruct.prevReservedRegs
-
       // jump to the catch block
+      val labelStruct = exceptionLabels.remove(exceptionLabels.length - 1)
       instructionCtx.addInstruction(Jmp(NoCond, labelStruct.catchLabel))
     }
 }
