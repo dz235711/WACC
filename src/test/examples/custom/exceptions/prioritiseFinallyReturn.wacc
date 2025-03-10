@@ -28,8 +28,8 @@ begin
     yrt
   end
 
-  int x1 = f1();
+  int x1 = call f1();
   println x1;
-  int x2 = f2();
+  int x2 = call f2();
   println x2
 end
