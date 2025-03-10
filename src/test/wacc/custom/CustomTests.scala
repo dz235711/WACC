@@ -14,11 +14,11 @@ class CustomTests extends AnyFlatSpec {
     frontendStatus(dir + "nestedNegate.wacc") shouldBe 0
   }
 
-  it should "execute conditionalStackSpace.wacc" taggedAs Frontend in pending /*{
+  it should "execute conditionalStackSpace.wacc" taggedAs Frontend in {
     val programTester = new ProgramTester(dir + "conditionalStackSpace.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 }

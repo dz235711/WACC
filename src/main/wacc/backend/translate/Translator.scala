@@ -416,7 +416,9 @@ class Translator {
       val (falseLabel, endLabel) = instructionCtx.getIfLabels()
 
       branch(endLabel, falseLabel, cond, s1)
+      locationCtx.enterScope()
       translateStmt(s2)
+      locationCtx.exitScope()
       instructionCtx.addInstruction(DefineLabel(endLabel))
 
     case While(cond, body) =>
@@ -488,7 +490,9 @@ class Translator {
     //   goto falseLabel
     instructionCtx.addInstruction(Jmp(Zero, falseLabel))
     // trueBody
+    locationCtx.enterScope()
     translateStmt(trueBody)
+    locationCtx.exitScope()
     // goto afterTrueLabel
     instructionCtx.addInstruction(Jmp(NoCond, afterTrueLabel))
     // falseLabel:

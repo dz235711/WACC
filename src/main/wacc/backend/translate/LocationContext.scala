@@ -5,7 +5,6 @@ import wacc.TypedAST.Ident
 import wacc.Register.*
 import wacc.RenamedAST.KnownType.IntType
 
-import scala.reflect.Selectable.reflectiveSelectable
 import scala.collection.mutable
 
 type Location = Register | Pointer
@@ -39,6 +38,9 @@ class LocationContext(val isMain: Boolean, val id: Int) {
     R14,
     R15
   )
+
+  /** Keeps track of the number of reserved stack locations before entering a scope (for unwinding) */
+  private val scopeStack = mutable.Stack.empty[Int]
 
   private trait ExceptionLabelStruct {
 
@@ -450,4 +452,15 @@ class LocationContext(val isMain: Boolean, val id: Int) {
    * @return Whether the code is in a try block
    */
   def inTryContext: Boolean = exceptionLabels.nonEmpty && exceptionLabels.top.inTryBlock
+
+  /** Register that the code is entering a new local scope */
+  def enterScope(): Unit =
+    scopeStack.push(reservedStackLocs)
+
+  /** Register that the code is exiting a local scope */
+  def exitScope()(using instructionCtx: InstructionContext): Unit =
+    val scopeStackLocs = reservedStackLocs - scopeStack.pop()
+    reservedStackLocs -= scopeStackLocs
+    instructionCtx.addInstruction(Comment("Exiting scope - freeing stack locations"))
+    instructionCtx.addInstruction(Add(StackPointer, PointerSize.asBytes * scopeStackLocs)(PointerSize))
 }
