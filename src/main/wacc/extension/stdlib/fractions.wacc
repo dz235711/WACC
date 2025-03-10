@@ -175,7 +175,7 @@ begin
       return num == 0
     end
 
-    pair(int, int) summationToPi(int iteration) is
+    pair(int, int) piIterative(int iteration) is
       int parity = 1;
       int num = 1;
       int den = 1;
@@ -198,9 +198,28 @@ begin
       return pi
     end
 
+    pair(int, int) eIterative(int iteration) is
+      int num = 1;
+      int den = 1;
+      int count = 0;
+      pair(int, int) acc = call toFraction(0, 1);
+      while count < iteration do
+        pair(int, int) frac = call toFraction(num, den);
+        acc = call fractionAdd(acc, frac);
+        den = den * (count + 1);
+        count = count + 1
+      done;
+      return acc
+    end
+
+    pair(int, int) e() is
+      pair(int, int) e = call toFraction(2721, 1001);
+      return e
+    end
+
     bool _ = true;
 
-    pair(int, int) frac = call toFraction(200, 5);
+    pair(int, int) frac = call e();
     _ = call fractionPrint(frac);
     println("");
     _ = call fractionPrintAsFloat(frac)
