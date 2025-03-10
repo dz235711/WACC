@@ -1,6 +1,6 @@
 # uncaught throw should exit with the associated code
 
-# Output:
+# Exit:
 # 415
 
 begin
