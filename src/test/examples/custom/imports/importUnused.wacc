@@ -1,0 +1,6 @@
+import exampleProg.wacc
+
+begin
+  int z = 2;
+  skip
+end

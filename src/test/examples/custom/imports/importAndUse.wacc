@@ -1,0 +1,4 @@
+begin
+    int x = call f(7);
+    println(x)
+end
