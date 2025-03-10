@@ -18,7 +18,8 @@ begin
       throw 112358
     else
       return next
-    fi
+    fi;
+    return 0 # unreachable
   end
 
   # throw an exception when n is a fibonacci number, otherwise return a message
@@ -26,29 +27,33 @@ begin
     int prev2 = 0;
     int prev1 = 1;
     while true do
+      int next = call nextFib(prev2, prev1, n);
       prev2 = prev1;
-      prev1 = nextFib(prev2, prev1, n);
+      prev1 = next;
       if prev1 > n then
-        return "it's not a fibonacci number"
+        return "it\'s not a fibonacci number"
       else
         skip
       fi
-    done
-    throw 0 # unreachable
+    done;
+    throw 0; # unreachable
+    return "unreachable"
   end
   
   bool shouldError = false;
   
   try
     println "calling with 13";
-    throwWhenFib(13)
+    string res = call throwWhenFib(13);
+    println res
   catch e
     print "caught with exception code: ";
     println e;
     shouldError = true
   finally
     println "finally calling with 9";
-    println throwWhenFib(9)
+    string res = call throwWhenFib(9);
+    println res
   yrt;
   
   if shouldError then
