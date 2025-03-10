@@ -75,7 +75,7 @@ class LocationContext(val isMain: Boolean, val id: Int) {
   private val BasePointer = RBP
   private val ArgRegs = List(RDI, RSI, RDX, RCX, R8, R9)
   private val CalleeSaved = List(RBX, R12, R13, R14, R15)
-  private val CallerSaved = List(RDX, RCX, RSI, RDI, R8, R9, R10, R11)
+  private val CallerSaved = List(RDX, RCX, RSI, RDI, R8, R9, R10)
 
   /** Get the next location to use, without actually using it
    *
