@@ -6,6 +6,7 @@ import org.scalatest.Tag
 object Frontend extends Tag("wacc.Frontend")
 object Backend extends Tag("wacc.Backend")
 object Debug extends Tag("wacc.Debug")
+object Imports extends Tag("wacc.Imports")
 
 // Timeout code for the timeout command
 val TimeoutCode = 124
@@ -21,3 +22,21 @@ def frontendStatus(path: String): Int =
       throw new FileNotFoundException()
     case Some(lines) =>
       runFrontend(lines, false).fold(status => status._1, _ => 0)
+
+/** Compare the output of the frontend with the expected output
+ *
+ * @param path Path to the file
+ * @param expected Expected output
+ * @return Whether the output of the frontend matches the expected output
+ */
+def compareFrontend(path: String, expected: TypedAST.Program): Boolean =
+  val programLines = readFile(path) match
+    case None =>
+      throw new FileNotFoundException()
+    case Some(lines) =>
+      lines
+  val frontendOutput = runFrontend(programLines, false)
+  frontendOutput match
+    case Left(_) => false
+    case Right(ast) =>
+      ast.toString() == expected.toString()
