@@ -142,6 +142,43 @@ begin
       return uBound + (uBound - 1)
     end
 
+    pair(int, int) _preRoundedLog(int n, int base) is
+      int count = 0;
+      int acc = 1;
+      while acc < n do
+        acc = acc * base;
+        count = count + 1
+      done;
+      pair(int, int) res = newpair(count, acc);
+      return res
+    end
+
+    int flooredLog(int n, int base) is
+      pair(int, int) res = call _preRoundedLog(n, base);
+      int count = fst res;
+      int acc = snd res;
+      if acc > n then
+        return count - 1
+      else
+        return count
+      fi
+    end
+
+    int ceiledLog(int x, int n) is
+      pair(int, int) res = call _preRoundedLog(x, n);
+      int count = fst res;
+      return count
+    end
+
+    # bool floatToFraction(int digits, int decimals) is 
+    #   int inf = call inf();
+    #   int quot = inf / num;
+    #   int factor = 1;
+    #   while factor * 10 < quot do
+    #     factor = factor * 10
+    #   done;
+    # end
+
     bool fractionPrintAsFloat(pair(int, int) frac) is
       int num = call getNumerator(frac);
       int den = call getDenominator(frac);
@@ -331,7 +368,6 @@ begin
 
     bool _ = true;
 
-    pair(int, int) f = call toFraction(9, 1);
-    f = call root(f, 2, 3);
-    _ = call fractionPrintAsFloat(f)
+    int x = call flooredLog(8, 2);
+    println x
 end
