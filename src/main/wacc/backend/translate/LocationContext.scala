@@ -201,7 +201,7 @@ class LocationContext(val isMain: Boolean, val id: Int) {
    * @param retSize The size of the return value
    * @param exception Whether the function is returning due to an exception
    */
-  def cleanUpFunc(retVal: Location, retSize: Size, exception: Boolean = false)(using
+  def cleanUpFunc(retVal: Location, retSize: Size, exception: Boolean)(using
       instructionCtx: InstructionContext
   ): Unit = {
     instructionCtx.addInstruction(Comment("Cleaning up function"))
@@ -226,7 +226,7 @@ class LocationContext(val isMain: Boolean, val id: Int) {
 
     // 6. If we're in a try or catch block, jump to the finally block
     if (exceptionLabels.nonEmpty) {
-      val labelStruct = exceptionLabels.pop()
+      val labelStruct = exceptionLabels.top
       instructionCtx.addInstruction(Jmp(NoCond, labelStruct.finallyLabel))
       // TODO: jump back from finally block to this return point... somehow
       //  maybe we can call the finally block from here and ret at the end of the finally block
@@ -302,9 +302,7 @@ class LocationContext(val isMain: Boolean, val id: Int) {
     // 2. Restore caller registers
     popLocs(CallerSaved)
 
-    instructionCtx.addInstruction(Comment("Function call clean up complete"))
-
-    // 3 Check for exceptions
+    // 3. Check for exceptions
     val exceptionReturnLabel = getExceptionReturnLabel()
 
     // Jump to the normal return if no exception was thrown
@@ -318,6 +316,7 @@ class LocationContext(val isMain: Boolean, val id: Int) {
 
     // 4. Return result location
     instructionCtx.addInstruction(DefineLabel(exceptionReturnLabel))
+    instructionCtx.addInstruction(Comment("Function call clean up complete"))
     ReturnReg
 
   /** Move a value from one location to another

@@ -336,7 +336,7 @@ class Translator {
       )
 
     case Return(e) =>
-      unary(e, l => locationCtx.cleanUpFunc(l, Size(e.getType)))
+      unary(e, l => locationCtx.cleanUpFunc(l, Size(e.getType), false))
       instructionCtx.addInstruction(Ret(None))
 
     case Exit(e) =>
@@ -1173,6 +1173,7 @@ object Clib {
     Mov(BASE_POINTER, STACK_POINTER)(PointerSize)
   ) ::: body ::: List(
     Mov(STACK_POINTER, BASE_POINTER)(PointerSize),
+    Mov(Register.R11, 0)(W64), // Mark as no exception
     Pop(BASE_POINTER)(PointerSize),
     Ret(None)
   )
