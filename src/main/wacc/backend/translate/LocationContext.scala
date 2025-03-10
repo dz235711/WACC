@@ -229,10 +229,7 @@ class LocationContext(val isMain: Boolean, val id: Int) {
     // 6. If we're in a try or catch block, jump to the finally block
     if (exceptionLabels.nonEmpty) {
       val labelStruct = exceptionLabels.top
-      instructionCtx.addInstruction(Jmp(NoCond, labelStruct.finallyLabel))
-      // TODO: jump back from finally block to this return point... somehow
-      //  maybe we can call the finally block from here and ret at the end of the finally block
-      //  (without any stack modifying so that we're in the same location context)
+      instructionCtx.addInstruction(Call(labelStruct.finallyLabel))
     }
 
     // 7. return from function
@@ -430,6 +427,9 @@ class LocationContext(val isMain: Boolean, val id: Int) {
   def throwException()(using instructionCtx: InstructionContext): Unit =
     val exceptionLoc = getNext
 
+    // revert the scope
+    val scopeStackLocs = if scopeStack.isEmpty then None else Some(scopeStack.pop())
+
     instructionCtx.addInstruction(Comment("Exception thrown, fill upper bits of exception register with 1 as a flag"))
     instructionCtx.addInstruction(Mov(ExceptionReg, -1)(PointerSize))
 
@@ -446,6 +446,9 @@ class LocationContext(val isMain: Boolean, val id: Int) {
       labelStruct.exitTryBlock()
       instructionCtx.addInstruction(Jmp(NoCond, labelStruct.catchLabel))
     }
+
+    // restore the scope
+    scopeStackLocs.map(scopeStack.push)
 
   /** Check if the code is in a try block.
    *

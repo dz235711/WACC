@@ -79,13 +79,14 @@ sealed class InstructionContext {
 
   /** Get the next catch-finally labels
    *
-   * @return A tuple of the catch and finally labels of a try-catch-finally statement
+   * @return A tuple of the catch, finally, and post-finally labels of a try-catch-finally statement
    */
-  def getTryLabels(): (Label, Label) = {
+  def getTryLabels(): (Label, Label, Label) = {
     val catchLabel = Label(s"catch_$tryCounter")
     val finallyLabel = Label(s"finally_$tryCounter")
+    val postFinallyLabel = Label(s"post_finally_$tryCounter")
     tryCounter += 1
-    (catchLabel, finallyLabel)
+    (catchLabel, finallyLabel, postFinallyLabel)
   }
 
   /** Generate a unique location context id
@@ -442,26 +443,40 @@ class Translator {
         locationCtx.throwException()
 
     case TryCatchFinally(tryBody, catchIdent, catchBody, finallyBody) =>
-      val (catchLabel, finallyLabel) = instructionCtx.getTryLabels()
+      val (catchLabel, finallyLabel, postFinallyLabel) = instructionCtx.getTryLabels()
 
       locationCtx.enterTryCatchBlock(catchLabel, finallyLabel)
 
       // Try block
+      locationCtx.enterScope()
       translateStmt(tryBody)
+      locationCtx.exitScope()
       locationCtx.exitTryBlock()
 
-      instructionCtx.addInstruction(Jmp(NoCond, finallyLabel))
+      instructionCtx.addInstruction(Call(finallyLabel))
+      instructionCtx.addInstruction(Jmp(NoCond, postFinallyLabel))
 
       // Catch block
       instructionCtx.addInstruction(DefineLabel(catchLabel))
       locationCtx.setCatchIdent(catchIdent)
 
+      locationCtx.enterScope()
       translateStmt(catchBody)
+      locationCtx.exitScope()
       locationCtx.exitCatchBlock()
+
+      instructionCtx.addInstruction(Call(finallyLabel))
+      instructionCtx.addInstruction(Jmp(NoCond, postFinallyLabel))
 
       // Finally block
       instructionCtx.addInstruction(DefineLabel(finallyLabel))
+      locationCtx.enterScope()
       translateStmt(finallyBody)
+      locationCtx.exitScope()
+      // return from finally block to the caller (try or catch block which called the finally block before returning)
+      instructionCtx.addInstruction(Ret(None))
+
+      instructionCtx.addInstruction(DefineLabel(postFinallyLabel))
   }
 
   /**
