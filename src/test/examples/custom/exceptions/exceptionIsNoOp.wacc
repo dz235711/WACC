@@ -5,11 +5,11 @@
 #
 
 begin
-  int nothing() is throw 123 end
+  int nothing() is throw 123; return 5 end
   int x = 20;
 
   try
-    x = nothing()
+    x = call nothing()
   catch e
     skip
   finally
