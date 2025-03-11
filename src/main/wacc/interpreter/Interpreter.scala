@@ -62,6 +62,8 @@ final class Interpreter {
   /** Interprets a program within a new scope.
     *
     * @param program The program to be interpreted
+    * @param inheritedScope An optional, initial scope for variables
+    * @param inheritedFunctionScope An optional, initial scope for functions
     * @return The variable and function scopes after interpreting the program
     */
   def interpret(
@@ -346,8 +348,8 @@ final class Interpreter {
 object Interpreter {
   def interpret(
       p: Program,
-      inheritedScope: Option[VariableScope],
-      inheritedFunctionScope: Option[FunctionScope]
+      inheritedScope: Option[VariableScope] = None,
+      inheritedFunctionScope: Option[FunctionScope] = None
   ): (VariableScope, FunctionScope) =
     val interpreter = new Interpreter()
     interpreter.interpret(p, inheritedScope, inheritedFunctionScope)
