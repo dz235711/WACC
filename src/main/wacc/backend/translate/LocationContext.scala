@@ -401,6 +401,7 @@ class LocationContext(val isMain: Boolean, val id: Int) {
    * @param finallyLabel The label of the finally block to jump associated with the try block
    */
   def enterTryCatchBlock(catchLabel: Label, finallyLabel: Label): Unit =
+    // can't refer to catchLabel and finallyLabel in the ExceptionLabelStruct directly because they are vals
     val catchLabel_ = catchLabel
     val finallyLabel_ = finallyLabel
     val newExceptionLabelStruct: ExceptionLabelStruct = new ExceptionLabelStruct {
