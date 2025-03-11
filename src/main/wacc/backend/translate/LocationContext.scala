@@ -1,14 +1,28 @@
 package wacc
 
+import wacc.Condition.{Equal, NoCond}
 import wacc.TypedAST.Ident
-
 import wacc.Register.*
+import wacc.RenamedAST.KnownType.IntType
 
 import scala.collection.mutable
 
 type Location = Register | Pointer
 
-class LocationContext {
+class LocationContext(val isMain: Boolean, val id: Int) {
+
+  /** The number of returns in the location context so each exception check jump label is unique */
+  private var exceptionReturnLabelId = 0
+
+  /** Get a label for returning from an exception
+   *
+   * @return The label for returning from an exception
+   */
+  private def getExceptionReturnLabel(): Label = {
+    val exceptionReturnLabel = Label(s"exception_return_${exceptionReturnLabelId}_$id")
+    exceptionReturnLabelId += 1
+    exceptionReturnLabel
+  }
 
   /** Free registers */
   private val freeRegs: mutable.ListBuffer[Register] = mutable.ListBuffer(
@@ -19,12 +33,36 @@ class LocationContext {
     R8,
     R9,
     R10,
-    R11,
     R12,
     R13,
     R14,
     R15
   )
+
+  /** Keeps track of the number of reserved stack locations before entering a scope (for unwinding) */
+  private val scopeStack = mutable.Stack.empty[Int]
+
+  private trait ExceptionLabelStruct {
+
+    /** The label of the catch block */
+    val catchLabel: Label
+
+    /** The label of the finally block */
+    val finallyLabel: Label
+
+    /** The number of reserved stack locations before entering the try block */
+    val savedReservedStackLocs: Int
+
+    /** Whether code execution is still within the try block */
+    var inTryBlock: Boolean = true
+
+    /** Register exiting the current try block */
+    def exitTryBlock(): Unit =
+      inTryBlock = false
+  }
+
+  /** LIFO queue of labels for catch blocks. */
+  private val exceptionLabels = mutable.Stack.empty[ExceptionLabelStruct]
 
   /** Reserved registers in order, i.e. tail is latest reservation */
   private val reservedRegs = mutable.ListBuffer[Register]()
@@ -36,13 +74,14 @@ class LocationContext {
   private val identMap = mutable.Map[Int, Location]()
 
   // Register constants
+  private val ExceptionReg = R11 // never used as a location
   private val ReturnReg = RAX
   private val EmptyRegs = List(RAX, RDX) // never used as a location
   private val StackPointer = RSP
   private val BasePointer = RBP
   private val ArgRegs = List(RDI, RSI, RDX, RCX, R8, R9)
   private val CalleeSaved = List(RBX, R12, R13, R14, R15)
-  private val CallerSaved = List(RDX, RCX, RSI, RDI, R8, R9, R10, R11)
+  private val CallerSaved = List(RDX, RCX, RSI, RDI, R8, R9, R10)
 
   /** Get the next location to use, without actually using it
    *
@@ -166,25 +205,40 @@ class LocationContext {
    * @note Run this at the end of a function just before returning.
    * @param retVal The location of the return value
    * @param retSize The size of the return value
+   * @param exception Whether the function is returning due to an exception
    */
-  def cleanUpFunc(retVal: Location, retSize: Size)(using instructionCtx: InstructionContext): Unit = {
+  def cleanUpFunc(retVal: Location, retSize: Size, exception: Boolean)(using
+      instructionCtx: InstructionContext
+  ): Unit = {
     instructionCtx.addInstruction(Comment("Cleaning up function"))
 
-    // 1. set return value
+    // 1. If we're in a try or catch block, jump to the finally block
+    if (exceptionLabels.nonEmpty) {
+      instructionCtx.addInstruction(Comment("Jumping to finally block"))
+      val labelStruct = exceptionLabels.top
+      instructionCtx.addInstruction(Call(labelStruct.finallyLabel))
+    }
+
+    // 2. set return value
     instructionCtx.addInstruction(Mov(ReturnReg, retVal)(retSize))
 
-    // 2. reset the stack pointer
+    // 3. reset the stack pointer
     instructionCtx.addInstruction(Mov(StackPointer, BasePointer)(PointerSize))
 
-    // 3. pop callee-saved registers
+    // 4. pop callee-saved registers
     popLocs(CalleeSaved)
 
-    // 4. pop base pointer
+    // 5. pop base pointer
     instructionCtx.addInstruction(Pop(BasePointer)(PointerSize))
 
-    // 5. return from function
-    instructionCtx.addInstruction(Ret(None))
+    // 6. if no exception was thrown, put 0 in the exception register
+    if (!exception) {
+      instructionCtx.addInstruction(Comment("No exception was thrown - clear exception register"))
+      instructionCtx.addInstruction(Mov(ExceptionReg, 0)(PointerSize))
+    }
 
+    // 7. return from function
+    instructionCtx.addInstruction(Ret(None))
     instructionCtx.addInstruction(Comment("Function clean up complete"))
   }
 
@@ -251,9 +305,21 @@ class LocationContext {
     // 2. Restore caller registers
     popLocs(CallerSaved)
 
-    instructionCtx.addInstruction(Comment("Function call clean up complete"))
+    // 3. Check for exceptions
+    val exceptionReturnLabel = getExceptionReturnLabel()
 
-    // 3. Return result location
+    // Jump to the normal return if no exception was thrown
+    instructionCtx.addInstruction(Compare(ExceptionReg, 0)(PointerSize))
+    instructionCtx.addInstruction(Jmp(Equal, exceptionReturnLabel))
+
+    // An exception was thrown
+    val exceptionLoc = getNext
+    movLocLoc(exceptionLoc, ExceptionReg, Size(IntType))
+    throwException()
+
+    // 4. Return result location
+    instructionCtx.addInstruction(DefineLabel(exceptionReturnLabel))
+    instructionCtx.addInstruction(Comment("Function call clean up complete"))
     ReturnReg
 
   /** Move a value from one location to another
@@ -328,4 +394,83 @@ class LocationContext {
    * @param op The operation to perform on the division registers
    */
   def withDivRegisters(op: => Unit): Unit = op // We've guaranteed that the division registers are free
+
+  /** Register that the code is entering a try block.
+   *
+   * @param catchLabel The label of the catch block to jump to if an exception is thrown
+   * @param finallyLabel The label of the finally block to jump associated with the try block
+   */
+  def enterTryCatchBlock(catchLabel: Label, finallyLabel: Label): Unit =
+    // can't refer to catchLabel and finallyLabel in the ExceptionLabelStruct directly because they are vals
+    val catchLabel_ = catchLabel
+    val finallyLabel_ = finallyLabel
+    val newExceptionLabelStruct: ExceptionLabelStruct = new ExceptionLabelStruct {
+      val catchLabel: Label = catchLabel_
+      val finallyLabel: Label = finallyLabel_
+      val savedReservedStackLocs: Int = reservedStackLocs
+    }
+    exceptionLabels.push(newExceptionLabelStruct)
+
+  /** Register that the code is exiting a try block. */
+  def exitTryBlock(): Unit =
+    exceptionLabels.top.exitTryBlock()
+
+  /** Register that the code is exiting a catch block. */
+  def exitCatchBlock(): Unit =
+    exceptionLabels.pop()
+
+  /** Set the identifier of the exception code variable for the catch block.
+   * 
+   * @param catchIdent The identifier of the exception code variable
+   */
+  def setCatchIdent(catchIdent: Ident)(using instructionCtx: InstructionContext): Unit =
+    val exceptionLoc = getNext
+    movLocLoc(exceptionLoc, ExceptionReg, Size(IntType))
+    addLocation(catchIdent)
+
+  /** Handle an exception being thrown.
+   *
+   * @note The exception code is assumed to be in the next available location
+   * @note The code is not running in the main function (i.e. we can return from the function)
+   */
+  def throwException()(using instructionCtx: InstructionContext): Unit =
+    val exceptionLoc = getNext
+
+    instructionCtx.addInstruction(Comment("Exception thrown, fill upper bits of exception register with 1 as a flag"))
+    instructionCtx.addInstruction(Mov(ExceptionReg, -1)(PointerSize))
+
+    // move the exception code to the exception register
+    movLocLoc(ExceptionReg, exceptionLoc, Size(IntType))
+
+    // if we are not in a try block, bubble up the exception to the caller
+    if (inTryContext) {
+      val labelStruct = exceptionLabels.top
+
+      // clean up the try scope (decrease stack pointer by number of stack locations reserved in this try scope)
+      val scopeReserved = reservedStackLocs - labelStruct.savedReservedStackLocs
+      instructionCtx.addInstruction(Add(StackPointer, PointerSize.asBytes * scopeReserved)(PointerSize))
+
+      // jump to the catch block
+      instructionCtx.addInstruction(Jmp(NoCond, labelStruct.catchLabel))
+    } else {
+      cleanUpFunc(ExceptionReg, Size(IntType), true)
+      instructionCtx.addInstruction(Ret(None))
+    }
+
+  /** Check if the code is in a try block.
+   *
+   * @return Whether the code is in a try block
+   */
+  def inTryContext: Boolean = exceptionLabels.nonEmpty && exceptionLabels.top.inTryBlock
+
+  /** Register that the code is entering a new local scope */
+  def enterScope(): Unit =
+    scopeStack.push(reservedStackLocs)
+
+  /** Register that the code is exiting a local scope */
+  def exitScope()(using instructionCtx: InstructionContext): Unit =
+    val scopeStackLocs = reservedStackLocs - scopeStack.pop()
+    reservedStackLocs -= scopeStackLocs
+    instructionCtx.addInstruction(Comment("Exiting scope - freeing stack locations"))
+    instructionCtx.addInstruction(Add(StackPointer, PointerSize.asBytes * scopeStackLocs)(PointerSize))
 }

@@ -1,0 +1,28 @@
+# exceptions thrown in recursive functions can be caught by the initial caller
+
+# Output:
+# caught
+#
+
+begin
+  int f(int n) is
+    if n == 0 then
+      throw 1
+    else
+      int result = call f(n - 1);
+      return result
+    fi;
+    return 0
+  end
+
+  try
+    int x = call f(5)
+  catch e
+    println "caught";
+    exit 0
+  finally
+    skip
+  yrt;
+  
+  println "uncaught"
+end

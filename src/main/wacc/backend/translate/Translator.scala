@@ -37,6 +37,12 @@ sealed class InstructionContext {
   /** The number of if statements so each jump label is unique */
   private var ifCounter = 0
 
+  /** The number of try statements so each jump label is unique */
+  private var tryCounter = 0
+
+  /** The number of location contexts so each location context can create unique labels internally */
+  private var locationContextCounter = 0
+
   /** Stores library functions in a set to prevent duplicates. */
   private val libFunctions: mutable.Set[List[Instruction]] = mutable.Set()
 
@@ -71,7 +77,29 @@ sealed class InstructionContext {
     (falseLabel, endLabel)
   }
 
-  /** Get the the strings and list of instructions
+  /** Get the next catch-finally labels
+   *
+   * @return A tuple of the catch, finally, and post-finally labels of a try-catch-finally statement
+   */
+  def getTryLabels(): (Label, Label, Label) = {
+    val catchLabel = Label(s"catch_$tryCounter")
+    val finallyLabel = Label(s"finally_$tryCounter")
+    val postFinallyLabel = Label(s"post_finally_$tryCounter")
+    tryCounter += 1
+    (catchLabel, finallyLabel, postFinallyLabel)
+  }
+
+  /** Generate a unique location context id
+   * 
+   * @return A unique location context id
+   */
+  def generateLocCtxId: Int = {
+    val toReturn = locationContextCounter
+    locationContextCounter += 1
+    toReturn
+  }
+
+  /** Get the strings and list of instructions
    * 
    * @return A tuple of the string-label tuple list and the list of instructions
    */
@@ -151,7 +179,7 @@ class Translator {
 
   def translate(program: Program): (List[(String, Label)], List[Instruction]) = {
     given translateCtx: InstructionContext = new InstructionContext()
-    given locationCtx: LocationContext = new LocationContext()
+    given locationCtx: LocationContext = new LocationContext(true, translateCtx.generateLocCtxId)
 
     // Translate the program body
     translateStmt(program.body)
@@ -309,7 +337,7 @@ class Translator {
       )
 
     case Return(e) =>
-      unary(e, l => locationCtx.cleanUpFunc(l, Size(e.getType)))
+      unary(e, l => locationCtx.cleanUpFunc(l, Size(e.getType), false))
       instructionCtx.addInstruction(Ret(None))
 
     case Exit(e) =>
@@ -319,7 +347,7 @@ class Translator {
       val dest = locationCtx.reserveNext()
 
       // Call exit
-      val args = List((dest, Size(e.getType)))
+      val args = List((dest, W8)) // exit only uses the 8 LSbs
       locationCtx.setUpCall(args)
       instructionCtx.addInstruction(Call(Clib.exitLabel))
       locationCtx.cleanUpCall(args.length)
@@ -389,7 +417,9 @@ class Translator {
       val (falseLabel, endLabel) = instructionCtx.getIfLabels()
 
       branch(endLabel, falseLabel, cond, s1)
+      locationCtx.enterScope()
       translateStmt(s2)
+      locationCtx.exitScope()
       instructionCtx.addInstruction(DefineLabel(endLabel))
 
     case While(cond, body) =>
@@ -403,6 +433,50 @@ class Translator {
     case Semi(s1, s2) =>
       translateStmt(s1)
       translateStmt(s2)
+
+    case Throw(e) =>
+      if locationCtx.isMain && !locationCtx.inTryContext then
+        // call exit
+        translateStmt(Exit(e))
+      else
+        translateExpr(e)
+        locationCtx.throwException()
+
+    case TryCatchFinally(tryBody, catchIdent, catchBody, finallyBody) =>
+      val (catchLabel, finallyLabel, postFinallyLabel) = instructionCtx.getTryLabels()
+
+      locationCtx.enterTryCatchBlock(catchLabel, finallyLabel)
+
+      // Try block
+      locationCtx.enterScope()
+      translateStmt(tryBody)
+      locationCtx.exitScope()
+      locationCtx.exitTryBlock()
+
+      instructionCtx.addInstruction(Call(finallyLabel))
+      instructionCtx.addInstruction(Jmp(NoCond, postFinallyLabel))
+
+      // Catch block
+      instructionCtx.addInstruction(DefineLabel(catchLabel))
+
+      locationCtx.enterScope()
+      locationCtx.setCatchIdent(catchIdent)
+      translateStmt(catchBody)
+      locationCtx.exitScope()
+      locationCtx.exitCatchBlock()
+
+      instructionCtx.addInstruction(Call(finallyLabel))
+      instructionCtx.addInstruction(Jmp(NoCond, postFinallyLabel))
+
+      // Finally block
+      instructionCtx.addInstruction(DefineLabel(finallyLabel))
+      locationCtx.enterScope()
+      translateStmt(finallyBody)
+      locationCtx.exitScope()
+      // return from finally block to the caller (try or catch block which called the finally block before returning)
+      instructionCtx.addInstruction(Ret(None))
+
+      instructionCtx.addInstruction(DefineLabel(postFinallyLabel))
   }
 
   /**
@@ -431,7 +505,9 @@ class Translator {
     //   goto falseLabel
     instructionCtx.addInstruction(Jmp(Zero, falseLabel))
     // trueBody
+    locationCtx.enterScope()
     translateStmt(trueBody)
+    locationCtx.exitScope()
     // goto afterTrueLabel
     instructionCtx.addInstruction(Jmp(NoCond, afterTrueLabel))
     // falseLabel:
@@ -854,7 +930,7 @@ class Translator {
     instructionCtx.addInstruction(DefineLabel(getFunctionName(f.v.id)))
 
     // Set up the location context for the function
-    given locationCtx: LocationContext = new LocationContext()
+    given locationCtx: LocationContext = new LocationContext(false, instructionCtx.generateLocCtxId)
 
     // Set up stack frame and save callee-save registers
     locationCtx.setUpFunc(f.params)
@@ -1116,6 +1192,7 @@ object Clib {
     Mov(BASE_POINTER, STACK_POINTER)(PointerSize)
   ) ::: body ::: List(
     Mov(STACK_POINTER, BASE_POINTER)(PointerSize),
+    Mov(Register.R11, 0)(W64), // Mark as no exception
     Pop(BASE_POINTER)(PointerSize),
     Ret(None)
   )
