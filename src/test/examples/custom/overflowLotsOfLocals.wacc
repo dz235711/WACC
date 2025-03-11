@@ -1,0 +1,19 @@
+# detecting overflow on values in the stack should be the same
+
+# Output:
+# #runtime_error#
+
+begin
+    pair(int, int) p1 = newpair(1, 1);
+    pair(int, int) p2 = newpair(2, 2);
+    pair(int, int) p3 = newpair(3, 3);
+    pair(int, int) p4 = newpair(4, 4);
+    pair(int, int) p5 = newpair(5, 5);
+    pair(int, int) p6 = newpair(6, 6);
+    pair(int, int) p7 = newpair(7, 7);
+    pair(int, int) p8 = newpair(8, 8);
+    pair(int, int) p9 = newpair(9, 9);
+    pair(int, int) p10 = newpair(10, 10);
+    pair(int, int) p11 = newpair(11, 11);
+    println 2147483647 + 1
+end
