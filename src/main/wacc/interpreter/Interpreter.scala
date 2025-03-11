@@ -123,6 +123,11 @@ final class Interpreter {
       case Print(e) =>
         val value = interpretExpr(e)
         value match {
+          // An array of characters should print as a string.
+          case ArrayValue(es) if es.exists(_.getClass == classOf[Character]) => {
+            val resString = StringBuilder().addAll(es.asInstanceOf[ListBuffer[Char]]).result()
+            print(resString)
+          }
           // WACC prints the pointers of arrays and pairs, but the closest we can get in Scala is the hashcode
           case pointer: (ArrayValue | PairValue) => print(pointer.hashCode)
           case nullPointer: UninitalizedPair     => print(NullPointerString)
