@@ -458,9 +458,9 @@ class Translator {
 
       // Catch block
       instructionCtx.addInstruction(DefineLabel(catchLabel))
-      locationCtx.setCatchIdent(catchIdent)
 
       locationCtx.enterScope()
+      locationCtx.setCatchIdent(catchIdent)
       translateStmt(catchBody)
       locationCtx.exitScope()
       locationCtx.exitCatchBlock()

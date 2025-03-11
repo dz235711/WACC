@@ -6,13 +6,13 @@ import org.scalatest.matchers.should.Matchers.*
 class ExceptionBackendTests extends AnyFlatSpec {
   val dir = "src/test/examples/custom/exceptions/"
 
-  it should "execute catchAdvanced.wacc" taggedAs Backend in pending /*{
+  it should "execute catchAdvanced.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "catchAdvanced.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute catchExceptionCode.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "catchExceptionCode.wacc")
