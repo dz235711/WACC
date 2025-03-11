@@ -1,7 +1,7 @@
-# array out of bound errors should be caught (code 5)
+# array out of bound errors should be caught (code 6)
 
 # Output:
-# error caught with code: 5
+# error caught with code: 6
 
 begin
   int[] arr = [1, 2, 3];

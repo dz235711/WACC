@@ -1,7 +1,7 @@
-# division by zero errors should be caught (code 2)
+# division by zero errors should be caught (code 3)
 
 # Output:
-# error caught with code: 2
+# error caught with code: 3
 
 begin
   int numerator = 1;

@@ -1,10 +1,10 @@
-# null pair dereference errors should be caught (code 1)
+# null pair dereference errors should be caught (code 2)
 
 # Output:
-# error caught with code: 1
+# error caught with code: 2
 
 begin
-  pair(int, int) = null;
+  pair(int, int) p = null;
   try
     int x = fst p
   catch e

@@ -1,7 +1,7 @@
-# bad char errors should be caught (code 4)
+# bad char errors should be caught (code 5)
 
 # Output:
-# error caught with code: 4
+# error caught with code: 5
 
 begin
   int asciiCode = 128;

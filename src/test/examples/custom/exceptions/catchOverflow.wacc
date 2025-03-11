@@ -1,7 +1,7 @@
-# overflow errors should be caught (code 3)
+# overflow errors should be caught (code 4)
 
 # Output:
-# error caught with code: 3
+# error caught with code: 4
 
 begin
   int maxInt = 2147483647;
