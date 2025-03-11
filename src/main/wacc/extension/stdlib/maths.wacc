@@ -1,4 +1,7 @@
 begin
+
+# ========== Maths Module Functions ==========
+
   # calculates the power of a number
   int pow(int x, int n) is
     if n == 0 then
