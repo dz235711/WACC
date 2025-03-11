@@ -1,0 +1,16 @@
+# array out of bound errors should be caught (code 5)
+
+# Output:
+# error caught with code: 5
+
+begin
+  int[] arr = [1, 2, 3];
+  try
+    int x = arr[3]
+  catch e
+    print "error caught with code: ";
+    print e
+  finally
+    skip
+  yrt
+end

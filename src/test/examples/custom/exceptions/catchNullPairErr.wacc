@@ -1,0 +1,16 @@
+# null pair dereference errors should be caught (code 1)
+
+# Output:
+# error caught with code: 1
+
+begin
+  pair(int, int) = null;
+  try
+    int x = fst p
+  catch e
+    print "error caught with code: ";
+    print e
+  finally
+    skip
+  yrt
+end

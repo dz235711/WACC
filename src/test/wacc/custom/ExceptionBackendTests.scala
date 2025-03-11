@@ -110,4 +110,43 @@ class ExceptionBackendTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
+  it should "execute catchBadChar.wacc" taggedAs Backend in pending /*{
+    val programTester = new ProgramTester(dir + "catchBadChar.wacc")
+    val (exitStatus, output) = programTester.run(programTester.testInput)
+
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
+    output shouldBe programTester.expectedOutput
+  }*/
+
+  it should "execute catchDivideByZero.wacc" taggedAs Backend in pending /*{
+    val programTester = new ProgramTester(dir + "catchDivideByZero.wacc")
+    val (exitStatus, output) = programTester.run(programTester.testInput)
+
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
+    output shouldBe programTester.expectedOutput
+  }*/
+
+  it should "execute catchNullPairErr.wacc" taggedAs Backend in pending /*{
+    val programTester = new ProgramTester(dir + "catchNullPairErr.wacc")
+    val (exitStatus, output) = programTester.run(programTester.testInput)
+
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
+    output shouldBe programTester.expectedOutput
+  }*/
+
+  it should "execute catchOutOfBounds.wacc" taggedAs Backend in pending /*{
+    val programTester = new ProgramTester(dir + "catchOutOfBounds.wacc")
+    val (exitStatus, output) = programTester.run(programTester.testInput)
+
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
+    output shouldBe programTester.expectedOutput
+  }*/
+
+  it should "execute catchOverflow.wacc" taggedAs Backend in pending /*{
+    val programTester = new ProgramTester(dir + "catchOverflow.wacc")
+    val (exitStatus, output) = programTester.run(programTester.testInput)
+
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
+    output shouldBe programTester.expectedOutput
+  }*/
 }

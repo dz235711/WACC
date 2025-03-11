@@ -1,0 +1,16 @@
+# bad char errors should be caught (code 4)
+
+# Output:
+# error caught with code: 4
+
+begin
+  int asciiCode = 128;
+  try
+    char c = chr asciiCode
+  catch e
+    print "error caught with code: ";
+    print e
+  finally
+    skip
+  yrt
+end

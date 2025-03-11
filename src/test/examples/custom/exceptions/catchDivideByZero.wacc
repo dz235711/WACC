@@ -1,0 +1,17 @@
+# division by zero errors should be caught (code 2)
+
+# Output:
+# error caught with code: 2
+
+begin
+  int numerator = 1;
+  int denominator = 0;
+  try
+    int x = numerator / denominator
+  catch e
+    print "error caught with code: ";
+    print e
+  finally
+    skip
+  yrt
+end

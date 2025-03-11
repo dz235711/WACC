@@ -1,0 +1,16 @@
+# overflow errors should be caught (code 3)
+
+# Output:
+# error caught with code: 3
+
+begin
+  int maxInt = 2147483647;
+  try
+    int x = maxInt + 1
+  catch e
+    print "error caught with code: ";
+    print e
+  finally
+    skip
+  yrt
+end
