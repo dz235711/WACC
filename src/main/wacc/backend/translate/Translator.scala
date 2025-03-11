@@ -790,18 +790,7 @@ class Translator {
       )
       locationCtx.unreserveLast()
 
-    case Mult(e1, e2) =>
-      binary(
-        e1,
-        e2,
-        { (regOp1, locOp2) => SignedMul(Some(regOp1), locOp2, None)(IntSize) }
-      )
-
-      // Check for under/overflow runtime error
-      val postErrLabel = instructionCtx.getRuntimeErrorLabel()
-      instructionCtx.addInstruction(Jmp(NotOverflow, postErrLabel))
-      translateStmt(Throw(IntLiter(Clib.OverflowExceptionCode)))
-      instructionCtx.addInstruction(DefineLabel(postErrLabel))
+    case Mult(e1, e2) => binary(e1, e2, { (regOp1, locOp2) => SignedMul(Some(regOp1), locOp2, None)(IntSize) }, true)
 
     case op @ (Div(_, _) | Mod(_, _)) =>
       val (dividendExp, divisorExp) = op match {
@@ -850,23 +839,9 @@ class Translator {
       locationCtx.unreserveLast()
       locationCtx.unreserveLast()
 
-    case TypedAdd(e1, e2) =>
-      binary(e1, e2, { (reg, loc) => Add(reg, loc)(IntSize) })
+    case TypedAdd(e1, e2) => binary(e1, e2, { (reg, loc) => Add(reg, loc)(IntSize) }, true)
 
-      // Check for under/overflow runtime error
-      val postErrLabel = instructionCtx.getRuntimeErrorLabel()
-      instructionCtx.addInstruction(Jmp(NotOverflow, postErrLabel))
-      translateStmt(Throw(IntLiter(Clib.OverflowExceptionCode)))
-      instructionCtx.addInstruction(DefineLabel(postErrLabel))
-
-    case TypedSub(e1, e2) =>
-      binary(e1, e2, { (reg, loc) => Sub(reg, loc)(IntSize) })
-
-      // Check for under/overflow runtime error
-      val postErrLabel = instructionCtx.getRuntimeErrorLabel()
-      instructionCtx.addInstruction(Jmp(NotOverflow, postErrLabel))
-      translateStmt(Throw(IntLiter(Clib.OverflowExceptionCode)))
-      instructionCtx.addInstruction(DefineLabel(postErrLabel))
+    case TypedSub(e1, e2) => binary(e1, e2, { (reg, loc) => Sub(reg, loc)(IntSize) }, true)
 
     case TypedGreater(e1, e2) => cmpExp(e1, e2, { loc => SetGreater(loc)(BoolSize) })
 
@@ -883,9 +858,9 @@ class Translator {
       translateExpr(Equals(e1, e2))
       instructionCtx.addInstruction(Not(dest)(BoolSize))
 
-    case TypedAnd(e1, e2) => binary(e1, e2, { (reg, loc) => And(reg, loc)(BoolSize) })
+    case TypedAnd(e1, e2) => binary(e1, e2, { (reg, loc) => And(reg, loc)(BoolSize) }, false)
 
-    case TypedOr(e1, e2) => binary(e1, e2, { (reg, loc) => Or(reg, loc)(BoolSize) })
+    case TypedOr(e1, e2) => binary(e1, e2, { (reg, loc) => Or(reg, loc)(BoolSize) }, false)
 
     case IntLiter(x) =>
       val dest = locationCtx.getNext
@@ -985,9 +960,9 @@ class Translator {
     val e2Dest = locationCtx.getNext
     locationCtx.regInstr1(dest, Size(e2.getType), { reg => Compare(reg, e2Dest)(Size(e2.getType)) })
     // Move dest to a 1-byte location so that the setter can set the correct byte
-    locationCtx.unreserveLast()
-    val destByte = locationCtx.getNext
+    val destByte = dest
     instructionCtx.addInstruction(setter(destByte))
+    locationCtx.unreserveLast()
 
   /** Get the location of an LValue that is stored on the heap
    *
@@ -1169,19 +1144,24 @@ class Translator {
       e1: Expr,
       e2: Expr,
       instr: (Register, Location) => Instruction,
-      check1: Option[Location => Unit] = None,
-      check2: Option[(Location, Location) => Unit] = None
+      checkOverflow: Boolean
   )(using
       instructionCtx: InstructionContext,
       locationCtx: LocationContext
   ): Unit = {
     translateExpr(e1)
     val dest = locationCtx.reserveNext()
-    if check1.isDefined then check1.get(dest)
-    val e2Dest = locationCtx.getNext
-    if check2.isDefined then check2.get(dest, e2Dest)
     translateExpr(e2)
+    val e2Dest = locationCtx.getNext
+
     locationCtx.regInstr1(dest, Size(e1.getType), { reg => instr(reg, e2Dest) })
+
+    if (checkOverflow)
+      val postErrLabel = instructionCtx.getRuntimeErrorLabel()
+      instructionCtx.addInstruction(Jmp(NotOverflow, postErrLabel))
+      translateStmt(Throw(IntLiter(Clib.OverflowExceptionCode)))
+      instructionCtx.addInstruction(DefineLabel(postErrLabel))
+
     locationCtx.unreserveLast()
   }
 }
