@@ -957,9 +957,9 @@ class Translator {
     val e2Dest = locationCtx.getNext
     locationCtx.regInstr1(dest, Size(e2.getType), { reg => Compare(reg, e2Dest)(Size(e2.getType)) })
     // Move dest to a 1-byte location so that the setter can set the correct byte
-    locationCtx.unreserveLast()
-    val destByte = locationCtx.getNext
+    val destByte = dest
     instructionCtx.addInstruction(setter(destByte))
+    locationCtx.unreserveLast()
 
   /** Get the location of an LValue that is stored on the heap
    *

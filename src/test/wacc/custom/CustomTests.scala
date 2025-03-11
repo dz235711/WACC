@@ -22,11 +22,11 @@ class CustomTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute compareLotsOfLocals.wacc" taggedAs Frontend in pending /*{
+  it should "execute compareLotsOfLocals.wacc" taggedAs Frontend in {
     val programTester = new ProgramTester(dir + "compareLotsOfLocals.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 }
