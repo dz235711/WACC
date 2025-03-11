@@ -13,6 +13,9 @@ final class Interpreter {
 
   // CONSTANTS
 
+  /** Mask to bind the exit code to the least significant 8 bits */
+  private val ExitCodeMask = 0xff
+
   /** String representation of null pointer */
   private val NullPointerString = "(nil)"
 
@@ -114,7 +117,7 @@ final class Interpreter {
       case Exit(e) =>
         println(ExitString)
         interpretExpr(e) match {
-          case i: Int => sys.exit(i)
+          case i: Int => sys.exit(i & ExitCodeMask) // Since exit is bounded to 8 bits
           case _      => throw new TypeMismatchException(ExitErrorString)
         }
       case Print(e) =>
