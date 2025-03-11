@@ -91,10 +91,10 @@ pair(int, pair) _intListMerge(pair(int, pair) intList1, pair(int, pair) intList2
         
         # compare the values and append the smaller one
         if v1 < v2 then
-          pair(int, pair) sorted = call intListAppend(sorted, v1);
+          sorted = call intListAppend(sorted, v1);
           node1 = call _intListNextNode(node1)
         else
-          pair(int, pair) sorted = call intListAppend(sorted, v2);
+          sorted = call intListAppend(sorted, v2);
           node2 = call _intListNextNode(node2)
         fi
 
@@ -105,14 +105,14 @@ pair(int, pair) _intListMerge(pair(int, pair) intList1, pair(int, pair) intList2
         # first list is non-empty
         while node1 != leafNode do
           int v = call _intListNodeVal(node1);
-          pair(int, pair) sorted = call intListAppend(sorted, v);
+          sorted = call intListAppend(sorted, v);
           node1 = call _intListNextNode(node1)
         done
       else
         # otherwise second list is non-empty
         while node2 != leafNode do
           int v = call _intListNodeVal(node2);
-          pair(int, pair) sorted = call intListAppend(sorted, v);
+          sorted = call intListAppend(sorted, v);
           node2 = call _intListNextNode(node2)
         done
       fi;
@@ -392,6 +392,7 @@ pair(int, pair) intList1 = call intListReversed(intList0);
 pair(int, pair) intList2 = call intListSort(intList0);
 
 _ = call intListPrint(intList0);
-_ = call intListPrint(intList1)
+_ = call intListPrint(intList1);
+_ = call intListPrint(intList2)
 
 end
