@@ -1,8 +1,11 @@
 # uncaught throw should exit with the associated code
 
 # Exit:
-# 2
+# 10
+
+# Output:
+# #runtime_error#
 
 begin
-  throw 258
+  throw 10
 end
