@@ -5,6 +5,7 @@ import org.scalatest.Tag
 
 object Frontend extends Tag("wacc.Frontend")
 object Backend extends Tag("wacc.Backend")
+object Repl extends Tag("wacc.Interpreter")
 
 // Timeout code for the timeout command
 val TimeoutCode = 124
