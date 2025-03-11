@@ -52,7 +52,8 @@ object lexer {
         "false",
         "len",
         "ord",
-        "chr"
+        "chr",
+        "import"
       ),
       hardOperators = Set(
         "!",

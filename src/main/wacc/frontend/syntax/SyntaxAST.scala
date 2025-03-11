@@ -162,8 +162,13 @@ object SyntaxAST {
     override def labels: List[String] = List("function")
   }
 
-  case class Program(fs: List[Func], body: Stmt)(val pos: (Int, Int))
-  object Program extends ParserBridgePos2[List[Func], Stmt, Program] {
+  case class Program(imports: List[Import], fs: List[Func], body: Stmt)(val pos: (Int, Int))
+  object Program extends ParserBridgePos3[List[Import], List[Func], Stmt, Program] {
     override def labels: List[String] = List("program")
+  }
+
+  case class Import(filename: StringLiter)(val pos: (Int, Int))
+  object Import extends ParserBridgePos1[StringLiter, Import] {
+    override def labels: List[String] = List("import")
   }
 }
