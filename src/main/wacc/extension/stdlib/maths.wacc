@@ -64,6 +64,14 @@ begin
     fi
   end
 
+  int abs(int x) is 
+    if x < 0 then
+      return -x
+    else
+      return x
+    fi
+  end
+
     int x = call ninf();
     println x
 end
