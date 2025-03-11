@@ -1,21 +1,27 @@
 begin
+  # calculates the power of a number
   int pow(int x, int n) is
     if n == 0 then
+      # anything to the power of 0 is 1
       return 1
     else
       if n == 1 then 
+        # anything to the power of 1 is itself
         return x
       else
         int half = call pow(x, n / 2);
         if n % 2 == 0 then
+          # if n is even, return half * half (2n = n / 2 + n / 2)
           return half * half
         else
+          # if n is odd, return half * half * x (2n + 1 = n / 2 + n / 2 + 1)
           return half * half * x
         fi
       fi
     fi
   end
 
+  # calculates the factorial of a number
   int fact(int n) is
     int i = 2;
     int acc = 1;
@@ -26,28 +32,33 @@ begin
     return acc
   end
 
+  # calculates the combination of n choose k
   int comb(int n, int k) is
     int p = call perm(n, k);
     int kFact = call fact(k);
     return p / kFact
   end
 
+  # calculates the permutation of n choose k
   int perm(int n, int k) is
     int nFact = call fact(n);
     int nMinusKFact = call fact(n - k);
     return nFact / nMinusKFact
   end
 
+  # returns the positive infinity
   int inf() is
     int uBound = call pow(2, 30);
     return uBound + (uBound - 1)
   end
 
+  # returns the negative infinity
   int ninf() is
     int lBound = call pow(-2, 31);
     return lBound
   end
 
+  # returns the maximum of two numbers
   int max(int x, int y) is
     if x > y then
       return x
@@ -56,6 +67,7 @@ begin
     fi
   end
 
+  # returns the minimum of two numbers
   int min(int x, int y) is
     if x < y then
       return x
@@ -64,6 +76,7 @@ begin
     fi
   end
 
+  # returns the absolute value of a number
   int abs(int x) is 
     if x < 0 then
       return -x
@@ -72,6 +85,77 @@ begin
     fi
   end
 
-    int x = call ninf();
-    println x
-end
+  # calculates the greatest common divisor of two numbers
+  int gcd(int a, int b) is
+    if b == 0 then
+      # if b is 0, a is the gcd
+      return a
+    else
+      # recursive call to gcd with the remainder of a divided by b
+      int gcd = call gcd(b, a % b);
+      return gcd
+    fi
+  end
+
+  # calculates the least common multiple of two numbers
+  int lcm(int a, int b) is
+    # gcd of a and b
+    int gcd = call gcd(a, b);
+
+    # lcm is a * (b / gcd)
+    int lcm = a * (b / gcd);
+    return lcm
+  end
+
+  # helper for rounded log functions, performs ceiled log but also returns the exponented value to allow further manipulation
+  pair(int, int) _preRoundedLog(int n, int base) is
+    int count = 0;
+    int acc = 1;
+
+    # reduce n by one power as otherwise it might overflow if n is int limit
+    int reduced = n / base;
+    while acc < reduced do
+      acc = acc * base;
+      count = count + 1
+    done;
+    pair(int, int) res = newpair(count, acc);
+    return res
+  end
+
+  # log and then ceil the result
+  int ceiledLog(int n, int base) is
+    # get the power and the exponented value
+    pair(int, int) res = call _preRoundedLog(n, base);
+    int count = fst res;
+    int acc = snd res;
+
+    # if the exponented value is less than n, return power + 1 as the actual would be a decimal in between that and the power returned from helper
+    if acc < n then
+      count = count + 1
+    else
+      skip
+    fi;
+
+    # free the temporary pair
+    free res;
+
+    return count
+  end
+
+  # log and then floor the result
+  int flooredLog(int x, int n) is
+    # get the power and the exponented value
+    pair(int, int) res = call _preRoundedLog(x, n);
+
+    # the power is the floored log
+    int count = fst res;
+
+    # free the temporary pair
+    free res;
+
+    return count
+  end
+
+    bool _ = true
+
+  end

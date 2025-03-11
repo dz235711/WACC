@@ -23,25 +23,6 @@ begin
     return lcm
   end
 
-  # helper function to refactor out the logic for rounding up or down
-  int _roundedDiv(pair(int, int) frac, bool flag, int parity) is
-    # get the numerator and denominator of the fraction
-    int num = call getNumerator(frac);
-    int den = call getDenominator(frac);
-
-    # divide the numerator by the denominator to get the rounded down (or up if negative) value of the fraction
-    int res = num / den;
-
-    # if the fraction is not an integer, round up or down based on the flag (defined and explained in wrapper functions)
-    if num % den != 0 && flag then
-      # modify result
-      res = res + parity
-    else
-      skip
-    fi;
-    return res
-  end
-
   int pow(int x, int n) is
     if n == 0 then
       return 1
@@ -162,7 +143,26 @@ begin
     return true
   end
 
-    # round fraction up to the nearest integer
+  # helper function to refactor out the logic for rounding up or down
+  int _roundedDiv(pair(int, int) frac, bool flag, int parity) is
+    # get the numerator and denominator of the fraction
+    int num = call getNumerator(frac);
+    int den = call getDenominator(frac);
+
+    # divide the numerator by the denominator to get the rounded down (or up if negative) value of the fraction
+    int res = num / den;
+
+    # if the fraction is not an integer, round up or down based on the flag (defined and explained in wrapper functions)
+    if num % den != 0 && flag then
+      # modify result
+      res = res + parity
+    else
+      skip
+    fi;
+    return res
+  end
+
+  # round fraction up to the nearest integer
   int ceil(pair(int, int) frac) is
     # only add one if fraction is positive as negative division automatically rounds up due to smaller absolute values now being considered larger
     bool isPos = call fractionIsPositive(frac);
