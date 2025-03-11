@@ -52,7 +52,13 @@ object lexer {
         "false",
         "len",
         "ord",
-        "chr"
+        "chr",
+        // Exception keywords
+        "throw",
+        "try",
+        "catch",
+        "finally",
+        "yrt"
       ),
       hardOperators = Set(
         "!",

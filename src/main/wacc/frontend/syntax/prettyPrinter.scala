@@ -85,6 +85,11 @@ def prettyPrintStmt(s: Stmt): String =
     case Begin(body) =>
       "begin\n" + prettyPrintStmt(body).indent(INDENTATION_SIZE) + "end"
     case Semi(s1, s2) => prettyPrintStmt(s1) + ";\n" + prettyPrintStmt(s2)
+    case Throw(e)     => "throw " + prettyPrintExpr(e)
+    case TryCatchFinally(t, c, cBody, f) =>
+      "try\n" + prettyPrintStmt(t).indent(INDENTATION_SIZE)
+        + "catch " + prettyPrintExpr(c) + "\n" + prettyPrintStmt(cBody).indent(INDENTATION_SIZE)
+        + "finally\n" + prettyPrintStmt(f).indent(INDENTATION_SIZE) + "yrt"
 
 def prettyPrintFunc(f: Func): String = {
   val Func((t, v), params, body) = f

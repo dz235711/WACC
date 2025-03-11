@@ -1,0 +1,15 @@
+# the exception code is caught and printed
+
+# Output:
+# 314
+#
+
+begin
+  try
+    throw 314
+  catch e
+    println e
+  finally
+    skip
+  yrt
+end
