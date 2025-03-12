@@ -30,10 +30,29 @@ class ImportsTests extends AnyFlatSpec {
   }
 
   // Testing whether multiple files can be imported
+  it should "frontend analyse multipleImports.wacc" taggedAs (Frontend, Imports) in {
+    frontendStatus(dir + "multipleImports.wacc") shouldBe 0
+  }
 
   // Testing whether circular dependencies result in an error
+  it should "frontend analyse circularDependency.wacc" taggedAs (Frontend, Imports) in pending /*{
+    frontendStatus(dir + "circularDependency.wacc") should not be 0
+  } */ // TODO: Finish after separate import stage is merged in
+
+  // Testing whether the filename ends in .wacc
 
   // Testing whether nested imports work
+  it should "frontend analyse nestedImports.wacc" taggedAs (Frontend, Imports) in {
+    val result = runFrontend(readFile(dir + "nestedImports.wacc").get, true)
+    result match {
+      case Left(err) =>
+        val sb = new StringBuilder()
+        err._2.foldRight(sb)((e, acc) => printWaccError(e, acc))
+        throw new Exception(sb.toString())
+      case Right(ast) => ast
+    }
+    frontendStatus(dir + "nestedImports.wacc") shouldBe 0
+  }
 
   // Testing whether an error is flagged for a non-existent file
 

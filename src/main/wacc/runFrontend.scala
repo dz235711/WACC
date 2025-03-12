@@ -4,6 +4,25 @@ import parsley.{Failure, Success}
 import WaccErrorBuilder.{format, setLines}
 import parsley.errors.ErrorBuilder
 
+/** Recurses through all imports of the program and parses them
+ * 
+ * @param ast_ The program AST 
+ * @return A list of either the imported ASTs or a list of errors
+ * 
+*/
+private def getAllImports(ast_ : SyntaxAST.Program)(implicit
+    errBuilder: ErrorBuilder[WaccError],
+    errCtx: ListContext[WaccError]
+): List[Either[(Int, List[WaccError]), SyntaxAST.Program]] = {
+  ast_.imports.flatMap { (file: SyntaxAST.Import) =>
+    val importedLines = readFile(file.filename.s).getOrElse(List())
+    parser.parse(importedLines.mkString("\n")) match {
+      case Success(ast) => Right(ast) :: getAllImports(ast)
+      case Failure(err) => Left((100, List(format(err, None, ErrType.Syntax)))) :: Nil
+    }
+  }
+}
+
 /** Runs the frontend of the compiler (parser, renamer, type checker)
  *
  * @param linesList List of lines from the input file
@@ -30,13 +49,8 @@ def runFrontend(linesList: List[String], verbose: Boolean): Either[(Int, List[Wa
     _ = printVerboseInfo(verbose, "Pretty-Printed AST", prettyPrint(syntaxAST), Console.GREEN)
 
     // Parse the imported files
-    imports = syntaxAST.imports.map { (file: SyntaxAST.Import) =>
-      val importedLines = readFile(file.filename.s).getOrElse(List())
-      parser.parse(importedLines.mkString("\n")) match {
-        case Success(ast) => Right(ast)
-        case Failure(err) => Left((100, List(format(err, None, ErrType.Syntax))))
-      }
-    }
+    imports = getAllImports(syntaxAST)
+    _ = printVerboseInfo(verbose, "Imports", imports, Console.CYAN)
 
     // Get the imported ASTs and report any errors in included files
     (importErrs, importASTs) = imports.partitionMap(identity)

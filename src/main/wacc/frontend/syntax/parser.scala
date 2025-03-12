@@ -86,7 +86,7 @@ object parser {
   private lazy val importFile: Parsley[Import] = Import("import" ~> StringLiter(str))
   private lazy val prog: Parsley[Program] =
     Program(
-      sepBy(importFile, "\n"),
+      sepBy(importFile, ";"),
       "begin".explain("Programs must start with begin") ~> many(func),
       stmt
         .explain(
