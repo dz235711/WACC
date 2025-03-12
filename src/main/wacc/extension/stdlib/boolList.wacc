@@ -1,354 +1,294 @@
 begin
 
-# ========== IntList Module Functions ==========
+# ========== BoolList Module Functions ==========
 
-# helper function to get contents from an int list
-pair(int, pair) _intListContents(pair(int, pair) intList) is
-  pair(int, pair) node = snd intList;
+# helper function to get contents from a bool list
+pair(bool, pair) _boolListContents(pair(int, pair) boolList) is
+  pair(bool, pair) node = snd boolList;
   return node
 end
 
-# helper function to get next node from an int list
-pair(int, pair) _intListNextNode(pair(int, pair) node) is
-  pair(int, pair) nextNode = snd node;
+# helper function to get next node from a bool list
+pair(bool, pair) _boolListNextNode(pair(bool, pair) node) is
+  pair(bool, pair) nextNode = snd node;
   return nextNode
 end
 
-# helper function to get value from an int list node
-int _intListNodeVal(pair(int, pair) node) is
-  int v = fst node;
+# helper function to get value from a bool list node
+bool _boolListNodeVal(pair(bool, pair) node) is
+  bool v = fst node;
   return v
 end
 
-# helper function to assign next node to an int list node
-bool _intListAsgnNextNode(pair(int, pair) node, pair(int, pair) newNode) is
+# helper function to assign next node to a bool list node
+bool _boolListAsgnNextNode(pair(bool, pair) node, pair(bool, pair) newNode) is
   snd node = newNode;
   return true
 end
 
-# helper function to assign value to an int list node
-bool _intListAsgnVal(pair(int, pair) node, int v) is
+# helper function to assign value to a bool list node
+bool _boolListAsgnVal(pair(bool, pair) node, bool v) is
   fst node = v;
   return true
 end
 
-# helper function to create an int list node
-pair(int, pair) _intList(int length, pair(int, pair) node) is
+# helper function to create a bool list node
+pair(int, pair) _boolList(int length, pair(bool, pair) node) is
   pair(int, pair) lenNode = newpair(length, node);
   return lenNode
 end
 
-# helper function to create an int list node with value
-pair(int, pair) _intListNode(int v, pair(int, pair) node) is
-  pair(int, pair) newNode = newpair(v, node);
+# helper function to create a bool list node with value
+pair(bool, pair) _boolListNode(bool v, pair(bool, pair) node) is
+  pair(bool, pair) newNode = newpair(v, node);
   return newNode
 end
 
-# helper function to create an int list leaf node
-pair(int, pair) _intListLeafNode() is
+# helper function to create an bool list leaf node
+pair(bool, pair) _boolListLeafNode() is
   return null
 end
 
-# helper function to add to an length of an int list
-bool _intListAddLength(pair(int, pair) intList, int diff) is
-  int length = call intListLen(intList);
-  fst intList = length + diff;
+# helper function to add to an length of an bool list
+bool _boolListAddLength(pair(int, pair) boolList, int diff) is
+  int length = call boolListLen(boolList);
+  fst boolList = length + diff;
   return true
 end
 
-# helper function to merge two int lists
-pair(int, pair) _intListMerge(pair(int, pair) intList1, pair(int, pair) intList2) is
-
-  # compute whether the lists are empty
-  bool isEmpty1 = call intListIsEmpty(intList1);
-  bool isEmpty2 = call intListIsEmpty(intList2);
-
-  # copy the lists so we dont modify the originals
-  pair(int, pair) intList1Copy = call intListCopy(intList1);
-  pair(int, pair) intList2Copy = call intListCopy(intList2);
-
-  if isEmpty1 then
-    # if the first list is empty, return the second list
-    bool _ = call intListFree(intList1Copy);
-    return intList2Copy
-  else
-    if isEmpty2 then
-      # if the second list is empty, return the first list
-      bool _ = call intListFree(intList2Copy);
-      return intList1Copy
-    else
-      # get the first node of each list
-      pair(int, pair) node1 = call _intListContents(intList1Copy);
-      pair(int, pair) node2 = call _intListContents(intList2Copy);
-
-      # get the leaf node for comparison and construction
-      pair(int, pair) leafNode = call _intListLeafNode();
-      pair(int, pair) sorted = call _intList(0, leafNode);
-
-      # merge the two lists
-      while node1 != leafNode && node2 != leafNode do
-        # get the values of the nodes
-        int v1 = call _intListNodeVal(node1);
-        int v2 = call _intListNodeVal(node2);
-        
-        # compare the values and append the smaller one
-        if v1 < v2 then
-          sorted = call intListAppend(sorted, v1);
-          node1 = call _intListNextNode(node1)
-        else
-          sorted = call intListAppend(sorted, v2);
-          node2 = call _intListNextNode(node2)
-        fi
-
-      done;
-
-      # append the remaining elements of the non-empty list
-      if node1 != leafNode then
-        # first list is non-empty
-        while node1 != leafNode do
-          int v = call _intListNodeVal(node1);
-          sorted = call intListAppend(sorted, v);
-          node1 = call _intListNextNode(node1)
-        done
-      else
-        # otherwise second list is non-empty
-        while node2 != leafNode do
-          int v = call _intListNodeVal(node2);
-          sorted = call intListAppend(sorted, v);
-          node2 = call _intListNextNode(node2)
-        done
-      fi;
-
-      # free the copied lists
-      bool _ = call intListFree(intList1Copy);
-      _ = call intListFree(intList2Copy);
-
-      return sorted
-    fi
-  fi
-end
-
-bool _intListFreeLenNode(pair(int, pair) intList) is
-  free intList;
+# helper function to free the length node of a bool list
+bool _boolListFreeLenNode(pair(int, pair) boolList) is
+  free boolList;
   return true
 end
 
-bool _intListFreeContents(pair(int, pair) contents) is
-  pair(int, pair) node = contents;
-  pair(int, pair) leafNode = call _intListLeafNode();
+# helper function to free the contents of a bool list
+bool _boolListFreeContents(pair(bool, pair) contents) is
+  pair(bool, pair) node = contents;
+  pair(bool, pair) leafNode = call _boolListLeafNode();
   while node != leafNode do
-    pair(int, pair) nextNode = call _intListNextNode(node);
+    pair(bool, pair) nextNode = call _boolListNextNode(node);
     free node;
     node = nextNode
   done;
   return true
 end
   
-# gets length of an int list
-int intListLen(pair(int, pair) intList) is
-  int l = fst intList;
+# gets length of a bool list
+int boolListLen(pair(int, pair) boolList) is
+  int l = fst boolList;
   return l
 end
 
-# checks if an int list is empty
-bool intListIsEmpty(pair(int, pair) intList) is
-  int length = call intListLen(intList);
+# checks if a bool list is empty
+bool boolListIsEmpty(pair(int, pair) boolList) is
+  int length = call boolListLen(boolList);
   return length == 0
 end
 
-# creates a singleton int list
-pair(int, pair) intListSingleton(int v) is
-  pair(int, pair) leaf = call _intListLeafNode();
-  pair(int, pair) node = call _intListNode(v, leaf);
-  pair(int, pair) intList = call _intList(1, node);
-  bool _ = call _intListAsgnNextNode(intList, node);
-  return intList
+# creates a singleton bool list
+pair(int, pair) boolListSingleton(bool v) is
+  pair(bool, pair) leaf = call _boolListLeafNode();
+  pair(bool, pair) node = call _boolListNode(v, leaf);
+  pair(int, pair) boolList = call _boolList(1, node);
+  return boolList
 end
 
-# inserts an element into an int list
-pair(int, pair) intListInsert(pair(int, pair) intList, int index, int v) is
+# inserts an element into a bool list
+pair(int, pair) boolListInsert(pair(int, pair) boolList, int index, bool v) is
 
   # split the list at the index
-  pair(int, pair) dropped = call intListDrop(intList, index);
-  pair(int, pair) taken = call intListTake(intList, index);
-
+  pair(int, pair) dropped = call boolListDrop(boolList, index);
+  pair(int, pair) taken = call boolListTake(boolList, index);
+  
   # create a new node for the value
-  pair(int, pair) newList = call intListSingleton(v);
-  pair(int, pair) newNode = call _intListContents(newList);
+  pair(int, pair) newList = call boolListSingleton(v);
+  pair(bool, pair) newNode = call _boolListContents(newList);
 
   # get the contents of the dropped list
-  pair(int, pair) droppedContents = call _intListContents(dropped);
+  pair(bool, pair) droppedContents = call _boolListContents(dropped);
 
   # free the length node of the dropped list
-  bool _ = call _intListFreeLenNode(dropped);
+  bool _ = call _boolListFreeLenNode(dropped);
 
   # link the new node to the dropped list
-  _ = call _intListAsgnNextNode(newNode, droppedContents);
+  _ = call _boolListAsgnNextNode(newNode, droppedContents);
 
   # link the new node to the front of the list
-  pair(int, pair) concat = call intListConcat(taken, newList);
+  pair(int, pair) concat = call boolListConcat(taken, newList);
 
   return concat
 end
 
-# concatenates two int lists
-pair(int, pair) intListConcat(pair(int, pair) intList1, pair(int, pair) intList2) is
+# concatenates two bool lists
+pair(int, pair) boolListConcat(pair(int, pair) boolList1, pair(int, pair) boolList2) is
 
   # check if the lists are empty
-  bool isEmpty1 = call intListIsEmpty(intList1);
-  bool isEmpty2 = call intListIsEmpty(intList2);
+  bool isEmpty1 = call boolListIsEmpty(boolList1);
+  bool isEmpty2 = call boolListIsEmpty(boolList2);
 
   # copy the lists so we dont modify the originals
-  pair(int, pair) intList1Copy = call intListCopy(intList1);
-  pair(int, pair) intList2Copy = call intListCopy(intList2);
+  pair(int, pair) boolList1Copy = call boolListCopy(boolList1);
+  pair(int, pair) boolList2Copy = call boolListCopy(boolList2);
 
   # if one of the lists is empty, return the other
   if isEmpty1 then
-    bool _ = call intListFree(intList1Copy);
-    return intList2Copy
+    bool _ = call boolListFree(boolList1Copy);
+    return boolList2Copy
   else
     if isEmpty2 then
-      bool _ = call intListFree(intList2Copy);
-      return intList1Copy
+      bool _ = call boolListFree(boolList2Copy);
+      return boolList1Copy
     else
       # find the last node of the first list
-      pair(int, pair) node1 = intList1Copy;
-      pair(int, pair) nextNode1 = call _intListContents(node1);
-      pair(int, pair) leafNode = call _intListLeafNode();
+      pair(bool, pair) leafNode = call _boolListLeafNode();
+      pair(bool, pair) node1 = leafNode;
+      pair(bool, pair) nextNode1 = call _boolListContents(boolList1Copy);
       while nextNode1 != leafNode do
         node1 = nextNode1;
-        nextNode1 = call _intListNextNode(node1)
+        nextNode1 = call _boolListNextNode(node1)
       done;
 
       # link first node of the second list to the last node of the first list
-      pair(int, pair) node2 = call _intListContents(intList2Copy);
-      bool _ = call _intListAsgnNextNode(node1, node2);
-      int length2 = call intListLen(intList2Copy);
-      _ = call _intListAddLength(intList1Copy, length2);
+      pair(bool, pair) node2 = call _boolListContents(boolList2Copy);
+      bool _ = call _boolListAsgnNextNode(node1, node2);
+      int length2 = call boolListLen(boolList2Copy);
+      _ = call _boolListAddLength(boolList1Copy, length2);
 
       # free the length node of second list
-      _ = call _intListFreeLenNode(intList2Copy);
+      _ = call _boolListFreeLenNode(boolList2Copy);
 
-      return intList1Copy
+      return boolList1Copy
     fi
   fi
 end
 
-# converts an int array to an int list
-pair(int, pair) toIntList(int[] arr) is
+# converts a bool array to a bool list
+pair(int, pair) toBoolList(bool[] arr) is
+  pair(bool, pair) leafNode = call _boolListLeafNode();
+  int length = len arr;
+  
+  # if arr is empty then we construct an empty list
+  if length == 0 then
+    pair(int, pair) boolList = call _boolList(0, leafNode);
+    return boolList
+  else 
+    skip
+  fi;
 
   # create a stub list
-  int length = len arr;
-  pair(int, pair) leafNode = call _intListLeafNode();
-  pair(int, pair) intList = call _intList(length, leafNode);
-  int i = 0;
-  pair(int, pair) node = intList;
+  pair(bool, pair) node = call _boolListNode(arr[0], leafNode);
+  pair(int, pair) boolList = call _boolList(length, node);
+  int i = 1;
 
   # iterate through the array and add elements to the list
   while i < length do
-    pair(int, pair) newNode = call _intListNode(arr[i], leafNode);
-    bool _ = call _intListAsgnNextNode(node, newNode);
+    pair(bool, pair) newNode = call _boolListNode(arr[i], leafNode);
+    bool _ = call _boolListAsgnNextNode(node, newNode);
     node = newNode;
     i = i + 1
   done;
-  return intList
+
+  return boolList
 end
 
-# takes the first n elements of an int list
-pair(int, pair) intListTake(pair(int, pair) intList, int taking) is
-pair(int, pair) leafNode = call _intListLeafNode();
+# takes the first n elements of a bool list
+pair(int, pair) boolListTake(pair(int, pair) boolList, int taking) is
+pair(bool, pair) leafNode = call _boolListLeafNode();
 
   # if taking is 0, return a singleton list
   if taking == 0 then
-    pair(int, pair) singleton = call _intList(0, leafNode);
+    pair(int, pair) singleton = call _boolList(0, leafNode);
     return singleton
   else
 
     # create a new list with the first n elements
-    pair(int, pair) intListCopy = call intListCopy(intList);
-    pair(int, pair) node = call _intListContents(intListCopy);
+    pair(int, pair) boolListCopy = call boolListCopy(boolList);
+    pair(bool, pair) node = call _boolListContents(boolListCopy);
     int i = 0;
     while i < taking - 1 do
-      node = call _intListNextNode(node);
+      node = call _boolListNextNode(node);
       i = i + 1
     done;
 
-    pair(int, pair) nextNode = call _intListNextNode(node);
+    pair(bool, pair) nextNode = call _boolListNextNode(node);
     
     # free the rest of the list
-    bool _ = call _intListFreeContents(nextNode);
+    bool _ = call _boolListFreeContents(nextNode);
     
     # assign a leaf node to cut off the rest of the array
-    _ = call _intListAsgnNextNode(node, leafNode);
+    _ = call _boolListAsgnNextNode(node, leafNode);
 
     # add the length of the new list
-    int length = call intListLen(intListCopy);
-    _ = call _intListAddLength(intListCopy, taking - length);
-    return intListCopy
+    int length = call boolListLen(boolListCopy);
+    _ = call _boolListAddLength(boolListCopy, taking - length);
+    return boolListCopy
   fi
 end
 
-# drops the first n elements of an int list
-pair(int, pair) intListDrop(pair(int, pair) intList, int dropping) is
+# drops the first n elements of a bool list
+pair(int, pair) boolListDrop(pair(int, pair) boolList, int dropping) is
 
   # get the node after the dropping index
-  pair(int, pair) node = call _intListContents(intList);
+  pair(bool, pair) node = call _boolListContents(boolList);
   int i = 0;
   while i < dropping do
-    node = call _intListNextNode(node);
+    node = call _boolListNextNode(node);
     i = i + 1
   done;
 
   # create a new list with the remaining elements
-  int length = call intListLen(intList);
-  pair(int, pair) wrapped = call _intList(length, node);
-  pair(int, pair) wrappedCopy = call intListCopy(wrapped);
-
-  # free the len node of wrapped
-  bool _ = call _intListFreeLenNode(wrapped);
+  int length = call boolListLen(boolList);
+  pair(int, pair) wrapped = call _boolList(length, node);
 
   # subtract the length of the new list
-  _ = call _intListAddLength(wrappedCopy, -dropping);
+  bool _ = call _boolListAddLength(wrapped, -dropping);
+
+  pair(int, pair) wrappedCopy = call boolListCopy(wrapped);
+
+  # free the len node of wrapped
+  _ = call _boolListFreeLenNode(wrapped);
+  
   return wrappedCopy
 end
 
-# gets the element at an index of an int list
-int intListGet(pair(int, pair) intList, int index) is
+# gets the element at an index of a bool list
+bool intListGet(pair(int, pair) boolList, int index) is
 
   # split the list at the index
-  pair(int, pair) dropped = call intListDrop(intList, index);
-  pair(int, pair) contents = call _intListContents(dropped);
+  pair(int, pair) dropped = call boolListDrop(boolList, index);
+  pair(bool, pair) contents = call _boolListContents(dropped);
 
   # get the value of the ith node
-  int v = call _intListNodeVal(contents);
+  bool v = call _boolListNodeVal(contents);
 
   # free the dropped list
-  bool _ = call intListFree(dropped);
+  bool _ = call boolListFree(dropped);
 
   return v
 end
 
-# prints an int list
-bool intListPrint(pair(int, pair) intList) is
+# prints a bool list
+bool boolListPrint(pair(int, pair) boolList) is
   print '[';
 
   # check if the list is empty
-  bool intListIsEmpty = call intListIsEmpty(intList);
-  if intListIsEmpty then
+  bool boolListIsEmpty = call boolListIsEmpty(boolList);
+  if boolListIsEmpty then
     skip
   else
 
     # iterate through the list and print elements
-    pair(int, pair) node = call _intListContents(intList);
-    int v = call _intListNodeVal(node);
-    pair(int, pair) nextNode = call _intListNextNode(node);
-    pair(int, pair) leafNode = call _intListLeafNode();
+    pair(bool, pair) node = call _boolListContents(boolList);
+    bool v = call _boolListNodeVal(node);
+    pair(bool, pair) nextNode = call _boolListNextNode(node);
+    pair(bool, pair) leafNode = call _boolListLeafNode();
     while nextNode != leafNode do
       print v;
       print ", ";
       node = nextNode;
-      v = call _intListNodeVal(node);
-      nextNode = call _intListNextNode(node)
+      v = call _boolListNodeVal(node);
+      nextNode = call _boolListNextNode(node)
 
     done;
     print v
@@ -357,108 +297,101 @@ bool intListPrint(pair(int, pair) intList) is
   return true
 end
 
-# copies an int list
-pair(int, pair) intListCopy(pair(int, pair) intList) is
+# copies a bool list
+pair(int, pair) boolListCopy(pair(int, pair) boolList) is
+  pair(bool, pair) leafNode = call _boolListLeafNode();
+  int length = call boolListLen(boolList);
+
+  # if the list is empty, return an empty list
+  if length == 0 then
+    pair(int, pair) boolListCopy = call _boolList(0, leafNode);
+    return boolListCopy
+  else 
+    skip
+  fi;
+
   # create a new list
-  int length = call intListLen(intList);
-  pair(int, pair) leafNode = call _intListLeafNode();
-  pair(int, pair) intListCopy = call _intList(length, leafNode);
-  pair(int, pair) node = call _intListContents(intList);
-  pair(int, pair) copyNode = intListCopy;
+  pair(bool, pair) node = call _boolListContents(boolList);
+  bool v = call _boolListNodeVal(node);
+  pair(bool, pair) copyNode = call _boolListNode(v, leafNode);
+  pair(int, pair) boolListCopy = call _boolList(length, copyNode);
+  node = call _boolListNextNode(node);
 
   # iterate through the list and copy elements
   while node != leafNode do
-    int v = call _intListNodeVal(node);
-    pair(int, pair) newNode = call _intListNode(v, leafNode);
-    bool _ = call _intListAsgnNextNode(copyNode, newNode);
+    bool v = call _boolListNodeVal(node);
+    pair(bool, pair) newNode = call _boolListNode(v, leafNode);
+    bool _ = call _boolListAsgnNextNode(copyNode, newNode);
     copyNode = newNode;
-    node = call _intListNextNode(node)
+    node = call _boolListNextNode(node)
   done;
-  return intListCopy
+  return boolListCopy
 end
 
-# replaces the element at an index of an int list
-pair(int, pair) intListReplace(pair(int, pair) intList, int index, int value) is
+# replaces the element at an index of a bool list
+pair(int, pair) boolListReplace(pair(int, pair) boolList, int index, bool value) is
   # split the list at the index
-  pair(int, pair) taken = call intListTake(intList, index);
-  pair(int, pair) dropped = call intListDrop(intList, index);
-  pair(int, pair) node = call _intListContents(dropped);
+  pair(int, pair) taken = call boolListTake(boolList, index);
+  pair(int, pair) dropped = call boolListDrop(boolList, index);
+  pair(bool, pair) node = call _boolListContents(dropped);
 
   # assign the new value to the node
-  bool _ = call _intListAsgnVal(node, value);
-  pair(int, pair) concat = call intListConcat(taken, dropped);
+  bool _ = call _boolListAsgnVal(node, value);
+  pair(int, pair) concat = call boolListConcat(taken, dropped);
 
   return concat
 end
 
-# appends an element to an int list
-pair(int, pair) intListAppend(pair(int, pair) intList, int value) is 
-  int length = call intListLen(intList);
-  pair(int, pair) intListInserted = call intListInsert(intList, length, value);
-  return intListInserted
+# appends an element to bool list
+pair(int, pair) boolListAppend(pair(int, pair) boolList, bool value) is 
+  int length = call boolListLen(boolList);
+  pair(int, pair) boolListInserted = call boolListInsert(boolList, length, value);
+  return boolListInserted
 end
 
-# reverses an int list
-pair(int, pair) intListReversed(pair(int, pair) intList) is
+# reverses an bool list
+pair(int, pair) boolListReversed(pair(int, pair) boolList) is
 
   # create a new list
-  pair(int, pair) leafNode = call _intListLeafNode();
-  pair(int, pair) intListReversed = call _intList(0, leafNode);
+  pair(bool, pair) leafNode = call _boolListLeafNode();
+  pair(int, pair) boolListReversed = call _boolList(0, leafNode);
 
   # get the first node
-  pair(int, pair) node = call _intListContents(intList);
+  pair(bool, pair) node = call _boolListContents(boolList);
 
   # iterate through the list and appends elements to the new list in reverse
   while node != leafNode do
     # get the value of the node and make an inserted list
-    int v = call _intListNodeVal(node);
-    pair(int, pair) nextIntListReversed = call intListInsert(intListReversed, 0, v);
+    bool v = call _boolListNodeVal(node);
+    pair(int, pair) nextboolListReversed = call boolListInsert(boolListReversed, 0, v);
 
     # free the old list
-    bool _ = call intListFree(intListReversed);
+    bool _ = call boolListFree(boolListReversed);
 
-    intListReversed = nextIntListReversed;
-    node = call _intListNextNode(node)
+    boolListReversed = nextboolListReversed;
+    node = call _boolListNextNode(node)
   done;
-  return intListReversed
+  return boolListReversed
 end
 
-# sorts an int list
-pair(int, pair) intListSort(pair(int, pair) intList) is
-
-  # base case: if the list is empty or has one element, return it
-  int length = call intListLen(intList);
-  if length <= 1 then
-    return intList
-  else
-
-    # split the list in half
-    int mid = length / 2;
-    pair(int, pair) left = call intListTake(intList, mid);
-    pair(int, pair) right = call intListDrop(intList, mid);
-
-    # recursively sort the halves
-    pair(int, pair) sortedLeft = call intListSort(left);
-    pair(int, pair) sortedRight = call intListSort(right);
-
-    # merge the sorted halves
-    pair(int, pair) sorted = call _intListMerge(sortedLeft, sortedRight);
-    return sorted
-  fi
-end
-
-# frees every node in an int list
-bool intListFree(pair(int, pair) intList) is
+# frees every node in a bool list
+bool boolListFree(pair(int, pair) boolList) is
 
   # free the contents
-  pair(int, pair) contents = call _intListContents(intList);
-  bool _ = call _intListFreeContents(contents);
+  pair(bool, pair) contents = call _boolListContents(boolList);
+  bool _ = call _boolListFreeContents(contents);
 
   # free the length node
-  _ = call _intListFreeLenNode(intList);
+  _ = call _boolListFreeLenNode(boolList);
 
   return true
 end
 
-bool _ = true
+bool _ = true;
+
+bool[] a = [true, true, true, false, true, false];
+pair(int, pair) boolList = call toBoolList(a);
+pair(int, pair) boolListSorted = call boolListCopy(boolList);
+_ = call boolListPrint(boolListSorted)
+
 end
