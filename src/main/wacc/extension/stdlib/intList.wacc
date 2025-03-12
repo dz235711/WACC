@@ -69,10 +69,12 @@ pair(int, pair) _intListMerge(pair(int, pair) intList1, pair(int, pair) intList2
 
   if isEmpty1 then
     # if the first list is empty, return the second list
+    bool _ = call intListFree(intList1Copy);
     return intList2Copy
   else
     if isEmpty2 then
       # if the second list is empty, return the first list
+      bool _ = call intListFree(intList2Copy);
       return intList1Copy
     else
       # get the first node of each list
@@ -116,9 +118,30 @@ pair(int, pair) _intListMerge(pair(int, pair) intList1, pair(int, pair) intList2
           node2 = call _intListNextNode(node2)
         done
       fi;
+
+      # free the copied lists
+      bool _ = call intListFree(intList1Copy);
+      _ = call intListFree(intList2Copy);
+
       return sorted
     fi
   fi
+end
+
+bool _intListFreeLenNode(pair(int, pair) intList) is
+  free intList;
+  return true
+end
+
+bool _intListFreeContents(pair(int, pair) contents) is
+  pair(int, pair) node = contents;
+  pair(int, pair) leafNode = call _intListLeafNode();
+  while node != leafNode do
+    pair(int, pair) nextNode = call _intListNextNode(node);
+    free node;
+    node = nextNode
+  done;
+  return true
 end
   
 # gets length of an int list
@@ -144,6 +167,7 @@ end
 
 # inserts an element into an int list
 pair(int, pair) intListInsert(pair(int, pair) intList, int index, int v) is
+
   # split the list at the index
   pair(int, pair) dropped = call intListDrop(intList, index);
   pair(int, pair) taken = call intListTake(intList, index);
@@ -155,8 +179,11 @@ pair(int, pair) intListInsert(pair(int, pair) intList, int index, int v) is
   # get the contents of the dropped list
   pair(int, pair) droppedContents = call _intListContents(dropped);
 
+  # free the length node of the dropped list
+  bool _ = call _intListFreeLenNode(dropped);
+
   # link the new node to the dropped list
-  bool _ = call _intListAsgnNextNode(newNode, droppedContents);
+  _ = call _intListAsgnNextNode(newNode, droppedContents);
 
   # link the new node to the front of the list
   pair(int, pair) concat = call intListConcat(taken, newList);
@@ -166,6 +193,7 @@ end
 
 # concatenates two int lists
 pair(int, pair) intListConcat(pair(int, pair) intList1, pair(int, pair) intList2) is
+
   # check if the lists are empty
   bool isEmpty1 = call intListIsEmpty(intList1);
   bool isEmpty2 = call intListIsEmpty(intList2);
@@ -176,9 +204,11 @@ pair(int, pair) intListConcat(pair(int, pair) intList1, pair(int, pair) intList2
 
   # if one of the lists is empty, return the other
   if isEmpty1 then
+    bool _ = call intListFree(intList1Copy);
     return intList2Copy
   else
     if isEmpty2 then
+      bool _ = call intListFree(intList2Copy);
       return intList1Copy
     else
       # find the last node of the first list
@@ -195,6 +225,10 @@ pair(int, pair) intListConcat(pair(int, pair) intList1, pair(int, pair) intList2
       bool _ = call _intListAsgnNextNode(node1, node2);
       int length2 = call intListLen(intList2Copy);
       _ = call _intListAddLength(intList1Copy, length2);
+
+      # free the length node of second list
+      _ = call _intListFreeLenNode(intList2Copy);
+
       return intList1Copy
     fi
   fi
@@ -222,12 +256,14 @@ end
 
 # takes the first n elements of an int list
 pair(int, pair) intListTake(pair(int, pair) intList, int taking) is
+pair(int, pair) leafNode = call _intListLeafNode();
+
   # if taking is 0, return a singleton list
   if taking == 0 then
-    pair(int, pair) leafNode = call _intListLeafNode();
     pair(int, pair) singleton = call _intList(0, leafNode);
     return singleton
   else
+
     # create a new list with the first n elements
     pair(int, pair) intListCopy = call intListCopy(intList);
     pair(int, pair) node = call _intListContents(intListCopy);
@@ -237,16 +273,24 @@ pair(int, pair) intListTake(pair(int, pair) intList, int taking) is
       i = i + 1
     done;
 
+    pair(int, pair) nextNode = call _intListNextNode(node);
+    
+    # free the rest of the list
+    bool _ = call _intListFreeContents(nextNode);
+    
+    # assign a leaf node to cut off the rest of the array
+    _ = call _intListAsgnNextNode(node, leafNode);
+
     # add the length of the new list
-    snd node = call _intListLeafNode();
     int length = call intListLen(intListCopy);
-    bool _ = call _intListAddLength(intListCopy, taking - length);
+    _ = call _intListAddLength(intListCopy, taking - length);
     return intListCopy
   fi
 end
 
 # drops the first n elements of an int list
 pair(int, pair) intListDrop(pair(int, pair) intList, int dropping) is
+
   # get the node after the dropping index
   pair(int, pair) node = call _intListContents(intList);
   int i = 0;
@@ -258,18 +302,29 @@ pair(int, pair) intListDrop(pair(int, pair) intList, int dropping) is
   # create a new list with the remaining elements
   int length = call intListLen(intList);
   pair(int, pair) wrapped = call _intList(length, node);
-  wrapped = call intListCopy(wrapped);
+  pair(int, pair) wrappedCopy = call intListCopy(wrapped);
+
+  # free the len node of wrapped
+  bool _ = call _intListFreeLenNode(wrapped);
 
   # subtract the length of the new list
-  bool _ = call _intListAddLength(wrapped, -dropping);
-  return wrapped
+  _ = call _intListAddLength(wrappedCopy, -dropping);
+  return wrappedCopy
 end
 
 # gets the element at an index of an int list
 int intListGet(pair(int, pair) intList, int index) is
+
+  # split the list at the index
   pair(int, pair) dropped = call intListDrop(intList, index);
   pair(int, pair) contents = call _intListContents(dropped);
+
+  # get the value of the ith node
   int v = call _intListNodeVal(contents);
+
+  # free the dropped list
+  bool _ = call intListFree(dropped);
+
   return v
 end
 
@@ -345,16 +400,25 @@ end
 
 # reverses an int list
 pair(int, pair) intListReversed(pair(int, pair) intList) is
+
   # create a new list
-  int i = call intListLen(intList);
   pair(int, pair) leafNode = call _intListLeafNode();
   pair(int, pair) intListReversed = call _intList(0, leafNode);
 
+  # get the first node
+  pair(int, pair) node = call _intListContents(intList);
+
   # iterate through the list and appends elements to the new list in reverse
-  while i > 0 do
-    int v = call intListGet(intList, i - 1);
-    intListReversed = call intListAppend(intListReversed, v); # TODO: use insert
-    i = i - 1
+  while node != leafNode do
+    # get the value of the node and make an inserted list
+    int v = call _intListNodeVal(node);
+    pair(int, pair) nextIntListReversed = call intListInsert(intListReversed, 0, v);
+
+    # free the old list
+    bool _ = call intListFree(intListReversed);
+
+    intListReversed = nextIntListReversed;
+    node = call _intListNextNode(node)
   done;
   return intListReversed
 end
@@ -383,16 +447,18 @@ pair(int, pair) intListSort(pair(int, pair) intList) is
   fi
 end
 
+# frees every node in an int list
+bool intListFree(pair(int, pair) intList) is
 
-bool _ = true;
-int[] arr = [3, 4, 2, 6, 1, 5];
+  # free the contents
+  pair(int, pair) contents = call _intListContents(intList);
+  bool _ = call _intListFreeContents(contents);
 
-pair(int, pair) intList0 = call toIntList(arr);
-pair(int, pair) intList1 = call intListReversed(intList0);
-pair(int, pair) intList2 = call intListSort(intList0);
+  # free the length node
+  _ = call _intListFreeLenNode(intList);
 
-_ = call intListPrint(intList0);
-_ = call intListPrint(intList1);
-_ = call intListPrint(intList2)
+  return true
+end
 
+bool _ = true
 end

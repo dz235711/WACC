@@ -216,8 +216,7 @@ begin
     int nums = approx / factor;
     int decs = approx % factor;
 
-    bool a = decs < 0;
-    if (a && num >= 0) then
+    if (decs < 0 && nums >= 0) then
       # if the number is negative, print the negative sign
       print("-");
 
