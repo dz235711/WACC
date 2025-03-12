@@ -509,7 +509,7 @@ begin
 
   # approximate 0-90 degrees of the sine function
   pair(int, int) _sinApprox(int deg) is
-    # implementation of sin(Θ) ≈ 4Θ(180 - Θ) / (40500 - Θ(180 - Θ))
+    # implementation of sin(Θ) ≈ 4Θ(180 - Θ) / (40500 - Θ(180 - Θ)) for 0 <= Θ <= 180
 
     # calculate the numerator
     int num = 4 * deg * (180 - deg);
