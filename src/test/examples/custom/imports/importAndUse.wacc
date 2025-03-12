@@ -1,3 +1,5 @@
+import "src/test/examples/custom/imports/exampleProg.wacc"
+
 begin
     int x = call f(7);
     println(x)
