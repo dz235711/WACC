@@ -32,7 +32,7 @@ bool _intListAsgnVal(pair(int, pair) node, int v) is
   return true
 end
 
-# helper function to create an int list
+# helper function to create an int list node
 pair(int, pair) _intList(int length, pair(int, pair) node) is
   pair(int, pair) lenNode = newpair(length, node);
   return lenNode
@@ -128,13 +128,11 @@ pair(int, pair) _intListMerge(pair(int, pair) intList1, pair(int, pair) intList2
   fi
 end
 
-# helper function to free the length node of an int list
 bool _intListFreeLenNode(pair(int, pair) intList) is
   free intList;
   return true
 end
 
-# helper function to free the contents of an int list
 bool _intListFreeContents(pair(int, pair) contents) is
   pair(int, pair) node = contents;
   pair(int, pair) leafNode = call _intListLeafNode();
@@ -163,6 +161,7 @@ pair(int, pair) intListSingleton(int v) is
   pair(int, pair) leaf = call _intListLeafNode();
   pair(int, pair) node = call _intListNode(v, leaf);
   pair(int, pair) intList = call _intList(1, node);
+  bool _ = call _intListAsgnNextNode(intList, node);
   return intList
 end
 
@@ -237,21 +236,13 @@ end
 
 # converts an int array to an int list
 pair(int, pair) toIntList(int[] arr) is
-  pair(int, pair) leafNode = call _intListLeafNode();
-  int length = len arr;
-
-  # if arr is empty then we construct an empty list
-  if length == 0 then
-    pair(int, pair) intList = call _intList(0, leafNode);
-    return intList
-  else 
-    skip
-  fi;
 
   # create a stub list
-  pair(int, pair) node = call _intListNode(arr[0], leafNode);
-  pair(int, pair) intList = call _intList(length, node);
-  int i = 1;
+  int length = len arr;
+  pair(int, pair) leafNode = call _intListLeafNode();
+  pair(int, pair) intList = call _intList(length, leafNode);
+  int i = 0;
+  pair(int, pair) node = intList;
 
   # iterate through the array and add elements to the list
   while i < length do
@@ -260,7 +251,6 @@ pair(int, pair) toIntList(int[] arr) is
     node = newNode;
     i = i + 1
   done;
-  
   return intList
 end
 
@@ -312,15 +302,13 @@ pair(int, pair) intListDrop(pair(int, pair) intList, int dropping) is
   # create a new list with the remaining elements
   int length = call intListLen(intList);
   pair(int, pair) wrapped = call _intList(length, node);
-
-  # subtract the length of the new list
-  bool _ = call _intListAddLength(wrapped, -dropping);
-
   pair(int, pair) wrappedCopy = call intListCopy(wrapped);
 
   # free the len node of wrapped
-  _ = call _intListFreeLenNode(wrapped);
+  bool _ = call _intListFreeLenNode(wrapped);
 
+  # subtract the length of the new list
+  _ = call _intListAddLength(wrappedCopy, -dropping);
   return wrappedCopy
 end
 
@@ -371,23 +359,12 @@ end
 
 # copies an int list
 pair(int, pair) intListCopy(pair(int, pair) intList) is
-  pair(int, pair) leafNode = call _intListLeafNode();
-  int length = call intListLen(intList);
-
-  # if the list is empty, return an empty list
-  if length == 0 then
-    pair(int, pair) charListCopy = call _intList(0, leafNode);
-    return charListCopy
-  else 
-    skip
-  fi;
-
   # create a new list
+  int length = call intListLen(intList);
+  pair(int, pair) leafNode = call _intListLeafNode();
+  pair(int, pair) intListCopy = call _intList(length, leafNode);
   pair(int, pair) node = call _intListContents(intList);
-  int v = call _intListNodeVal(node);
-  pair(int, pair) copyNode = call _intListNode(v, leafNode);
-  pair(int, pair) intListCopy = call _intList(length, copyNode);
-  node = call _intListNextNode(node);
+  pair(int, pair) copyNode = intListCopy;
 
   # iterate through the list and copy elements
   while node != leafNode do
@@ -483,11 +460,5 @@ bool intListFree(pair(int, pair) intList) is
   return true
 end
 
-bool _ = true;
-
-int[] a = [2, 3, 4, 1, 5];
-pair(int, pair) intList = call toIntList(a);
-pair(int, pair) intList2 = call intListSort(intList);
-_ = call intListPrint(intList2)
-
+bool _ = true
 end
