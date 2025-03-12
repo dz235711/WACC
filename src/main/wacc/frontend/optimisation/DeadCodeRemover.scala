@@ -11,6 +11,12 @@ class DeadCodeRemover {
   private val g = Graph[Int, AnyDiEdge]()
   private val MainNode = -1
 
+  /** Removes dead functions from the program.
+   * We consider a function dead if it is not reachable from the main function.
+   *
+   * @param prog The program to remove dead functions from
+   * @return The program with dead functions removed
+   */
   def removeDeadCode(prog: Program): Program = {
     // Populate the graph with the functions
     g.add(MainNode)
