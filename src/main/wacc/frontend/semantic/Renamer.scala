@@ -26,9 +26,13 @@ class Renamer private {
    * @param p The program to rename (ast)
    * @return The renamed program (RenamedAST)
    */
-  def renameProgram(p: SyntaxAST.Program)(using ctx: ListContext[WaccError]): RenamedAST.Program = {
+  def renameProgram(p: SyntaxAST.Program, imports: List[SyntaxAST.Program])(using
+      ctx: ListContext[WaccError]
+  ): RenamedAST.Program = {
+    // Get the imported functions and create a list of all functions
+    val allFuncs = imports.flatMap(_.fs) ++ p.fs
     // Generate unique identifiers for all functions
-    val fids = p.fs.map(f => {
+    val fids = allFuncs.map(f => {
       val (t, id) = f.decl
       val name = id.v
       val uid = generateUid()
@@ -52,7 +56,7 @@ class Renamer private {
     })
 
     // Rename all functions and the body
-    val renamedFuncs = p.fs.zip(fids).map(renameFunc)
+    val renamedFuncs = allFuncs.zip(fids).map(renameFunc)
     val renamedBody = renameStmt(p.body, Map(), Map(), false)._1
 
     // Return the renamed program
@@ -391,7 +395,9 @@ class Renamer private {
 }
 
 object Renamer extends Renamer {
-  def rename(p: SyntaxAST.Program)(using ctx: ListContext[WaccError]): RenamedAST.Program =
+  def rename(p: SyntaxAST.Program, imports: List[SyntaxAST.Program])(using
+      ctx: ListContext[WaccError]
+  ): RenamedAST.Program =
     val renamer = new Renamer()
-    renamer.renameProgram(p)
+    renamer.renameProgram(p, imports)
 }

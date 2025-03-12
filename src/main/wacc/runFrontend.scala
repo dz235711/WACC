@@ -29,8 +29,21 @@ def runFrontend(linesList: List[String], verbose: Boolean): Either[(Int, List[Wa
     // Print pretty-printed AST
     _ = printVerboseInfo(verbose, "Pretty-Printed AST", prettyPrint(syntaxAST), Console.GREEN)
 
+    // Parse the imported files
+    imports = syntaxAST.imports.map { (file: SyntaxAST.Import) =>
+      val importedLines = readFile(file.filename.s).getOrElse(List())
+      parser.parse(importedLines.mkString("\n")) match {
+        case Success(ast) => Right(ast)
+        case Failure(err) => Left((100, List(format(err, None, ErrType.Syntax))))
+      }
+    }
+
+    // Get the imported ASTs and report any errors in included files
+    (importErrs, importASTs) = imports.partitionMap(identity)
+    _ <- if (importErrs.nonEmpty) Left((100, importErrs.flatMap(_._2))) else Right(importASTs)
+
     // Semantic analysis
-    renamedAST = Renamer.rename(syntaxAST)
+    renamedAST = Renamer.rename(syntaxAST, importASTs)
     _ = printVerboseInfo(verbose, "Renamed AST", renamedAST, Console.BLUE)
 
     typedAST = TypeChecker().checkProg(renamedAST)
