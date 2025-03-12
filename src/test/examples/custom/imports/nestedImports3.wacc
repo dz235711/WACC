@@ -1,0 +1,6 @@
+begin
+    int f(int x) is 
+        return x + 1
+    end
+    skip
+end

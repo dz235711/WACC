@@ -1,0 +1,4 @@
+import "src/test/examples/custom/imports/nestedImports3.wacc"
+begin
+    skip
+end
