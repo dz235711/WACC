@@ -142,6 +142,9 @@ object SyntaxAST {
   case class While(cond: Expr, body: Stmt)(val pos: (Int, Int)) extends Stmt, StmtErrorBridge
   case class Begin(body: Stmt)(val pos: (Int, Int)) extends Stmt, StmtErrorBridge
   case class Semi(s1: Stmt, s2: Stmt)(val pos: (Int, Int)) extends Stmt, StmtErrorBridge
+  case class Throw(e: Expr)(val pos: (Int, Int)) extends Stmt
+  case class TryCatchFinally(tryBody: Stmt, catchIdent: Ident, catchBody: Stmt, finallyBody: Stmt)(val pos: (Int, Int))
+      extends Stmt
 
   object Skip extends ParserBridgePos0[Skip]
   object Decl extends ParserBridgePos3[Type, Ident, RValue, Decl]
@@ -156,6 +159,8 @@ object SyntaxAST {
   object While extends ParserBridgePos2[Expr, Stmt, While]
   object Begin extends ParserBridgePos1[Stmt, Begin]
   object Semi extends ParserBridgePos2[Stmt, Stmt, Semi]
+  object Throw extends ParserBridgePos1[Expr, Throw]
+  object TryCatchFinally extends ParserBridgePos4[Stmt, Ident, Stmt, Stmt, TryCatchFinally]
 
   case class Func(decl: FuncDecl, params: List[Param], body: Stmt)(val pos: (Int, Int)) extends PositionalNode
   object Func extends ParserBridgePos3[FuncDecl, List[Param], Stmt, Func] {

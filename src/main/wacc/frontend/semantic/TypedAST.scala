@@ -76,6 +76,8 @@ object TypedAST {
   case class While(cond: Expr, body: Stmt) extends Stmt
   case class Begin(body: Stmt) extends Stmt
   case class Semi(s1: Stmt, s2: Stmt) extends Stmt
+  case class Throw(e: Expr) extends Stmt
+  case class TryCatchFinally(body: Stmt, catchIdent: Ident, catchBody: Stmt, finallyBody: Stmt) extends Stmt
 
   case class Func(v: Ident, params: List[Ident], body: Stmt)
 

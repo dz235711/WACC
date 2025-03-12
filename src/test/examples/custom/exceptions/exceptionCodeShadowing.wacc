@@ -1,0 +1,16 @@
+# the exception code should shadow local variables
+
+# Output:
+# 314
+#
+
+begin
+  int e = 0;
+  try
+    throw 314
+  catch e
+    println e
+  finally
+    skip
+  yrt
+end

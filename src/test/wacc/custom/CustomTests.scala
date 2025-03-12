@@ -13,4 +13,28 @@ class CustomTests extends AnyFlatSpec {
   it should "frontend analyse nestedNegate.wacc" taggedAs Frontend in {
     frontendStatus(dir + "nestedNegate.wacc") shouldBe 0
   }
+
+  it should "execute conditionalStackSpace.wacc" taggedAs Frontend in {
+    val programTester = new ProgramTester(dir + "conditionalStackSpace.wacc")
+    val (exitStatus, output) = programTester.run(programTester.testInput)
+
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
+    output shouldBe programTester.expectedOutput
+  }
+
+  it should "execute compareLotsOfLocals.wacc" taggedAs Frontend in {
+    val programTester = new ProgramTester(dir + "compareLotsOfLocals.wacc")
+    val (exitStatus, output) = programTester.run(programTester.testInput)
+
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
+    output shouldBe programTester.expectedOutput
+  }
+
+  it should "execute overflowLotsOfLocals.wacc" taggedAs Frontend in {
+    val programTester = new ProgramTester(dir + "overflowLotsOfLocals.wacc")
+    val (exitStatus, output) = programTester.run(programTester.testInput)
+
+    exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
+    output shouldBe programTester.expectedOutput
+  }
 }

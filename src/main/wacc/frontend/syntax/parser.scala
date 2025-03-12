@@ -16,12 +16,13 @@ object parser {
 
   // Helpers
   private def endsInReturn(s: Stmt): Boolean = s match {
-    case Exit(_)     => true
-    case Return(_)   => true
-    case Semi(_, b)  => endsInReturn(b)
-    case Begin(b)    => endsInReturn(b)
-    case If(_, t, e) => endsInReturn(t) && endsInReturn(e)
-    case _           => false
+    case Exit(_)                     => true
+    case Return(_)                   => true
+    case Semi(_, b)                  => endsInReturn(b)
+    case Begin(b)                    => endsInReturn(b)
+    case If(_, t, e)                 => endsInReturn(t) && endsInReturn(e)
+    case TryCatchFinally(t, _, c, f) => (endsInReturn(t) && endsInReturn(c)) || endsInReturn(f)
+    case _                           => false
   }
 
   private lazy val arrayElem: Parsley[ArrayElem] =
@@ -120,7 +121,14 @@ object parser {
         PrintLn("println" ~> expr),
         If("if" ~> expr, "then" ~> stmt, "else" ~> stmt <~ "fi"),
         While("while" ~> expr, "do" ~> stmt <~ "done"),
-        Begin("begin" ~> stmt <~ "end")
+        Begin("begin" ~> stmt <~ "end"),
+        Throw("throw" ~> expr),
+        TryCatchFinally(
+          "try" ~> stmt,
+          "catch" ~> Ident(ident),
+          stmt,
+          "finally" ~> stmt <~ "yrt"
+        )
       )
     )(Semi <# ";")
   private lazy val lvalue: Parsley[LValue] = choice(

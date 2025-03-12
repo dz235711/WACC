@@ -1,0 +1,19 @@
+# make sure the catch block runs when an exception is thrown
+
+# Output:
+
+# Exit:
+# 10
+
+# Program:
+
+begin
+  try
+    throw 1
+  catch e
+    exit 10
+  finally
+    skip
+  yrt;
+  exit 11
+end
