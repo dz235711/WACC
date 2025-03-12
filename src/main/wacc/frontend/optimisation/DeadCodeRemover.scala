@@ -9,7 +9,7 @@ class DeadCodeRemover {
   // Node is function's ident's UID
   // Edge is a call from one function to another
   private val g = Graph[Int, AnyDiEdge]()
-  private val MainNode = -1
+  private val MainCode = -1
 
   /** Removes dead functions from the program.
    * We consider a function dead if it is not reachable from the main function.
@@ -19,14 +19,14 @@ class DeadCodeRemover {
    */
   def removeDeadCode(prog: Program): Program = {
     // Populate the graph with the functions
-    g.add(MainNode)
+    g.add(MainCode)
     for (func <- prog.fs) {
       g.add(func.v.v.UID)
     }
 
     // Add edges to the graph
     for (callee <- callsFrom(prog.body)) {
-      g.add(MainNode ~> callee)
+      g.add(MainCode ~> callee)
     }
     for (func <- prog.fs) {
       val caller = func.v.v.UID
@@ -36,12 +36,14 @@ class DeadCodeRemover {
     }
 
     // Remove unreachable functions
-    val reachable = g.get(MainNode).diSuccessors
-    val reachableFuncs = prog.fs.filter(func => reachable.contains(g.get(func.v.v.UID)))
+    val mainNode = g.get(MainCode)
+    val reachableFuncIds = mainNode.withSubgraph().toSet - mainNode
+    val reachableFuncs = prog.fs.filter(func => reachableFuncIds.contains(g.get(func.v.v.UID)))
+
     Program(reachableFuncs, prog.body)(prog.pos)
   }
 
-  private def callsFrom(funcBody: Stmt): List[Int] = funcBody match {
+  private def callsFrom(funcBody: Stmt): Set[Int] = funcBody match {
     // Recursive cases
     case Semi(s1, s2)   => callsFrom(s1) ++ callsFrom(s2)
     case If(_, s1, s2)  => callsFrom(s1) ++ callsFrom(s2)
@@ -50,8 +52,8 @@ class DeadCodeRemover {
     case TryCatchFinally(tryBody, _, catchBody, finallyBody) =>
       callsFrom(tryBody) ++ callsFrom(catchBody) ++ callsFrom(finallyBody)
     // Base cases
-    case Decl(_, Call(v, _)) => List(v.v.UID)
-    case Asgn(_, Call(v, _)) => List(v.v.UID)
-    case _                   => List()
+    case Decl(_, Call(v, _)) => Set(v.v.UID)
+    case Asgn(_, Call(v, _)) => Set(v.v.UID)
+    case _                   => Set.empty
   }
 }
