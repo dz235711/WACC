@@ -7,6 +7,9 @@
 //> using dep org.scala-graph::graph-core::2.0.2
 //> using test.dep org.scalatest::scalatest::3.2.19
 
+// some dependencies import their own test frameworks, so we need to override them
+//> using testFramework org.scalatest.tools.Framework
+
 // these are all sensible defaults to catch annoying issues
 //> using options -deprecation -unchecked -feature
 //> using options -Wimplausible-patterns -Wunused:all
