@@ -1,7 +1,7 @@
 package wacc
 
 import parsley.{Failure, Success}
-import WaccErrorBuilder.{format, setLines}
+import WaccErrorBuilder.{format, setLines, constructSpecialised}
 import parsley.errors.ErrorBuilder
 
 /** Recurses through all imports of the program and parses them
@@ -15,10 +15,16 @@ private def getAllImports(ast_ : SyntaxAST.Program)(implicit
     errCtx: ListContext[WaccError]
 ): List[Either[(Int, List[WaccError]), SyntaxAST.Program]] = {
   ast_.imports.flatMap { (file: SyntaxAST.Import) =>
-    val importedLines = readFile(file.filename.s).getOrElse(List())
-    parser.parse(importedLines.mkString("\n")) match {
-      case Success(ast) => Right(ast) :: getAllImports(ast)
-      case Failure(err) => Left((100, List(format(err, None, ErrType.Syntax)))) :: Nil
+    readFile(file.filename.s) match {
+      case Some(importedLines) =>
+        parser.parse(importedLines.mkString("\n")) match {
+          case Success(ast) => Right(ast) :: getAllImports(ast)
+          case Failure(err) => Left((100, List(format(err, None, ErrType.Syntax)))) :: Nil
+        }
+      case None =>
+        Left(
+          (100, List(constructSpecialised(file.pos, file.filename.s.length, s"File not found: ${file.filename.s}")))
+        ) :: Nil
     }
   }
 }

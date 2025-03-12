@@ -2,11 +2,10 @@ package wacc
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers.*
-import java.io.FileNotFoundException
 
 class ImportsTests extends AnyFlatSpec {
   val dir = "src/test/examples/custom/imports/"
-  val frontendErrorMessage = "Frontend failed to run"
+  val FrontendErrorMessage = "Frontend failed to run"
 
   // Testing whether a file can be imported, but not used
   it should "provide unchanged AST when importing a file without using it" taggedAs (Frontend, Imports) in pending /*{
@@ -39,22 +38,17 @@ class ImportsTests extends AnyFlatSpec {
     frontendStatus(dir + "circularDependency.wacc") should not be 0
   } */ // TODO: Finish after separate import stage is merged in
 
-  // Testing whether the filename ends in .wacc
+  // Testing whether an error is flagged for incorrect file format
 
   // Testing whether nested imports work
   it should "frontend analyse nestedImports.wacc" taggedAs (Frontend, Imports) in {
-    val result = runFrontend(readFile(dir + "nestedImports.wacc").get, true)
-    result match {
-      case Left(err) =>
-        val sb = new StringBuilder()
-        err._2.foldRight(sb)((e, acc) => printWaccError(e, acc))
-        throw new Exception(sb.toString())
-      case Right(ast) => ast
-    }
     frontendStatus(dir + "nestedImports.wacc") shouldBe 0
   }
 
   // Testing whether an error is flagged for a non-existent file
+  it should "flag an error for a non-existent file" taggedAs (Frontend, Imports) in {
+    getFrontendErrors(dir + "nonExistentImport.wacc") should include("File not found")
+  }
 
   // Testing behaviour when a file is imported multiple times
 

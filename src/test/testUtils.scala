@@ -40,3 +40,17 @@ def compareFrontend(path: String, expected: TypedAST.Program): Boolean =
     case Left(_) => false
     case Right(ast) =>
       ast.toString() == expected.toString()
+
+/** Give error output for the frontend, with an empty string if there are no errors
+ * 
+ * @param path Path to the file
+ * @return The error output of the frontend 
+*/
+def getFrontendErrors(path: String): String =
+  runFrontend(readFile(path).get, false) match {
+    case Left(err) =>
+      val sb = new StringBuilder()
+      err._2.foldRight(sb)((e, acc) => printWaccError(e, acc))
+      sb.toString()
+    case Right(ast) => ""
+  }
