@@ -6,6 +6,10 @@ import wacc.TypedAST._
 import scala.compiletime.uninitialized
 import scala.collection.mutable.ListBuffer
 
+type BoolExpr = BoolLiter | Not | Greater | GreaterEq | Smaller | SmallerEq | Equals | NotEquals | And | Or
+type IntExpr = IntLiter | Negate | Ord | Len | Mult | Mod | Add | Div | Sub
+type CharExpr = Chr | CharLiter
+
 type VariableScope = MapContext[Id, Value]
 type FunctionScope = MapContext[Id, (List[Ident], Stmt)]
 
@@ -211,29 +215,10 @@ final class Interpreter {
     */
   private def interpretExpr(e: Expr)(using scope: VariableScope): Value =
     e match {
-      case Not(e)    => !(e.asInstanceOf[Boolean])
-      case Negate(e) => -(e.asInstanceOf[Int])
-      case Len(e)    => (e.asInstanceOf[ArrayValue]).length
-      case Ord(e)    => (e.asInstanceOf[Char]).toInt // TODO: Check if this is consistent with WACC ord
-      case Chr(e)    => (e.asInstanceOf[Int]).toChar // TODO: Check if this is consistent with WACC chr
+      case e: BoolExpr => interpretBool(e)
+      case e: IntExpr  => interpretInt(e)
+      case e: CharExpr => interpretChar(e)
 
-      case Mult(e1, e2)      => binaryArithmetic(e1, e2, _ * _)
-      case Mod(e1, e2)       => binaryArithmetic(e1, e2, _ % _)
-      case Add(e1, e2)       => binaryArithmetic(e1, e2, _ + _)
-      case Div(e1, e2)       => binaryArithmetic(e1, e2, _ / _)
-      case Sub(e1, e2)       => binaryArithmetic(e1, e2, _ - _)
-      case Greater(e1, e2)   => binaryCompare(e1, e2, _ > _, _ > _)
-      case GreaterEq(e1, e2) => binaryCompare(e1, e2, _ >= _, _ >= _)
-      case Smaller(e1, e2)   => binaryCompare(e1, e2, _ < _, _ < _)
-      case SmallerEq(e1, e2) => binaryCompare(e1, e2, _ <= _, _ <= _)
-      case Equals(e1, e2)    => interpretExpr(e1) == interpretExpr(e2)
-      case NotEquals(e1, e2) => interpretExpr(e1) != interpretExpr(e2)
-      case And(e1, e2)       => interpretExpr(e1).asInstanceOf[Boolean] && interpretExpr(e2).asInstanceOf[Boolean]
-      case Or(e1, e2)        => interpretExpr(e1).asInstanceOf[Boolean] || interpretExpr(e2).asInstanceOf[Boolean]
-
-      case IntLiter(x)    => x
-      case BoolLiter(b)   => b
-      case CharLiter(c)   => c
       case StringLiter(s) => s
       case PairLiter      => UninitalizedPair.instance
 
@@ -259,11 +244,110 @@ final class Interpreter {
       case NestedExpr(e, _) => interpretExpr(e)
     }
 
+  /** Interprets a given expression as a boolean. Will throw an exception if the type of the expression is not a boolean.
+    *
+    * @param e The expression to be evaluated as a boolean
+    * @return The boolean as a result of evalutaing `e`
+    */
+  private def interpretBool(e: Expr)(using scope: VariableScope): Boolean =
+    e match {
+      case Not(e) => !interpretBool(e)
+
+      case Greater(e1, e2)   => binaryCompare(e1, e2, _ > _, _ > _)
+      case GreaterEq(e1, e2) => binaryCompare(e1, e2, _ >= _, _ >= _)
+      case Smaller(e1, e2)   => binaryCompare(e1, e2, _ < _, _ < _)
+      case SmallerEq(e1, e2) => binaryCompare(e1, e2, _ <= _, _ <= _)
+      case Equals(e1, e2)    => interpretExpr(e1) == interpretExpr(e2)
+      case NotEquals(e1, e2) => interpretExpr(e1) != interpretExpr(e2)
+      case And(e1, e2)       => binaryBoolOp(e1, e2, _ && _)
+      case Or(e1, e2)        => binaryBoolOp(e1, e2, _ || _)
+
+      case BoolLiter(b) => b
+
+      case Ident(id, KnownType.BoolType) =>
+        scope.get(id) match {
+          case Some(b: Boolean) => b
+          case Some(_)          => throw new TypeMismatchException("Expected bool.")
+          case None             => throw new VariableNotFoundException(getVariableErrorString(id))
+        } // TODO: Duplicated code
+
+      case _ => throw new TypeMismatchException("Expected bool.")
+    }
+
+  /** Interprets a given expression as an Int. Will throw an exception if the type of the expression is not a Int.
+    *
+    * @param e The expression to be evaluated as an Int
+    * @return The Int as a result of evalutaing `e`
+    */
+  private def interpretInt(e: Expr)(using scope: VariableScope): Int =
+    e match {
+      case Negate(e) => -interpretInt(e)
+      case Ord(e)    => interpretChar(e).toInt // TODO: Check if this is consistent with WACC ord
+      case Len(e)    => interpretExpr(e).asInstanceOf[ArrayValue].length
+
+      case Mult(e1, e2) => binaryArithmetic(e1, e2, _ * _)
+      case Mod(e1, e2)  => binaryArithmetic(e1, e2, _ % _)
+      case Add(e1, e2)  => binaryArithmetic(e1, e2, _ + _)
+      case Div(e1, e2)  => binaryArithmetic(e1, e2, _ / _)
+      case Sub(e1, e2)  => binaryArithmetic(e1, e2, _ - _)
+
+      case IntLiter(x) => x
+
+      case Ident(id, KnownType.IntType) =>
+        scope.get(id) match {
+          case Some(x: Int) => x
+          case Some(_)      => throw new TypeMismatchException("Expected int.")
+          case None         => throw new VariableNotFoundException(getVariableErrorString(id))
+        }
+
+      case _ => throw new TypeMismatchException("Expected int.")
+    }
+
+  /** Interprets a given expression as an Char. Will throw an exception if the type of the expression is not a Char.
+    *
+    * @param e The expression to be evaluated as an Char
+    * @return The Char as a result of evalutaing `e`
+    */
+  private def interpretChar(e: Expr)(using scope: VariableScope): Char =
+    e match {
+      case Chr(e)       => interpretInt(e).toChar
+      case CharLiter(c) => c
+
+      case Ident(id, KnownType.CharType) =>
+        scope.get(id) match {
+          case Some(c: Char) => c
+          case Some(_)       => throw new TypeMismatchException("Expected char.")
+          case None          => throw new VariableNotFoundException(getVariableErrorString(id))
+        }
+
+      case _ => throw new TypeMismatchException("Expected char.")
+    }
+
+  /** Applies a given arithmetic operation on two integer expressions.
+    *
+    * @param e1 The first integer expression
+    * @param e2 The second integer expression
+    * @param op The arithmetic operation to apply to the expressions
+    * @return The Int as a result of applying the operation on the expressions.
+    */
   private def binaryArithmetic(e1: Expr, e2: Expr, op: (Int, Int) => Int)(using scope: VariableScope): Int =
     op(
-      interpretExpr(e1).asInstanceOf[Int],
-      interpretExpr(e2).asInstanceOf[Int]
-    ) // TODO: Is there a way to avoid this cast?
+      interpretInt(e1),
+      interpretInt(e2)
+    )
+
+  /** Applies a given boolean operation on two boolean expressions.
+    * 
+    * @param e1 The first boolean expression
+    * @param e2 The second boolean expression
+    * @param op The boolean operation to apply to the expression
+    * @return The boolean as a result of applying the operation on the expressions.
+    */
+  private def binaryBoolOp(e1: Expr, e2: Expr, op: (Boolean, Boolean) => Boolean)(using scope: VariableScope): Boolean =
+    op(
+      interpretBool(e1),
+      interpretBool(e2)
+    )
 
   /** Compares two expressions, either integers or characters, using the given comparators. 
    *
@@ -283,7 +367,7 @@ final class Interpreter {
   ): Boolean =
     val evalExpr2 = interpretExpr(e2)
     interpretExpr(e1) match {
-      case i1: Int  => intComparator(i1, evalExpr2.asInstanceOf[Int])
+      case i1: Int  => intComparator(i1, interpretInt(e2))
       case c1: Char => charComparator(c1, evalExpr2.asInstanceOf[Char])
       case _        => throw new TypeMismatchException(ComparisonErrorString)
     }
