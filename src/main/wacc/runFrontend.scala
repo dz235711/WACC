@@ -18,7 +18,7 @@ private def getAllImports(ast: SyntaxAST.Program, imported: Set[String])(implici
   val imports = ast.imports
 
   // Filter out already imported files
-  val newImports = imports.filterNot(file => imported.contains(file.filename.s))
+  val newImports = imports.filterNot(file => imported.contains(file.filename.s)).toSet
 
   // Add the new imports to the set of imported files
   val allImports = imported ++ newImports.map(_.filename.s)

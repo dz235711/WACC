@@ -54,10 +54,10 @@ class ImportsTests extends AnyFlatSpec {
   }
 
   // Testing whether an error is flagged if the same file is imported multiple times
-  it should "allow for the same file to be imported multiple times" taggedAs (Frontend, Imports) in pending /* {
+  it should "allow for the same file to be imported multiple times" taggedAs (Frontend, Imports) in {
     println(getFrontendErrors(dir + "importsSameFile.wacc"))
     frontendStatus(dir + "importsSameFile.wacc") shouldBe 0
-  } */ // TODO: Implement this
+  }
 
   // Testing an error for if a function in a different file shares the same name as a function in the current file
   it should "flag an error for an illegal function re-declaration when imported" taggedAs (Frontend, Imports) in {
