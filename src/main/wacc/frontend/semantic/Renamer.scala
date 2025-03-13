@@ -12,7 +12,7 @@ class Renamer private (inheritedFunctionScope: Option[Map[String, (QualifiedName
   private val functionIds: mutable.Map[String, (QualifiedName, Int)] =
     inheritedFunctionScope match {
       case Some(scope) => mutable.Map.from(scope)
-      case None        => mutable.Map()
+      case None        => mutable.Map.empty
     }
 
   /** Generates a unique identifier.
@@ -58,10 +58,10 @@ class Renamer private (inheritedFunctionScope: Option[Map[String, (QualifiedName
     })
 
     // Rename all functions and the body
-    val parentScope = inheritedScope.getOrElse(Map())
+    val parentScope = inheritedScope.getOrElse(Map.empty)
 
     val renamedFuncs = p.fs.zip(fids).map(renameFunc)
-    val (renamedBody, renamedScope) = renameStmt(p.body, parentScope, Map(), false)
+    val (renamedBody, renamedScope) = renameStmt(p.body, parentScope, Map.empty, false)
 
     // Return the renamed program
     (RenamedAST.Program(renamedFuncs, renamedBody)(p.pos), parentScope ++ renamedScope, functionIds.toMap, uid)

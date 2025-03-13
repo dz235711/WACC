@@ -123,21 +123,21 @@ final class Interpreter(
             case KnownType.IntType => IntLiter(outputStream.readLine().toInt)
             case KnownType.CharType =>
               val inputString = outputStream.readLine()
-              if (inputString.length != 1) throw new BadInputException("Read malformed input. Expected char.")
+              if (inputString.length != 1) throw BadInputException("Read malformed input. Expected char.")
               if ((MIN_CHAR > inputString.head.toInt) || (inputString.head.toInt > MAX_CHAR))
-                throw new BadInputException("Read malformed input. Char is not ASCII 0-127.")
+                throw BadInputException("Read malformed input. Char is not ASCII 0-127.")
               CharLiter(inputString.head)
-            case _ => throw new BadInputException("Read must be called on object of type int or char")
+            case _ => throw BadInputException("Read must be called on object of type int or char")
           }
         ) match {
           case Success(readValue)                                      => handleAssignment(l, readValue)
-          case Failure(e: (BadInputException | NumberFormatException)) => scope
+          case Failure(_: (BadInputException | NumberFormatException)) => scope
           case Failure(exception)                                      => throw exception
         }
       case Free(e) =>
         interpretExpr(e) match {
           case freeable: Freeable => freeable.isFreed = true
-          case _                  => throw new FreedNonFreeableValueException()
+          case _                  => throw FreedNonFreeableValueException()
         }
         scope
       case Return(e) =>
@@ -147,8 +147,8 @@ final class Interpreter(
       case Exit(e) =>
         inputStream.write(ExitString)
         interpretExpr(e) match {
-          case i: Int => throw new InterpreterExitException(i & ExitCodeMask)
-          case _      => throw new TypeMismatchException(ExitErrorString)
+          case i: Int => throw InterpreterExitException(i & ExitCodeMask)
+          case _      => throw TypeMismatchException(ExitErrorString)
         }
       case Print(e) =>
         val value = interpretExpr(e)
@@ -160,7 +160,7 @@ final class Interpreter(
           }
           // WACC prints the pointers of arrays and pairs, but the closest we can get in Scala is the hashcode
           case pointer: (ArrayValue | PairValue) => inputStream.write(pointer.hashCode)
-          case nullPointer: UninitalizedPair     => inputStream.write(NullPointerString)
+          case _: UninitalizedPair     => inputStream.write(NullPointerString)
           case _                                 => inputStream.write(value.toString)
         }
         scope
@@ -171,7 +171,7 @@ final class Interpreter(
       case If(cond, s1, s2) =>
         val evaluatedCond = interpretExpr(cond) match {
           case b: Boolean => b
-          case _          => throw new TypeMismatchException(ConditionErrorString)
+          case _          => throw TypeMismatchException(ConditionErrorString)
         }
 
         if (evaluatedCond) {
@@ -182,7 +182,7 @@ final class Interpreter(
       case While(cond, body) =>
         val evaluatedCond = interpretExpr(cond) match {
           case b: Boolean => b
-          case _          => throw new TypeMismatchException(ConditionErrorString)
+          case _          => throw TypeMismatchException(ConditionErrorString)
         }
 
         if (evaluatedCond) {
@@ -208,7 +208,7 @@ final class Interpreter(
     case pairVal: (Fst | Snd) => getLValue(pairVal)
     case Call(v, args, _)     =>
       // Fetch parameters and body of function
-      val (params, body) = funcScope.get(v.id).getOrElse(throw new FunctionNotFoundException(getFuncErrorString(v.id)))
+      val (params, body) = funcScope.get(v.id).getOrElse(throw FunctionNotFoundException(getFuncErrorString(v.id)))
 
       // Evaluate arguments and put them into a new scope for the function
       val evaluatedArgs = args.map(interpretExpr)
@@ -243,7 +243,7 @@ final class Interpreter(
         scope
           .get(id)
           .getOrElse(
-            throw new VariableNotFoundException(getVariableErrorString(id))
+            throw VariableNotFoundException(getVariableErrorString(id))
           ) // TODO: Proper free handling
       case ArrayElem(v, es, _) =>
         // Evaluate the expression indices
@@ -251,7 +251,7 @@ final class Interpreter(
 
         // Index through the array(s)
         var currentValue =
-          scope.get(v.id).getOrElse(throw new VariableNotFoundException(getVariableErrorString(v.id)))
+          scope.get(v.id).getOrElse(throw VariableNotFoundException(getVariableErrorString(v.id)))
         for (ind <- indices) {
           val arrVal: ArrayValue = currentValue.asInstanceOf[ArrayValue]
           currentValue = arrVal.get(ind)
@@ -284,11 +284,11 @@ final class Interpreter(
       case Ident(id, KnownType.BoolType) =>
         scope.get(id) match {
           case Some(b: Boolean) => b
-          case Some(_)          => throw new TypeMismatchException("Expected bool.")
-          case None             => throw new VariableNotFoundException(getVariableErrorString(id))
+          case Some(_)          => throw TypeMismatchException("Expected bool.")
+          case None             => throw VariableNotFoundException(getVariableErrorString(id))
         } // TODO: Duplicated code
 
-      case _ => throw new TypeMismatchException("Expected bool.")
+      case _ => throw TypeMismatchException("Expected bool.")
     }
 
   /** Interprets a given expression as an Int. Will throw an exception if the type of the expression is not a Int.
@@ -313,11 +313,11 @@ final class Interpreter(
       case Ident(id, KnownType.IntType) =>
         scope.get(id) match {
           case Some(x: Int) => x
-          case Some(_)      => throw new TypeMismatchException("Expected int.")
-          case None         => throw new VariableNotFoundException(getVariableErrorString(id))
+          case Some(_)      => throw TypeMismatchException("Expected int.")
+          case None         => throw VariableNotFoundException(getVariableErrorString(id))
         }
 
-      case _ => throw new TypeMismatchException("Expected int.")
+      case _ => throw TypeMismatchException("Expected int.")
     }
 
   /** Interprets a given expression as an Char. Will throw an exception if the type of the expression is not a Char.
@@ -333,11 +333,11 @@ final class Interpreter(
       case Ident(id, KnownType.CharType) =>
         scope.get(id) match {
           case Some(c: Char) => c
-          case Some(_)       => throw new TypeMismatchException("Expected char.")
-          case None          => throw new VariableNotFoundException(getVariableErrorString(id))
+          case Some(_)       => throw TypeMismatchException("Expected char.")
+          case None          => throw VariableNotFoundException(getVariableErrorString(id))
         }
 
-      case _ => throw new TypeMismatchException("Expected char.")
+      case _ => throw TypeMismatchException("Expected char.")
     }
 
   /** Applies a given arithmetic operation on two integer expressions.
@@ -386,7 +386,7 @@ final class Interpreter(
     interpretExpr(e1) match {
       case i1: Int  => intComparator(i1, interpretInt(e2))
       case c1: Char => charComparator(c1, evalExpr2.asInstanceOf[Char])
-      case _        => throw new TypeMismatchException(ComparisonErrorString)
+      case _        => throw TypeMismatchException(ComparisonErrorString)
     }
 
   /** Handles an assignment statement, updating the variable scope accordingly.
@@ -441,8 +441,8 @@ final class Interpreter(
   private def unpackAsPair(value: Value): PairValue =
     value match {
       case pair: PairValue       => pair
-      case nil: UninitalizedPair => throw new NullDereferencedException()
-      case _                     => throw new TypeMismatchException(UnpackPairErrorString)
+      case _: UninitalizedPair => throw NullDereferencedException()
+      case _                     => throw TypeMismatchException(UnpackPairErrorString)
     }
 }
 

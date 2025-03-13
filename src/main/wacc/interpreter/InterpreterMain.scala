@@ -32,7 +32,7 @@ def interpreterMain()(using
 
   var exitValue: Option[Int] = None
 
-  while (exitValue == None) do
+  while exitValue.isEmpty do
     val frontendResult =
       promptInputAndRunFrontend(renamerScope, renamerFunctionScope, renamerUid, typeCheckerFunctionTable)
     val typedProgram = frontendResult._1
@@ -94,7 +94,7 @@ def promptInputAndRunFrontend(
     newTypedFuncTable = typeCheckerResult._2
 
     // If there are errors, print them and then prompt for input again.
-    !errCtx.get.isEmpty
+    errCtx.get.nonEmpty
   do
     interpreterIn.write(
       errCtx.get
@@ -102,7 +102,7 @@ def promptInputAndRunFrontend(
         .foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc))
         .result()
     )
-    errCtx = new ListContext()
+    errCtx = ListContext()
 
   (typedProgram, newRenamedScope, newRenamedFunctionScope, newUid, newTypedFuncTable)
 }
