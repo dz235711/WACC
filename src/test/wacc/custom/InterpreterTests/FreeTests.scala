@@ -12,22 +12,25 @@ class FreeTests extends AnyFlatSpec {
 
   it should "not allow fst on free pairs" taggedAs Repl in {
     Try(InterpreterTester(dir / "freePairFst.in").getResult()) match {
-      case Success(_) => fail("The interpreter should have thrown an exception!")
-      case Failure(_) => ()
+      case Success(_)                            => fail("The interpreter should have thrown an exception!")
+      case Failure(AccessFreedValueException(_)) => ()
+      case Failure(exception)                    => throw exception
     }
   }
 
   it should "not allow snd on free pairs" taggedAs Repl in {
     Try(InterpreterTester(dir / "freePairSnd.in").getResult()) match {
-      case Success(_) => fail("The interpreter should have thrown an exception!")
-      case Failure(_) => ()
+      case Success(_)                            => fail("The interpreter should have thrown an exception!")
+      case Failure(AccessFreedValueException(_)) => ()
+      case Failure(exception)                    => throw exception
     }
   }
 
   it should "not allow array access on freed array" taggedAs Repl in {
     Try(InterpreterTester(dir / "freeArr.in").getResult()) match {
-      case Success(_) => fail("The interpreter should have thrown an exception!")
-      case Failure(_) => ()
+      case Success(_)                            => fail("The interpreter should have thrown an exception!")
+      case Failure(AccessFreedValueException(_)) => ()
+      case Failure(exception)                    => throw exception
     }
   }
 
@@ -53,8 +56,9 @@ class FreeTests extends AnyFlatSpec {
 
   it should "not allow freeing of null" taggedAs Repl in {
     Try(InterpreterTester(dir / "freeNull.in").getResult()) match {
-      case Success(_) => fail("The interpreter should have thrown an exception!")
-      case Failure(_) => ()
+      case Success(_)                                 => fail("The interpreter should have thrown an exception!")
+      case Failure(FreedNonFreeableValueException(_)) => ()
+      case Failure(exception)                         => throw exception
     }
   }
 }
