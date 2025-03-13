@@ -39,9 +39,9 @@ class ImportsTests extends AnyFlatSpec {
   }
 
   // Testing whether an error is flagged for incorrect file format
-  it should "flag an error for an incorrect file format" taggedAs (Frontend, Imports) in pending /* {
+  it should "flag an error for an incorrect file format" taggedAs (Frontend, Imports) in {
     getFrontendErrors(dir + "incorrectFileFormat.wacc") should include("Imported files must be WACC files")
-  } */ // TODO: Implement this
+  }
 
   // Testing whether nested imports work
   it should "frontend analyse nestedImports.wacc" taggedAs (Frontend, Imports) in {

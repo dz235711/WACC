@@ -25,6 +25,23 @@ private def getAllImports(ast: SyntaxAST.Program, imported: Set[String])(implici
 
   newImports.foldLeft(Right(Nil): Either[(Int, List[WaccError]), List[SyntaxAST.Program]]) { (acc, importFile) =>
     for {
+      // Check that the file is a WACC file
+      _ <-
+        if (importFile.filename.s.endsWith(".wacc")) Right(())
+        else
+          Left(
+            (
+              100,
+              List(
+                constructSpecialised(
+                  importFile.pos,
+                  importFile.filename.s.length,
+                  s"Imported files must be WACC files"
+                )
+              )
+            )
+          )
+
       // Read the file
       file <- readFile(importFile.filename.s).toRight(
         (
