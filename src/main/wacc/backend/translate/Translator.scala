@@ -1,5 +1,14 @@
 package wacc
 
+object AsciiConstants {
+
+  /** The minimum value of a char */
+  val MIN_CHAR = 0
+
+  /** The maximum value of a char */
+  val MAX_CHAR = 127
+}
+
 import TypedAST.{
   Add as TypedAdd,
   And as TypedAnd,
@@ -131,12 +140,6 @@ class Translator {
 
   /** The value of FALSE */
   private val FALSE = 0
-
-  /** The minimum value of a char */
-  private val MIN_CHAR = 0
-
-  /** The maximum value of a char */
-  private val MAX_CHAR = 127
 
   /** The minimum value for an array to be indexed */
   private val MIN_ARR_SIZE = 0
@@ -628,9 +631,9 @@ class Translator {
       unary(
         e,
         { l =>
-          locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), MIN_CHAR) })
+          locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), AsciiConstants.MIN_CHAR) })
           instructionCtx.addInstruction(Jmp(LessEqual, Clib.errBadCharLabel))
-          locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), MAX_CHAR) })
+          locationCtx.regInstr1(l, { reg => Compare(reg(typeToSize(e.getType)), AsciiConstants.MAX_CHAR) })
           instructionCtx.addInstruction(Jmp(GreaterEqual, Clib.errBadCharLabel))
           locationCtx.movLocLoc(chrDest, l)
         }

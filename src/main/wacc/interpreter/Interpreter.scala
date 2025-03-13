@@ -5,6 +5,10 @@ import wacc.TypedAST._
 
 import scala.compiletime.uninitialized
 import scala.collection.mutable.ListBuffer
+import os.SubProcess.InputStream
+import os.SubProcess.OutputStream
+import wacc.AsciiConstants.MIN_CHAR
+import wacc.AsciiConstants.MAX_CHAR
 
 type BoolExpr = BoolLiter | Not | Greater | GreaterEq | Smaller | SmallerEq | Equals | NotEquals | And | Or
 type IntExpr = IntLiter | Negate | Ord | Len | Mult | Mod | Add | Div | Sub
@@ -13,7 +17,10 @@ type CharExpr = Chr | CharLiter
 type VariableScope = MapContext[Id, Value]
 type FunctionScope = MapContext[Id, (List[Ident], Stmt)]
 
-final class Interpreter {
+final class Interpreter(
+    private val inputStream: InputStream = InputStream(System.out),
+    private val outputStream: OutputStream = OutputStream(System.in)
+) {
 
   // CONSTANTS
 
@@ -29,9 +36,6 @@ final class Interpreter {
   /** System call exit error message */
   private val ExitErrorString = "Exit expression must evaluate to an integer"
 
-  /** Read error message */
-  private val ReadErrorString = "Read must be called on object of type int or char"
-
   /** Condition error message */
   private val ConditionErrorString = "Condition must evaluate to a boolean"
 
@@ -45,6 +49,9 @@ final class Interpreter {
 
   /** The return value of a function, initialised once it is called */
   private var returnValue: Value = uninitialized
+
+  /** The exit value of the interpreter. Only set if exit is called */
+  private var exitValue: Option[Int] = None
 
   // Helper functions
 
@@ -72,16 +79,16 @@ final class Interpreter {
     */
   def interpret(
       program: Program,
-      inheritedScope: Option[VariableScope],
-      inheritedFunctionScope: Option[FunctionScope]
-  ): (VariableScope, FunctionScope) = {
-    given scope: VariableScope = inheritedScope.getOrElse(new MapContext[Id, Value]())
-    given functionScope: FunctionScope = inheritedFunctionScope.getOrElse(new MapContext[Id, (List[Ident], Stmt)]())
+      inheritedScope: VariableScope,
+      inheritedFunctionScope: FunctionScope
+  ): (VariableScope, FunctionScope, Option[Int]) = {
+    given scope: VariableScope = inheritedScope
+    given functionScope: FunctionScope = inheritedFunctionScope
 
     program.fs.foreach(interpretFunction)
     interpretStmt(program.body)
 
-    (scope, functionScope)
+    (scope, functionScope, exitValue)
   }
 
   /** Interprets a function, adding it to the scope of functions
@@ -97,19 +104,30 @@ final class Interpreter {
     * @param stmt The statement to be interpreted
     * @return The scope after interpreting the statement
     */
-  private def interpretStmt(stmt: Stmt)(using scope: VariableScope, funcScope: FunctionScope): VariableScope =
+  private def interpretStmt(stmt: Stmt)(using
+      scope: VariableScope,
+      funcScope: FunctionScope
+  ): VariableScope =
     stmt match {
       case Skip       => scope
       case Decl(v, r) => handleAssignment(v, r)
       case Asgn(l, r) => handleAssignment(l, r)
       case Read(l) =>
-        val readValue = l.getType match {
-          case KnownType.IntType  => scala.io.StdIn.readInt()
-          case KnownType.CharType => scala.io.StdIn.readChar()
-          case _                  => throw new BadInputException(ReadErrorString)
+        try {
+          val readValue = l.getType match {
+            case KnownType.IntType => IntLiter(outputStream.readLine().toInt)
+            case KnownType.CharType =>
+              val inputString = outputStream.readLine()
+              if (inputString.length != 1) throw new BadInputException("Read malformed input. Expected char.")
+              if ((MIN_CHAR > inputString.head.toInt) || (inputString.head.toInt > MAX_CHAR))
+                throw new BadInputException("Read malformed input. Char is not ASCII 0-127.")
+              CharLiter(inputString.head)
+            case _ => throw new BadInputException("Read must be called on object of type int or char")
+          }
+          handleAssignment(l, readValue)
+        } catch {
+          case e: (BadInputException | NumberFormatException) => scope
         }
-        val lId = interpretLValue(l)
-        scope.add(lId, readValue)
       case Free(e) =>
         interpretExpr(e) match {
           case freeable: Freeable => freeable.isFreed = true
@@ -121,10 +139,12 @@ final class Interpreter {
         returnValue = interpretExpr(e)
         scope
       case Exit(e) =>
-        println(ExitString)
+        inputStream.write(ExitString)
         interpretExpr(e) match {
-          case i: Int => sys.exit(i & ExitCodeMask) // Since exit is bounded to 8 bits
-          case _      => throw new TypeMismatchException(ExitErrorString)
+          case i: Int =>
+            exitValue = Some(i & ExitCodeMask) // Since exit is bounded to 8 bits
+            scope
+          case _ => throw new TypeMismatchException(ExitErrorString)
         }
       case Print(e) =>
         val value = interpretExpr(e)
@@ -132,17 +152,17 @@ final class Interpreter {
           // An array of characters should print as a string.
           case ArrayValue(es) if es.exists(_.getClass == classOf[Character]) => {
             val resString = StringBuilder().addAll(es.asInstanceOf[ListBuffer[Char]]).result()
-            print(resString)
+            inputStream.write(resString)
           }
           // WACC prints the pointers of arrays and pairs, but the closest we can get in Scala is the hashcode
-          case pointer: (ArrayValue | PairValue) => print(pointer.hashCode)
-          case nullPointer: UninitalizedPair     => print(NullPointerString)
-          case _                                 => print(value)
+          case pointer: (ArrayValue | PairValue) => inputStream.write(pointer.hashCode)
+          case nullPointer: UninitalizedPair     => inputStream.write(NullPointerString)
+          case _                                 => inputStream.write(value.toString)
         }
         scope
       case PrintLn(e) =>
         interpretStmt(Print(e))
-        println()
+        inputStream.write("\n")
         scope
       case If(cond, s1, s2) =>
         val evaluatedCond = interpretExpr(cond) match {
@@ -170,7 +190,11 @@ final class Interpreter {
       case Begin(body) => interpretStmt(body)
       case Semi(s1, s2) =>
         val newScope = interpretStmt(s1)
-        interpretStmt(s2)(using newScope)
+
+        if (exitValue == None)
+          newScope
+        else
+          interpretStmt(s2)(using newScope)
     }
 
   /** Interprets an RValue into an evaluated value.
@@ -200,13 +224,6 @@ final class Interpreter {
       returnValue
     case e: Expr => interpretExpr(e)
   }
-
-  /** Interprets an LValue into its corresponding id.
-    *
-    * @param l The LValue to interpret
-    * @return The id of the LValue
-    */
-  private def interpretLValue(l: LValue)(using scope: VariableScope, funcScope: FunctionScope): Id = ???
 
   /** Interprets an expression into an evaluated value.
     *
@@ -432,9 +449,12 @@ final class Interpreter {
 object Interpreter {
   def interpret(
       p: Program,
-      inheritedScope: Option[VariableScope] = None,
-      inheritedFunctionScope: Option[FunctionScope] = None
-  ): (VariableScope, FunctionScope) =
-    val interpreter = new Interpreter()
+      inheritedScope: VariableScope = MapContext(),
+      inheritedFunctionScope: FunctionScope = MapContext()
+  )(using
+      inputStream: InputStream = InputStream(System.out),
+      outputStream: OutputStream = OutputStream(System.in)
+  ): (VariableScope, FunctionScope, Option[Int]) =
+    val interpreter = new Interpreter(inputStream, outputStream)
     interpreter.interpret(p, inheritedScope, inheritedFunctionScope)
 }

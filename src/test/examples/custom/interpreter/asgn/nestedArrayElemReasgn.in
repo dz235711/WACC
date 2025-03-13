@@ -1,0 +1,5 @@
+char[] arr1 = ['a', 'b' ,'c']
+char[][] arr2 = [arr1]
+char[][][] arr3 = [arr2]
+arr3[0][0][1] = 'f'
+exit 0

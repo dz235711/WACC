@@ -71,8 +71,8 @@ def main(args: Array[String]): Unit = {
 
   // Enter the interpreter main function if the interpreter flag is set
   if (enterInterpreter) {
-    interpreterMain()
-    exit(0)
+    val exitValue = interpreterMain()._3.getOrElse(0)
+    exit(exitValue)
   }
 
   val path = args.headOption

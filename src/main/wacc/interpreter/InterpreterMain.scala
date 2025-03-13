@@ -4,7 +4,8 @@ import WaccErrorBuilder.{format, setLines}
 
 import parsley.{Result, Failure, Success}
 import parsley.errors.ErrorBuilder
-import scala.io.StdIn.readLine
+import os.SubProcess.OutputStream
+import os.SubProcess.InputStream
 
 type RenamerUID = Int
 // To distinguish between renamer and interpreter scopes.
@@ -14,8 +15,11 @@ type TypeCheckerFunctionScope = Map[RenamerUID, List[RenamedAST.Ident]]
 type InterpreterVariableScope = VariableScope
 type InterpreterFunctionScope = FunctionScope
 
-def interpreterMain(): Unit = {
-  println("Welcome to the WACC interpreter!")
+def interpreterMain()(using
+    interpreterIn: InputStream = InputStream(System.out),
+    interpreterOut: OutputStream = OutputStream(System.in)
+): (InterpreterVariableScope, InterpreterFunctionScope, Option[Int]) = {
+  interpreterIn.writeLine("Welcome to the WACC interpreter!")
 
   var renamerScope: Option[RenamerScope] = None
   var renamerFunctionScope: Option[RenamerFunctionScope] = None
@@ -23,10 +27,12 @@ def interpreterMain(): Unit = {
 
   var typeCheckerFunctionTable: Option[TypeCheckerFunctionScope] = None
 
-  var interpreterScope: Option[InterpreterVariableScope] = None
-  var interpreterScopeFunctionScope: Option[InterpreterFunctionScope] = None
+  var interpreterScope: InterpreterVariableScope = MapContext()
+  var interpreterFunctionScope: InterpreterFunctionScope = MapContext()
 
-  while true do
+  var exitValue: Option[Int] = None
+
+  while (exitValue == None) do
     val frontendResult =
       promptInputAndRunFrontend(renamerScope, renamerFunctionScope, renamerUid, typeCheckerFunctionTable)
     val typedProgram = frontendResult._1
@@ -35,10 +41,12 @@ def interpreterMain(): Unit = {
     renamerUid = Some(frontendResult._4)
     typeCheckerFunctionTable = Some(frontendResult._5)
 
-    val newInterpreterScopes = Interpreter.interpret(typedProgram, interpreterScope, interpreterScopeFunctionScope)
-    interpreterScope = Some(newInterpreterScopes._1)
-    interpreterScopeFunctionScope = Some(newInterpreterScopes._2)
-  ()
+    val interpreterResult = Interpreter.interpret(typedProgram, interpreterScope, interpreterFunctionScope)
+    interpreterScope = interpreterResult._1
+    interpreterFunctionScope = interpreterResult._2
+    exitValue = interpreterResult._3
+
+  (interpreterScope, interpreterFunctionScope, exitValue)
 }
 
 def promptInputAndRunFrontend(
@@ -46,6 +54,9 @@ def promptInputAndRunFrontend(
     inheritedRenamerFunctionScope: Option[RenamerFunctionScope],
     inheritedRenamerUid: Option[RenamerUID],
     inheritedTypeCheckerFuncTable: Option[TypeCheckerFunctionScope]
+)(using
+    interpreterIn: InputStream,
+    interpreterOut: OutputStream
 ): (TypedAST.Program, RenamerScope, RenamerFunctionScope, RenamerUID, TypeCheckerFunctionScope) = {
   given ErrorBuilder[WaccError] = new WaccErrorBuilder
   var errCtx: ListContext[WaccError] = new ListContext()
@@ -96,7 +107,11 @@ def promptInputAndRunFrontend(
   (typedProgram, newRenamedScope, newRenamedFunctionScope, newUid, newTypedFuncTable)
 }
 
-def promptInputAndParse()(using wErr: ErrorBuilder[WaccError]): (SyntaxAST.Program, List[String]) = {
+def promptInputAndParse()(using
+    wErr: ErrorBuilder[WaccError],
+    interpreterIn: InputStream,
+    interpreterOut: OutputStream
+): (SyntaxAST.Program, List[String]) = {
   var parserResult: Result[WaccError, SyntaxAST.Program] = Failure(
     WaccErrorBuilder().constructSpecialised((0, 0), 0, "")
   ) // Dummy value.
@@ -105,11 +120,12 @@ def promptInputAndParse()(using wErr: ErrorBuilder[WaccError]): (SyntaxAST.Progr
 
   // We prompt for input until it is syntactically correct.
   while
-    print("WACC> ")
+    interpreterIn.write("WACC> ")
 
     // We read input until all opened scopes have been closed.
     while
-      val line = readLine()
+      interpreterIn.flush()
+      val line = interpreterOut.readLine()
       input.append(line + "\n")
 
       parserResult = parser.interpreterParse(input.result())
@@ -123,12 +139,12 @@ def promptInputAndParse()(using wErr: ErrorBuilder[WaccError]): (SyntaxAST.Progr
           }
         case _ => false
       }
-    do print("    | ")
+    do interpreterIn.write("    | ")
 
     // Print the errors, and prompt for new input if there are any errors, otherwise exit the loop.
     parserResult match {
       case Failure(msg) =>
-        println(printWaccError(format(msg, None, ErrType.Syntax), StringBuilder()).result())
+        interpreterIn.writeLine(printWaccError(format(msg, None, ErrType.Syntax), StringBuilder()).result())
         true
       case Success(p) =>
         program = p
