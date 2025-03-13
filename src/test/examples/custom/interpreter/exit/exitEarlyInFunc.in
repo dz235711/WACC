@@ -1,6 +1,6 @@
 int f() is
-exit 0;
-return 23
+    exit 0;
+    return 23
 end
 int x = call f()
 exit 1
