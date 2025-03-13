@@ -200,7 +200,7 @@ final class Interpreter(
   /** Interprets an RValue into an evaluated value.
     *
     * @param r The RValue to interpret
-    * @result The value of the evaluated RValue
+    * @return The value of the evaluated RValue
     */
   private def interpretRValue(r: RValue)(using scope: VariableScope, funcScope: FunctionScope): Value = r match {
     case ArrayLiter(es, _)    => ArrayValue(es.map(interpretExpr).to(ListBuffer))
@@ -227,7 +227,7 @@ final class Interpreter(
 
   /** Interprets an expression into an evaluated value.
     *
-    * @param e Expression to intrepret
+    * @param e Expression to interpret
     * @return The value of the evaluated expression
     */
   private def interpretExpr(e: Expr)(using scope: VariableScope): Value =
@@ -264,7 +264,7 @@ final class Interpreter(
   /** Interprets a given expression as a boolean. Will throw an exception if the type of the expression is not a boolean.
     *
     * @param e The expression to be evaluated as a boolean
-    * @return The boolean as a result of evalutaing `e`
+    * @return The boolean as a result of evaluating `e`
     */
   private def interpretBool(e: Expr)(using scope: VariableScope): Boolean =
     e match {
@@ -294,7 +294,7 @@ final class Interpreter(
   /** Interprets a given expression as an Int. Will throw an exception if the type of the expression is not a Int.
     *
     * @param e The expression to be evaluated as an Int
-    * @return The Int as a result of evalutaing `e`
+    * @return The Int as a result of evaluating `e`
     */
   private def interpretInt(e: Expr)(using scope: VariableScope): Int =
     e match {
@@ -320,10 +320,10 @@ final class Interpreter(
       case _ => throw TypeMismatchException("Expected int.")
     }
 
-  /** Interprets a given expression as an Char. Will throw an exception if the type of the expression is not a Char.
+  /** Interprets a given expression as a Char. Will throw an exception if the type of the expression is not a Char.
     *
-    * @param e The expression to be evaluated as an Char
-    * @return The Char as a result of evalutaing `e`
+    * @param e The expression to be evaluated as a Char
+    * @return The Char as a result of evaluating `e`
     */
   private def interpretChar(e: Expr)(using scope: VariableScope): Char =
     e match {
