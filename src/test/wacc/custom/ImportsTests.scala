@@ -57,6 +57,9 @@ class ImportsTests extends AnyFlatSpec {
   } */
 
   // Testing an error for if a function in a different file shares the same name as a function in the current file
+  it should "flag an error for an illegal function re-declaration when imported" taggedAs (Frontend, Imports) in {
+    getFrontendErrors(dir + "illegalFunctionRedeclaration.wacc") should include("Illegal function redeclaration")
+  }
 
   // Testing whether a function with colliding names can be used if the file is specified i.e., call example.f()
 
