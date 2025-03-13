@@ -9,6 +9,7 @@ import os.SubProcess.InputStream
 import os.SubProcess.OutputStream
 import wacc.AsciiConstants.MIN_CHAR
 import wacc.AsciiConstants.MAX_CHAR
+import scala.util.{Try, Success, Failure}
 
 type BoolExpr = BoolLiter | Not | Greater | GreaterEq | Smaller | SmallerEq | Equals | NotEquals | And | Or
 type IntExpr = IntLiter | Negate | Ord | Len | Mult | Mod | Add | Div | Sub
@@ -86,7 +87,11 @@ final class Interpreter(
     given functionScope: FunctionScope = inheritedFunctionScope
 
     program.fs.foreach(interpretFunction)
-    interpretStmt(program.body)
+    Try(interpretStmt(program.body)) match {
+      case Success(_)                                  => ()
+      case Failure(InterpreterExitException(exitCode)) => exitValue = Some(exitCode)
+      case Failure(exception)                          => throw exception
+    }
 
     (scope, functionScope, exitValue)
   }
@@ -113,8 +118,8 @@ final class Interpreter(
       case Decl(v, r) => handleAssignment(v, r)
       case Asgn(l, r) => handleAssignment(l, r)
       case Read(l) =>
-        try {
-          val readValue = l.getType match {
+        Try(
+          l.getType match {
             case KnownType.IntType => IntLiter(outputStream.readLine().toInt)
             case KnownType.CharType =>
               val inputString = outputStream.readLine()
@@ -124,9 +129,10 @@ final class Interpreter(
               CharLiter(inputString.head)
             case _ => throw new BadInputException("Read must be called on object of type int or char")
           }
-          handleAssignment(l, readValue)
-        } catch {
-          case e: (BadInputException | NumberFormatException) => scope
+        ) match {
+          case Success(readValue)                                      => handleAssignment(l, readValue)
+          case Failure(e: (BadInputException | NumberFormatException)) => scope
+          case Failure(exception)                                      => throw exception
         }
       case Free(e) =>
         interpretExpr(e) match {
@@ -141,10 +147,8 @@ final class Interpreter(
       case Exit(e) =>
         inputStream.write(ExitString)
         interpretExpr(e) match {
-          case i: Int =>
-            exitValue = Some(i & ExitCodeMask) // Since exit is bounded to 8 bits
-            scope
-          case _ => throw new TypeMismatchException(ExitErrorString)
+          case i: Int => throw new InterpreterExitException(i & ExitCodeMask)
+          case _      => throw new TypeMismatchException(ExitErrorString)
         }
       case Print(e) =>
         val value = interpretExpr(e)
@@ -190,11 +194,7 @@ final class Interpreter(
       case Begin(body) => interpretStmt(body)
       case Semi(s1, s2) =>
         val newScope = interpretStmt(s1)
-
-        if (exitValue == None)
-          newScope
-        else
-          interpretStmt(s2)(using newScope)
+        interpretStmt(s2)(using newScope)
     }
 
   /** Interprets an RValue into an evaluated value.
