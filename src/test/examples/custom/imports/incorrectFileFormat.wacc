@@ -1,0 +1,4 @@
+import "src/test/examples/custom/imports/exampleProg"
+begin
+    skip
+end

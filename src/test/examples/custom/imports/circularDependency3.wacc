@@ -1,0 +1,7 @@
+import "src/test/examples/custom/imports/circularDependency3.wacc"
+begin
+    int h() is
+        return 1
+    end
+    skip
+end

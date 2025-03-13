@@ -35,10 +35,13 @@ class ImportsTests extends AnyFlatSpec {
 
   // Testing whether circular dependencies result in an error
   it should "frontend analyse circularDependency.wacc" taggedAs (Frontend, Imports) in pending /*{
-    frontendStatus(dir + "circularDependency.wacc") should not be 0
+    getFrontendErrors(dir + "circularDependency.wacc") should include("Cannot import with circular dependencies")
   } */ // TODO: Finish after separate import stage is merged in
 
   // Testing whether an error is flagged for incorrect file format
+  it should "flag an error for an incorrect file format" taggedAs (Frontend, Imports) in pending /* {
+    getFrontendErrors(dir + "incorrectFileFormat.wacc") should include("Imported files must be WACC files")
+  } */ // TODO: Implement this
 
   // Testing whether nested imports work
   it should "frontend analyse nestedImports.wacc" taggedAs (Frontend, Imports) in {
@@ -54,7 +57,7 @@ class ImportsTests extends AnyFlatSpec {
   it should "allow for the same file to be imported multiple times" taggedAs (Frontend, Imports) in pending /* {
     println(getFrontendErrors(dir + "importsSameFile.wacc"))
     frontendStatus(dir + "importsSameFile.wacc") shouldBe 0
-  } */
+  } */ // TODO: Implement this
 
   // Testing an error for if a function in a different file shares the same name as a function in the current file
   it should "flag an error for an illegal function re-declaration when imported" taggedAs (Frontend, Imports) in {
@@ -62,6 +65,9 @@ class ImportsTests extends AnyFlatSpec {
   }
 
   // Testing whether a function with colliding names can be used if the file is specified i.e., call example.f()
+  it should "allow aliases for modules to import redeclared functions" taggedAs (Frontend, Imports) in pending /* {
+    frontendStatus(dir + "aliasFunctionRedeclaration.wacc") shouldBe 0
+  } */ // TODO: Implement this
 
   // Testing whether an error is flagged if an imported file has syntax errors
   it should "flag an error for an imported file with syntax errors" taggedAs (Frontend, Imports) in {
@@ -69,4 +75,7 @@ class ImportsTests extends AnyFlatSpec {
   }
 
   // Testing whether an error is flagged if a file imports itself
+  it should "flag an error for a file importing itself" taggedAs (Frontend, Imports) in pending /* {
+    getFrontendErrors(dir + "importsItself.wacc") should include("Cannot import with circular dependencies")
+  } */ // TODO: Fix this with circular dependencies
 }
