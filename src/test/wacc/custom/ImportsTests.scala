@@ -63,7 +63,10 @@ class ImportsTests extends AnyFlatSpec {
 
   // Testing whether a function with colliding names can be used if the file is specified i.e., call example.f()
 
-  // Testing whether an error is flagged if an imported file has syntax/semantic errors
+  // Testing whether an error is flagged if an imported file has syntax errors
+  it should "flag an error for an imported file with syntax errors" taggedAs (Frontend, Imports) in {
+    frontendStatus(dir + "importSyntaxError.wacc") shouldBe 100
+  }
 
   // Testing whether an error is flagged if a file imports itself
 }
