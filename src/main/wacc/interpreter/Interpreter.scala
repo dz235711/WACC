@@ -253,8 +253,8 @@ final class Interpreter(
         var currentValue =
           scope.get(v.id).getOrElse(throw new VariableNotFoundException(getVariableErrorString(v.id)))
         for (ind <- indices) {
-          val ArrayValue(arrayVals) = currentValue: @unchecked // TODO: Idiomatic?
-          currentValue = arrayVals(ind)
+          val arrVal: ArrayValue = currentValue.asInstanceOf[ArrayValue]
+          currentValue = arrVal.get(ind)
         }
 
         currentValue
