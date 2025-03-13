@@ -92,7 +92,7 @@ sealed class TypeChecker(inheritedFuncTable: Option[Map[Int, List[RenamedAST.Ide
   /** Checks a program and returns a typed program.
    *
    * @param p The renamed program to check
-   * @return The typed program
+   * @return The typed program and the function table for preservation
    */
   def checkProg(
       p: RenamedAST.Program

@@ -399,6 +399,15 @@ class Renamer private (inheritedFunctionScope: Option[Map[String, (QualifiedName
 }
 
 object Renamer {
+
+  /** Renames all functions and variables in the program. If interpreter mode is on, the scopes and UID are preserved with every input. 
+   * 
+   * @param p The program to rename (ast)
+   * @param inheritedScope An inherited scope
+   * @param inheritedFunctionScope An inherited function scope
+   * @param inheritedUid An inherited unique identifier
+   * @return The renamed program (RenamedAST), the new scope, the new function scope, and the new unique identifier
+  */
   def rename(
       p: SyntaxAST.Program,
       inheritedScope: Option[Scope] = None,

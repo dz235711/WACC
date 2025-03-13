@@ -160,7 +160,7 @@ final class Interpreter(
           }
           // WACC prints the pointers of arrays and pairs, but the closest we can get in Scala is the hashcode
           case pointer: (ArrayValue | PairValue) => inputStream.write(pointer.hashCode)
-          case _: UninitalizedPair     => inputStream.write(NullPointerString)
+          case _: UninitalizedPair               => inputStream.write(NullPointerString)
           case _                                 => inputStream.write(value.toString)
         }
         scope
@@ -440,9 +440,9 @@ final class Interpreter(
    */
   private def unpackAsPair(value: Value): PairValue =
     value match {
-      case pair: PairValue       => pair
+      case pair: PairValue     => pair
       case _: UninitalizedPair => throw NullDereferencedException()
-      case _                     => throw TypeMismatchException(UnpackPairErrorString)
+      case _                   => throw TypeMismatchException(UnpackPairErrorString)
     }
 }
 
