@@ -96,7 +96,7 @@ def promptInputAndRunFrontend(
     // If there are errors, print them and then prompt for input again.
     !errCtx.get.isEmpty
   do
-    println(
+    interpreterIn.write(
       errCtx.get
         .map(e => setLines(format(e, None, ErrType.Semantic), lines))
         .foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc))
