@@ -46,13 +46,13 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute functionManyArguments.wacc" taggedAs Backend in pending /*{
+  it should "execute functionManyArguments.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "functionManyArguments.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute functionMultiReturns.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "functionMultiReturns.wacc")
@@ -110,21 +110,21 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute manyArgumentsChar.wacc" taggedAs Backend in pending /*{
+  it should "execute manyArgumentsChar.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "manyArgumentsChar.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
-  it should "execute manyArgumentsInt.wacc" taggedAs Backend in pending /*{
+  it should "execute manyArgumentsInt.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "manyArgumentsInt.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute negFunction.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "negFunction.wacc")
@@ -166,12 +166,11 @@ class BackendValidFunctionSimple_functionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute usesArgumentWhilstMakingArgument.wacc" taggedAs Backend in pending /*{
+  it should "execute usesArgumentWhilstMakingArgument.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "usesArgumentWhilstMakingArgument.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
-
+  }
 }

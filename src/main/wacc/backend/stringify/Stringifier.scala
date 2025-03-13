@@ -2,8 +2,9 @@ package wacc
 
 import wacc.Size.*
 import wacc.Condition.*
+import wacc.Register.*
 
-type Operand = Register | Pointer | Immediate | Label
+type Operand = Register | Pointer | Immediate | Label | Option[Register] | String | Option[Immediate]
 
 class x86Stringifier {
 
@@ -16,9 +17,9 @@ class x86Stringifier {
   def stringify(strings: List[(String, Label)], instructions: List[Instruction]): String = {
     // TODO: Use string builder
     (List(
-      NoPrefixSyntax,
-      GlobalMain,
-      SectionReadOnlyData
+      NoPrefixSyntax(),
+      GlobalMain(),
+      SectionReadOnlyData()
     ) ++
       strings.flatMap((string, label) => {
         List(
@@ -28,21 +29,58 @@ class x86Stringifier {
         )
       }) ++
       List(
-        Text,
+        Text(),
         DefineLabel(Label("main")),
-        Push(RBP(W64)),
-        Mov(RBP(W64), RSP(W64))
+        Push(BASE_POINTER)(W64),
+        Mov(BASE_POINTER, STACK_POINTER)(W64)
       ) ++
       instructions)
       .map(instr => {
         // we first convert the instruction to a string
-        val translated = stringifyInstr(instr)
+        val translated = stringifyLine(instr)
 
         // we then add indentation if the instruction is not a label
         if (translated.startsWith(".") || translated.endsWith(":")) translated
         else s"${" " * INDENTATION_SIZE}$translated"
       })
       .mkString("\n") ++ "\n"
+  }
+
+  private def stringifyLine(instr: Instruction): String = {
+    instr match {
+      case DefineLabel(Label(s)) => s"$s:"
+      case Comment(s)            => s"# $s"
+      case m @ Movzx(dest, src)  => s"movzx ${stringifyOperand(dest, m.destSize)}, ${stringifyOperand(src, m.size)}"
+      case _ =>
+        val operands: List[Operand] = instr.productIterator.toList.asInstanceOf[List[Operand]] // ew
+        val size = instr.size
+
+        stringifyInstr(instr) + " " + operands.map(stringifyOperand(_, size)).filterNot(_ == "").mkString(", ")
+    }
+  }
+
+  private def stringifyJumpCondition(cond: Condition) = cond match {
+    case NoCond       => "mp"
+    case Equal        => "e"
+    case NotEqual     => "ne"
+    case Greater      => "g"
+    case GreaterEqual => "ge"
+    case Less         => "l"
+    case LessEqual    => "le"
+    case Zero         => "z"
+    case NotZero      => "nz"
+    case Carry        => "c"
+    case NotCarry     => "nc"
+    case Overflow     => "o"
+    case NotOverflow  => "no"
+    case Sign         => "s"
+    case NotSign      => "ns"
+    case Parity       => "p"
+    case NotParity    => "np"
+    case Above        => "a"
+    case AboveEqual   => "ae"
+    case Below        => "b"
+    case BelowEqual   => "be"
   }
 
   /**
@@ -54,88 +92,50 @@ class x86Stringifier {
   private def stringifyInstr(
       instr: Instruction
   ): String = instr match {
-    case Mov(dest, src)                 => s"mov ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
-    case Movzx(dest, src)               => s"movzx ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
-    case Call(label)                    => s"call ${stringifyOperand(label)}"
-    case Ret(imm)                       => s"ret${stringifyOptionalOperand(imm, prefix = " ")}"
-    case Nop                            => "nop"
-    case Halt                           => "hlt"
-    case Push(src)                      => s"push ${stringifyOperand(src)}"
-    case Pop(dest)                      => s"pop ${stringifyOperand(dest)}"
-    case Lea(dest, src)                 => s"lea ${stringifyOperand(dest)}, ${{ stringifyPointerArithmetic(src) }}"
-    case Cdq                            => "cdq"
-    case DefineLabel(label)             => s"${stringifyOperand(label)}:"
-    case Jmp(NoCond, label)             => s"jmp ${stringifyOperand(label)}"
-    case Jmp(Equal, label)              => s"je ${stringifyOperand(label)}"
-    case Jmp(NotEqual, label)           => s"jne ${stringifyOperand(label)}"
-    case Jmp(Greater, label)            => s"jg ${stringifyOperand(label)}"
-    case Jmp(GreaterEqual, label)       => s"jge ${stringifyOperand(label)}"
-    case Jmp(Less, label)               => s"jl ${stringifyOperand(label)}"
-    case Jmp(LessEqual, label)          => s"jle ${stringifyOperand(label)}"
-    case Jmp(Zero, label)               => s"jz ${stringifyOperand(label)}"
-    case Jmp(NotZero, label)            => s"jnz ${stringifyOperand(label)}"
-    case Jmp(Carry, label)              => s"jc ${stringifyOperand(label)}"
-    case Jmp(NotCarry, label)           => s"jnc ${stringifyOperand(label)}"
-    case Jmp(Overflow, label)           => s"jo ${stringifyOperand(label)}"
-    case Jmp(NotOverflow, label)        => s"jno ${stringifyOperand(label)}"
-    case Jmp(Sign, label)               => s"js ${stringifyOperand(label)}"
-    case Jmp(NotSign, label)            => s"jns ${stringifyOperand(label)}"
-    case Jmp(Parity, label)             => s"jp ${stringifyOperand(label)}"
-    case Jmp(NotParity, label)          => s"jnp ${stringifyOperand(label)}"
-    case Jmp(Above, label)              => s"ja ${stringifyOperand(label)}"
-    case Jmp(AboveEqual, label)         => s"jae ${stringifyOperand(label)}"
-    case Jmp(Below, label)              => s"jb ${stringifyOperand(label)}"
-    case Jmp(BelowEqual, label)         => s"jbe ${stringifyOperand(label)}"
-    case And(dest, src)                 => s"and ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
-    case Or(dest, src)                  => s"or ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
-    case Xor(dest, src)                 => s"xor ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
-    case ShiftArithLeft(dest, count)    => s"sal ${stringifyOperand(dest)}, ${stringifyOperand(count)}"
-    case ShiftArithRight(dest, count)   => s"sar ${stringifyOperand(dest)}, ${stringifyOperand(count)}"
-    case ShiftLogicalLeft(dest, count)  => s"shl ${stringifyOperand(dest)}, ${stringifyOperand(count)}"
-    case ShiftLogicalRight(dest, count) => s"shr ${stringifyOperand(dest)}, ${stringifyOperand(count)}"
-    case Test(src1, src2)               => s"test ${stringifyOperand(src1)}, ${stringifyOperand(src2)}"
-    case Compare(dest, src)             => s"cmp ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
-    case AddCarry(dest, src)            => s"adc ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
-    case Add(dest, src)                 => s"add ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
-    case Dec(dest)                      => s"dec ${stringifyOperand(dest)}"
-    case Inc(dest)                      => s"inc ${stringifyOperand(dest)}"
-    case Div(src)                       => s"div ${stringifyOperand(src)}"
-    case SignedDiv(src)                 => s"idiv ${stringifyOperand(src)}"
-    case Mul(src)                       => s"mul ${stringifyOperand(src)}"
-    case SignedMul(dest, src1, src2) =>
-      s"imul ${stringifyOptionalOperand(dest, postfix = ", ")}${stringifyOperand(src1)}${stringifyOptionalOperand(src2, prefix = ", ")}"
-    case Neg(dest)             => s"neg ${stringifyOperand(dest)}"
-    case Not(dest)             => s"not ${stringifyOperand(dest)}"
-    case Sub(dest, src)        => s"sub ${stringifyOperand(dest)}, ${stringifyOperand(src)}"
-    case Comment(comment)      => s"# $comment"
-    case NoPrefixSyntax        => ".intel_syntax noprefix"
-    case GlobalMain            => ".globl main"
-    case SectionReadOnlyData   => ".section .rodata"
-    case Text                  => ".text"
-    case IntData(value)        => s".int $value"
-    case Asciz(string)         => s".asciz \"$string\""
-    case SetGreater(dest)      => s"setg ${stringifyOperand(dest)}"
-    case SetGreaterEqual(dest) => s"setge ${stringifyOperand(dest)}"
-    case SetSmaller(dest)      => s"setl ${stringifyOperand(dest)}"
-    case SetSmallerEqual(dest) => s"setle ${stringifyOperand(dest)}"
-    case SetEqual(dest)        => s"sete ${stringifyOperand(dest)}"
-  }
-
-  /**
-    * Converts an optional operand into a string representation iff it is defined, with a prefix and postfix
-    *
-    * @param operand The operand to convert
-    * @param prefix The prefix to add to the operand string
-    * @param postfix The postfix to add to the operand string
-    * @return a string representation of the operand
-    */
-  private def stringifyOptionalOperand(
-      operand: Option[Operand],
-      prefix: String = "",
-      postfix: String = ""
-  ): String = operand match {
-    case Some(operand) => s"$prefix${stringifyOperand(operand)}$postfix"
-    case None          => ""
+    case Mov(_, _)               => s"mov"
+    case Movzx(_, _)             => s"movzx"
+    case Call(_)                 => s"call"
+    case Ret(_)                  => s"ret"
+    case Nop()                   => "nop"
+    case Halt()                  => "hlt"
+    case Push(_)                 => s"push"
+    case Pop(_)                  => s"pop"
+    case Lea(_, _)               => s"lea"
+    case Cdq()                   => "cdq"
+    case DefineLabel(_)          => s""
+    case Jmp(cond, _)            => s"j${stringifyJumpCondition(cond)}"
+    case And(_, _)               => s"and"
+    case Or(_, _)                => s"or"
+    case Xor(_, _)               => s"xor"
+    case ShiftArithLeft(_, _)    => s"sal"
+    case ShiftArithRight(_, _)   => s"sar"
+    case ShiftLogicalLeft(_, _)  => s"shl"
+    case ShiftLogicalRight(_, _) => s"shr"
+    case Test(_, _)              => s"test"
+    case Compare(_, _)           => s"cmp"
+    case AddCarry(_, _)          => s"adc"
+    case Add(_, _)               => s"add"
+    case Dec(_)                  => s"dec"
+    case Inc(_)                  => s"inc"
+    case Div(_)                  => s"div"
+    case SignedDiv(_)            => s"idiv"
+    case Mul(_)                  => s"mul"
+    case SignedMul(_, _, _)      => s"imul"
+    case Neg(_)                  => s"neg"
+    case Not(_)                  => s"not"
+    case Sub(_, _)               => s"sub"
+    case Comment(_)              => s"#"
+    case NoPrefixSyntax()        => ".intel_syntax noprefix"
+    case GlobalMain()            => ".globl main"
+    case SectionReadOnlyData()   => ".section .rodata"
+    case Text()                  => ".text"
+    case IntData(_)              => s".int"
+    case Asciz(_)                => s".asciz"
+    case SetGreater(_)           => s"setg"
+    case SetGreaterEqual(_)      => s"setge"
+    case SetSmaller(_)           => s"setl"
+    case SetSmallerEqual(_)      => s"setle"
+    case SetEqual(_)             => s"sete"
   }
 
   /**
@@ -144,11 +144,15 @@ class x86Stringifier {
     * @param operand The operand to convert
     * @return a string representation of the operand
     */
-  private def stringifyOperand(operand: Operand): String = operand match {
-    case n: Immediate => s"$n"
-    case r: Register  => stringifyRegister(r)
-    case p: Pointer   => stringifyPointer(p)
-    case Label(s)     => s
+  private def stringifyOperand(operand: Operand, size: Size): String = operand match {
+    case n: Immediate       => s"$n"
+    case r: Register        => stringifyRegister(r, size)
+    case p: Pointer         => stringifyPointer(p, size)
+    case Label(s)           => s
+    case Some(r: Register)  => stringifyRegister(r, size)
+    case Some(n: Immediate) => s"$n"
+    case s: String          => s"\"$s\""
+    case _                  => ""
   }
 
   /**
@@ -158,15 +162,15 @@ class x86Stringifier {
     * @return a string representation of the pointer
     * @example `RegImm(Reg(RAX), Imm(4))(W64)` -> `qword ptr [rax+4]`
     */
-  private def stringifyPointer(pointer: Pointer): String =
-    s"${ptrSize(pointer.size)} ${stringifyPointerArithmetic(pointer)}"
+  private def stringifyPointer(pointer: Pointer, size: Size): String =
+    s"${ptrSize(size)} ${stringifyPointerArithmetic(pointer, size)}"
 
   /** Returns the sign symbol of an operand
    *
    * @param operand The operand to check
    * @return The sign symbol of the operand
    */
-  def signSymbol(operand: Immediate | Label): String = operand match {
+  private def signSymbol(operand: Immediate | Label): String = operand match {
     case n: Immediate if n < 0 => ""
     case _                     => "+"
   }
@@ -178,17 +182,17 @@ class x86Stringifier {
     * @return a string representation of the pointer arithmetic
     * @example `RegImm(Reg(RAX), Imm(4))(W64)` -> `[rax+4]`
     */
-  private def stringifyPointerArithmetic(pointer: Pointer): String = {
+  private def stringifyPointerArithmetic(pointer: Pointer, size: Size): String = {
     val arithmetic = pointer match {
-      case RegPointer(reg)           => s"${stringifyOperand(reg)}"
-      case RegImmPointer(reg, imm)   => s"${stringifyOperand(reg)}${signSymbol(imm)}${stringifyOperand(imm)}"
-      case RegRegPointer(reg1, reg2) => s"${stringifyOperand(reg1)}+${stringifyOperand(reg2)}"
+      case RegPointer(reg)           => s"${stringifyOperand(reg, W64)}"
+      case RegImmPointer(reg, imm)   => s"${stringifyOperand(reg, W64)}${signSymbol(imm)}${stringifyOperand(imm, size)}"
+      case RegRegPointer(reg1, reg2) => s"${stringifyOperand(reg1, W64)}+${stringifyOperand(reg2, W64)}"
       case RegScaleRegPointer(reg1, scale, reg2) =>
-        s"${stringifyOperand(reg1)}+${stringifyOperand(scale)}*${stringifyOperand(reg2)}"
+        s"${stringifyOperand(reg1, W64)}+${stringifyOperand(scale, size)}*${stringifyOperand(reg2, W64)}"
       case RegScaleRegImmPointer(reg1, scale, reg2, imm) =>
-        s"${stringifyOperand(reg1)}+${stringifyOperand(scale)}*${stringifyOperand(reg2)}+${stringifyOperand(imm)}"
+        s"${stringifyOperand(reg1, W64)}+${stringifyOperand(scale, size)}*${stringifyOperand(reg2, W64)}+${stringifyOperand(imm, size)}"
       case ScaleRegImmPointer(scale, reg, imm) =>
-        s"${stringifyOperand(scale)}*${stringifyOperand(reg)}+${stringifyOperand(imm)}"
+        s"${stringifyOperand(scale, size)}*${stringifyOperand(reg, W64)}+${stringifyOperand(imm, size)}"
     }
 
     s"[$arithmetic]"
@@ -213,24 +217,24 @@ class x86Stringifier {
     * @param register The register to stringify
     * @return a string representation of the register
     */
-  private def stringifyRegister(register: Register): String = register match {
-    case RIP    => "rip"
-    case RAX(s) => prependSize(s, "ax", false)
-    case RBX(s) => prependSize(s, "bx", false)
-    case RCX(s) => prependSize(s, "cx", false)
-    case RDX(s) => prependSize(s, "dx", false)
-    case RSI(s) => prependSize(s, "si")
-    case RDI(s) => prependSize(s, "di")
-    case RSP(s) => prependSize(s, "sp")
-    case RBP(s) => prependSize(s, "bp")
-    case R8(s)  => appendSize(s, "r8")
-    case R9(s)  => appendSize(s, "r9")
-    case R10(s) => appendSize(s, "r10")
-    case R11(s) => appendSize(s, "r11")
-    case R12(s) => appendSize(s, "r12")
-    case R13(s) => appendSize(s, "r13")
-    case R14(s) => appendSize(s, "r14")
-    case R15(s) => appendSize(s, "r15")
+  private def stringifyRegister(register: Register, size: Size): String = register match {
+    case RIP => "rip"
+    case RAX => prependSize(size, "ax", false)
+    case RBX => prependSize(size, "bx", false)
+    case RCX => prependSize(size, "cx", false)
+    case RDX => prependSize(size, "dx", false)
+    case RSI => prependSize(size, "si")
+    case RDI => prependSize(size, "di")
+    case RSP => prependSize(size, "sp")
+    case RBP => prependSize(size, "bp")
+    case R8  => appendSize(size, "r8")
+    case R9  => appendSize(size, "r9")
+    case R10 => appendSize(size, "r10")
+    case R11 => appendSize(size, "r11")
+    case R12 => appendSize(size, "r12")
+    case R13 => appendSize(size, "r13")
+    case R14 => appendSize(size, "r14")
+    case R15 => appendSize(size, "r15")
   }
 
   /**

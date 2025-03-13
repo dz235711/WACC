@@ -175,6 +175,14 @@ sealed class TypeChecker(inheritedFuncTable: Option[Map[Int, List[RenamedAST.Ide
     case RenamedAST.Begin(body) => TypedAST.Begin(checkStmt(body, retC))
     case RenamedAST.Semi(s1, s2) =>
       TypedAST.Semi(checkStmt(s1, retC), checkStmt(s2, retC))
+    case RenamedAST.Throw(e) => TypedAST.Throw(checkExpr(e, Is(IntType))._2)
+    case RenamedAST.TryCatchFinally(t, c, cBody, f) =>
+      TypedAST.TryCatchFinally(
+        checkStmt(t, retC),
+        checkIdent(c, Is(IntType))._2,
+        checkStmt(cBody, retC),
+        checkStmt(f, retC)
+      )
   }
 
   private def checkExpr(
@@ -368,11 +376,13 @@ sealed class TypeChecker(inheritedFuncTable: Option[Map[Int, List[RenamedAST.Ide
         }
 
       ArrayType(elTy).satisfies(rval.pos)(c) match {
+        case Some(StringType) if elTy == CharType =>
+          val esTyped = es.map(checkExpr(_, Is(CharType))._2)
+          (Some(ArrayType(CharType)), TypedAST.ArrayLiter(esTyped, ArrayType(CharType)))
         case Some(ArrayType(ty)) =>
           val esTyped = es.map(checkExpr(_, Is(ty))._2)
           (Some(ArrayType(ty)), TypedAST.ArrayLiter(esTyped, ArrayType(ty)))
-        case _ =>
-          (None, TypedAST.ArrayLiter(es.map(checkExpr(_, Unconstrained)._2), ?))
+        case _ => (None, TypedAST.ArrayLiter(es.map(checkExpr(_, Unconstrained)._2), ?))
       }
     case RenamedAST.NewPair(e1, e2) =>
       PairType(?, ?).satisfies(rval.pos)(c) match {

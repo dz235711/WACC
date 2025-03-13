@@ -257,6 +257,30 @@ class Renamer private (inheritedFunctionScope: Option[Map[String, (QualifiedName
         RenamedAST.Semi(renamedS1, renamedS2)(stmt.pos),
         currentScopeS2
       )
+
+    case SyntaxAST.Throw(e) =>
+      (
+        RenamedAST.Throw(renameExpr(e, parentScope ++ currentScope))(stmt.pos),
+        currentScope
+      )
+
+    case SyntaxAST.TryCatchFinally(tryBody, catchIdent, catchBody, finallyBody) =>
+      val identName = QualifiedName(catchIdent.v, generateUid(), KnownType.IntType)
+      val renamedTry =
+        renameStmt(tryBody, parentScope ++ currentScope, Map(), isFunc)._1
+      val renamedCatch =
+        renameStmt(catchBody, parentScope ++ currentScope + (catchIdent.v -> identName), Map(), isFunc)._1
+      val renamedFinally =
+        renameStmt(finallyBody, parentScope ++ currentScope, Map(), isFunc)._1
+      (
+        RenamedAST.TryCatchFinally(
+          renamedTry,
+          RenamedAST.Ident(identName)(catchIdent.pos),
+          renamedCatch,
+          renamedFinally
+        )(stmt.pos),
+        currentScope
+      )
   }
 
   /** Rename an rvalue.

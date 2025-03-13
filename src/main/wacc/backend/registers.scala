@@ -1,9 +1,13 @@
 package wacc
 
+import wacc.RenamedAST.SemType
+import wacc.RenamedAST.KnownType.{ArrayType, BoolType, CharType, IntType, PairType, StringType}
+import wacc.RenamedAST.?
+
 enum Size {
   case W8, W16, W32, W64
 
-  def toBytes: Int = this match {
+  def asBytes: Int = this match {
     case W8  => 1
     case W16 => 2
     case W32 => 4
@@ -11,86 +15,104 @@ enum Size {
   }
 }
 
+object Size {
+
+  /** Constructs a size given a semantic type.
+   * 
+   * @param semType The semantic type
+   * @return The size of the semantic type
+   */
+  def apply(semType: SemType): Size = semType match {
+    case IntType        => W32
+    case BoolType       => W8
+    case CharType       => W8
+    case StringType     => W64
+    case ArrayType(_)   => W64
+    case PairType(_, _) => W64
+    case ?              => W64
+  }
+}
+
+/** The size of a pointer. */
+val PointerSize = Size.W64
+
+enum Register {
+
+  /** The return register, saved by caller. */
+  case RAX
+
+  /** General register, saved by callee. */
+  case RBX
+
+  /** The register for the 4th function argument, saved by caller. */
+  case RCX
+
+  /** The register for the 3rd function argument, saved by caller. */
+  case RDX
+
+  /** The register for the 2nd function argument, saved by caller. */
+  case RSI
+
+  /** The register for the 1st function argument, saved by caller. */
+  case RDI
+
+  /** The stack pointer register, saved by callee. */
+  case RSP
+
+  /** The base pointer register, saved by callee. */
+  case RBP
+
+  /** The register for the 5th function argument, saved by caller. */
+  case R8
+
+  /** The register for the 6th function argument, saved by caller. */
+  case R9
+
+  /** General register, saved by caller. */
+  case R10
+
+  /** General register, saved by caller. */
+  case R11
+
+  /** General register, saved by callee. */
+  case R12
+
+  /** General register, saved by callee. */
+  case R13
+
+  /** General register, saved by callee. */
+  case R14
+
+  /** General register, saved by callee. */
+  case R15
+
+  /** Instruction pointer. */
+  case RIP
+}
+
 /**  The program counter register. */
-val INSTRUCTION_POINTER = RIP
+val INSTRUCTION_POINTER = Register.RIP
 
 /** The stack pointer register. */
-val STACK_POINTER = RSP
+val STACK_POINTER = Register.RSP
 
 /** The base pointer register. */
-val BASE_POINTER = RBP
+val BASE_POINTER = Register.RBP
 
 /** The register for the 1st function argument. */
-val ARG_1 = RDI
+val ARG_1 = Register.RDI
 
 /** The register for the 2nd function argument. */
-val ARG_2 = RSI
+val ARG_2 = Register.RSI
 
 /** The register for the 3rd function argument. */
-val ARG_3 = RDX
+val ARG_3 = Register.RDX
 
 /** The register for the return value. */
-val RETURN = RAX
+val RETURN = Register.RAX
 
 /** Th quotient register for division. */
-val QUOT_REG = RAX
+val QUOT_REG = Register.RAX
 
 /** The remainder register for division. */
-val REM_REG = RDX
-
-sealed trait Register {
-  val width: Size
-}
-
-/** The program counter register. */
-object RIP extends Register {
-  val width: Size = Size.W64
-}
-
-/** The return register, saved by caller. */
-case class RAX(width: Size) extends Register
-
-/** General register, saved by callee. */
-case class RBX(width: Size) extends Register
-
-/** The register for the 4th function argument, saved by caller. */
-case class RCX(width: Size) extends Register
-
-/** The register for the 3rd function argument, saved by caller. */
-case class RDX(width: Size) extends Register
-
-/** The register for the 2nd function argument, saved by caller. */
-case class RSI(width: Size) extends Register
-
-/** The register for the 1st function argument, saved by caller. */
-case class RDI(width: Size) extends Register
-
-/** The stack pointer register, saved by callee. */
-case class RSP(width: Size) extends Register
-
-/** The base pointer register, saved by callee. */
-case class RBP(width: Size) extends Register
-
-/** The register for the 5th function argument, saved by caller. */
-case class R8(width: Size) extends Register
-
-/** The register for the 6th function argument, saved by caller. */
-case class R9(width: Size) extends Register
-
-/** General register, saved by caller. */
-case class R10(width: Size) extends Register
-
-/** General register, saved by caller. */
-case class R11(width: Size) extends Register
-
-/** General register, saved by callee. */
-case class R12(width: Size) extends Register
-
-/** General register, saved by callee. */
-case class R13(width: Size) extends Register
-
-/** General register, saved by callee. */
-case class R14(width: Size) extends Register
-
-/** General register, saved by callee. */
-case class R15(width: Size) extends Register
+val REM_REG = Register.RDX

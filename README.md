@@ -104,3 +104,13 @@ docker build --platform linux/amd64 -t assembly-container .
 USE_DOCKER=true scala test .
 ```
 (You can also just set the environment variable: `export USE_DOCKER=true`)
+
+To run a command in the docker container from the current directory, you can use the following command:
+```shell
+docker run --rm -v .:/workspace --platform linux/amd64 assembly-container "<command>"
+```
+
+For example, to assemble and run an assembly file:
+```shell
+docker run --rm -v .:/workspace --platform linux/amd64 assembly-container "gcc -o test -z noexecstack filename.s && ./test"
+```

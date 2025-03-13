@@ -22,13 +22,13 @@ class BackendValidFunctionNested_functionsTests extends AnyFlatSpec {
     output shouldBe programTester.expectedOutput
   }
 
-  it should "execute fixedPointRealArithmetic.wacc" taggedAs Backend in pending /*{
+  it should "execute fixedPointRealArithmetic.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "fixedPointRealArithmetic.wacc")
     val (exitStatus, output) = programTester.run(programTester.testInput)
 
     exitStatus shouldBe programTester.expectedExitStatus.orElse(exitStatus)
     output shouldBe programTester.expectedOutput
-  }*/
+  }
 
   it should "execute functionConditionalReturn.wacc" taggedAs Backend in {
     val programTester = new ProgramTester(dir + "functionConditionalReturn.wacc")

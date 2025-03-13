@@ -1,0 +1,25 @@
+# the inner-most catch block should be executed when an exception is thrown
+
+# Output:
+# inner catch
+#
+
+# Program:
+
+begin
+  try
+  
+    try
+      throw 1
+    catch e
+      println "inner catch"
+    finally
+      skip
+    yrt
+    
+  catch e
+    println "outer catch"
+  finally
+    skip
+  yrt
+end

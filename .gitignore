@@ -8,6 +8,12 @@ test.wacc
 test.s
 test
 reports/
+fraction
+boolList
+charList
+intList
+maths
+
 
 # Assembly
 *.s

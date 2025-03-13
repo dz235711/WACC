@@ -1,0 +1,18 @@
+# basic exception flow
+
+# Output:
+
+# Exit:
+# 0
+
+# Program:
+
+begin
+  try
+    throw 1
+  catch e
+    skip
+  finally
+    exit 0
+  yrt
+end
