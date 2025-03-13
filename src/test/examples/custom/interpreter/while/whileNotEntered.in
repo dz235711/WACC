@@ -1,0 +1,5 @@
+int x = 99
+while x != 99 do
+x = 12
+done
+exit 0
