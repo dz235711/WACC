@@ -7,8 +7,8 @@ import scala.compiletime.uninitialized
 import scala.collection.mutable.ListBuffer
 import os.SubProcess.InputStream
 import os.SubProcess.OutputStream
-import wacc.AsciiConstants.MIN_CHAR
-import wacc.AsciiConstants.MAX_CHAR
+import wacc.AsciiConstants.MinChar
+import wacc.AsciiConstants.MaxChar
 import scala.util.{Try, Success, Failure}
 
 type BoolExpr = BoolLiter | Not | Greater | GreaterEq | Smaller | SmallerEq | Equals | NotEquals | And | Or
@@ -124,7 +124,7 @@ final class Interpreter(
             case KnownType.CharType =>
               val inputString = outputStream.readLine()
               if (inputString.length != 1) throw BadInputException("Read malformed input. Expected char.")
-              if ((MIN_CHAR > inputString.head.toInt) || (inputString.head.toInt > MAX_CHAR))
+              if ((MinChar > inputString.head.toInt) || (inputString.head.toInt > MaxChar))
                 throw BadInputException("Read malformed input. Char is not ASCII 0-127.")
               CharLiter(inputString.head)
             case _ => throw BadInputException("Read must be called on object of type int or char")
