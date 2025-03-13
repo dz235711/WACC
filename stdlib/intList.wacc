@@ -483,11 +483,14 @@ bool intListFree(pair(int, pair) intList) is
   return true
 end
 
-bool _ = true;
+# removes an element from an int list
+pair(int, pair) intListRemove(pair(int, pair) intList, int index) is 
+  pair(int, pair) taken = call intListTake(intList, index);
+  pair(int, pair) dropped = call intListDrop(intList, index + 1);
+  pair(int, pair) intListRemoved = call intListConcat(taken, dropped);
+  return intListRemoved
+end
 
-int[] a = [2, 3, 4, 1, 5];
-pair(int, pair) intList = call toIntList(a);
-pair(int, pair) intList2 = call intListSort(intList);
-_ = call intListPrint(intList2)
+bool _ = true
 
 end
