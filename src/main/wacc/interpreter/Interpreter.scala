@@ -70,7 +70,6 @@ final class Interpreter(
     */
   private def getFuncErrorString(id: Id): String = s"Function with id $id not found"
 
-  // TODO: Change documentation after scope inheritance is implemented.
   /** Interprets a program within a new scope.
     *
     * @param program The program to be interpreted
@@ -244,7 +243,7 @@ final class Interpreter(
           .get(id)
           .getOrElse(
             throw VariableNotFoundException(getVariableErrorString(id))
-          ) // TODO: Proper free handling
+          )
       case ArrayElem(v, es, _) =>
         // Evaluate the expression indices
         val indices = es.map(interpretExpr(_).asInstanceOf[Int])
@@ -327,7 +326,7 @@ final class Interpreter(
     */
   private def interpretChar(e: Expr)(using scope: VariableScope): Char =
     e match {
-      case Chr(e)       => interpretInt(e).toChar
+      case Chr(e)       => interpretInt(e).toChar // TODO: Check if this is consistent with WACC chr
       case CharLiter(c) => c
 
       case Ident(id, KnownType.CharType) =>

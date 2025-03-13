@@ -156,7 +156,6 @@ object parser {
     ArrayLiter("[".label("array literal") ~> sepBy(expr, ",") <~ "]")
 
   // --- PARSER FOR INTERPRETER ---
-  // TODO: Should this be Skip <# whitespace?
   private lazy val interpreterStmt: Parsley[Stmt] =
     stmt.orElse(pure(Skip()(0, 0))) // We can insert a dummy position for the skip here, since it will never be used
   private lazy val interpreterProg = Program(many(func), interpreterStmt)
