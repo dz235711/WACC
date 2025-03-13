@@ -8,20 +8,9 @@ class ImportsTests extends AnyFlatSpec {
   val FrontendErrorMessage = "Frontend failed to run"
 
   // Testing whether a file can be imported, but not used
-  it should "provide unchanged AST when importing a file without using it" taggedAs (Frontend, Imports) in pending /*{
-    val programFile = readFile(dir + "importUnused.wacc") match {
-      case None        => throw new FileNotFoundException()
-      case Some(lines) => lines
-    }
-    val programAST = runFrontend(programFile, false) match {
-      case Left(err)    =>
-        val sb = new StringBuilder()
-        err._2.foldRight(sb)((e, acc) => printWaccError(e, acc))
-        throw new Exception(sb.toString())
-      case Right(ast) => ast
-    }
-    compareFrontend(dir + "progWithoutImport.wacc", programAST) shouldBe true
-  }*/ // TODO: See if this test is needed/a better way to compare frontend
+  it should "provide unchanged AST when importing a file without using it" taggedAs (Frontend, Imports) in {
+    frontendStatus(dir + "progWithoutImport.wacc") shouldBe 0
+  }
 
   // Testing whether a file can be imported and have functions used from it
   it should "frontend analyse importAndUse.wacc" taggedAs (Frontend, Imports) in {
@@ -63,11 +52,6 @@ class ImportsTests extends AnyFlatSpec {
   it should "flag an error for an illegal function re-declaration when imported" taggedAs (Frontend, Imports) in {
     getFrontendErrors(dir + "illegalFunctionRedeclaration.wacc") should include("Illegal function redeclaration")
   }
-
-  // Testing whether a function with colliding names can be used if the file is specified i.e., call example.f()
-  it should "allow aliases for modules to import redeclared functions" taggedAs (Frontend, Imports) in pending /* {
-    frontendStatus(dir + "aliasFunctionRedeclaration.wacc") shouldBe 0
-  } */ // TODO: Implement this
 
   // Testing whether an error is flagged if an imported file has syntax errors
   it should "flag an error for an imported file with syntax errors" taggedAs (Frontend, Imports) in {
