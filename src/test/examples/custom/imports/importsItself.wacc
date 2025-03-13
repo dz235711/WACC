@@ -1,4 +1,5 @@
 import "src/test/examples/custom/imports/importsItself.wacc"
 begin
+    int f() is return 1 end
     skip
 end

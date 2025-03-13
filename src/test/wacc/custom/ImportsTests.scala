@@ -75,7 +75,7 @@ class ImportsTests extends AnyFlatSpec {
   }
 
   // Testing whether an error is flagged if a file imports itself
-  it should "flag an error for a file importing itself" taggedAs (Frontend, Imports) in pending /* {
-    getFrontendErrors(dir + "importsItself.wacc") should include("Cannot import with circular dependencies")
-  } */ // TODO: Fix this with circular dependencies
+  it should "flag an error for a file importing itself" taggedAs (Frontend, Imports) in {
+    frontendStatus(dir + "importsItself.wacc") shouldBe 0
+  }
 }

@@ -88,7 +88,7 @@ def main(args: Array[String]): Unit = {
   val lines = file.get
 
   // Run the frontend
-  runFrontend(lines, verbose) match {
+  runFrontend(lines, verbose, path.get) match {
     case Right(program) =>
       // Run the backend
       val assembly = runBackend(program, verbose)

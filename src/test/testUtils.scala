@@ -21,7 +21,7 @@ def frontendStatus(path: String): Int =
     case None =>
       throw new FileNotFoundException()
     case Some(lines) =>
-      runFrontend(lines, false).fold(status => status._1, _ => 0)
+      runFrontend(lines, false, path).fold(status => status._1, _ => 0)
 
 /** Compare the output of the frontend with the expected output
  *
@@ -35,7 +35,7 @@ def compareFrontend(path: String, expected: TypedAST.Program): Boolean =
       throw new FileNotFoundException()
     case Some(lines) =>
       lines
-  val frontendOutput = runFrontend(programLines, false)
+  val frontendOutput = runFrontend(programLines, false, path)
   frontendOutput match
     case Left(_) => false
     case Right(ast) =>
@@ -47,7 +47,7 @@ def compareFrontend(path: String, expected: TypedAST.Program): Boolean =
  * @return The error output of the frontend 
 */
 def getFrontendErrors(path: String): String =
-  runFrontend(readFile(path).get, false) match {
+  runFrontend(readFile(path).get, false, path) match {
     case Left(err) =>
       val sb = new StringBuilder()
       err._2.foldRight(sb)((e, acc) => printWaccError(e, acc))

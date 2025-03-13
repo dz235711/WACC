@@ -72,9 +72,14 @@ private def getAllImports(ast: SyntaxAST.Program, imported: Set[String])(implici
  *
  * @param linesList List of lines from the input file
  * @param verbose Whether verbose mode is enabled
+ * @param path The path of the file being compiled
  * @return Either a tuple of the error status code and a list of errors or the typed AST
  */
-def runFrontend(linesList: List[String], verbose: Boolean): Either[(Int, List[WaccError]), TypedAST.Program] = {
+def runFrontend(
+    linesList: List[String],
+    verbose: Boolean,
+    path: String
+): Either[(Int, List[WaccError]), TypedAST.Program] = {
   val lines = linesList.mkString("\n")
 
   given ErrorBuilder[WaccError] = new WaccErrorBuilder
@@ -94,7 +99,7 @@ def runFrontend(linesList: List[String], verbose: Boolean): Either[(Int, List[Wa
     _ = printVerboseInfo(verbose, "Pretty-Printed AST", prettyPrint(syntaxAST), Console.GREEN)
 
     // Parse the imported files
-    importASTs <- getAllImports(syntaxAST, Set())
+    importASTs <- getAllImports(syntaxAST, Set(path))
     _ = printVerboseInfo(verbose, "Imports", importASTs, Console.CYAN)
 
     // Semantic analysis
