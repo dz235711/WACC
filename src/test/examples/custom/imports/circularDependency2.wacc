@@ -1,7 +1,7 @@
 import "src/test/examples/custom/imports/circularDependency3.wacc"
 begin
     int g(int x) is
-        int y = call h()
+        int y = call h();
         return y + x
     end
     skip

@@ -33,10 +33,10 @@ class ImportsTests extends AnyFlatSpec {
     frontendStatus(dir + "multipleImports.wacc") shouldBe 0
   }
 
-  // Testing whether circular dependencies result in an error
-  it should "frontend analyse circularDependency.wacc" taggedAs (Frontend, Imports) in pending /*{
-    getFrontendErrors(dir + "circularDependency.wacc") should include("Cannot import with circular dependencies")
-  } */ // TODO: Finish after separate import stage is merged in
+  // Testing whether circular dependencies succeed
+  it should "frontend analyse circularDependency.wacc" taggedAs (Frontend, Imports) in {
+    frontendStatus(dir + "circularDependency.wacc") shouldBe 0
+  }
 
   // Testing whether an error is flagged for incorrect file format
   it should "flag an error for an incorrect file format" taggedAs (Frontend, Imports) in pending /* {
