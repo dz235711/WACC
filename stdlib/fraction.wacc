@@ -1,0 +1,631 @@
+begin
+  # ============ Math Module Functions ============
+  int abs(int x) is 
+    if x < 0 then
+      return -x
+    else
+      return x
+    fi
+  end
+
+  int gcd(int a, int b) is
+    if b == 0 then
+      return a
+    else
+      int gcd = call gcd(b, a % b);
+      return gcd
+    fi
+  end
+
+  int lcm(int a, int b) is
+    int gcd = call gcd(a, b);
+    int lcm = a * (b / gcd);
+    return lcm
+  end
+
+  int pow(int x, int n) is
+    if n == 0 then
+      return 1
+    else
+      if n == 1 then 
+        return x
+      else
+        int half = call pow(x, n / 2);
+        if n % 2 == 0 then
+          return half * half
+        else
+          return half * half * x
+        fi
+      fi
+    fi
+  end
+
+  int inf() is
+    int uBound = call pow(2, 30);
+    return uBound + (uBound - 1)
+  end
+
+  # helper for rounded log functions, performs ceiled log but also returns the exponented value to allow further manipulation
+  pair(int, int) _preRoundedLog(int n, int base) is
+    int count = 0;
+    int acc = 1;
+
+    # reduce n by one power as otherwise it might overflow if n is int limit
+    int reduced = n / base;
+    while acc < reduced do
+      acc = acc * base;
+      count = count + 1
+    done;
+    pair(int, int) res = newpair(count, acc);
+    return res
+  end
+
+  # log and then ceil the result
+  int ceiledLog(int n, int base) is
+    # get the power and the exponented value
+    pair(int, int) res = call _preRoundedLog(n, base);
+    int count = fst res;
+    int acc = snd res;
+
+    # if the exponented value is less than n, return power + 1 as the actual would be a decimal in between that and the power returned from helper
+    if acc < n then
+      count = count + 1
+    else
+      skip
+    fi;
+
+    # free the temporary pair
+    free res;
+
+    return count
+  end
+
+  # log and then floor the result
+  int flooredLog(int x, int n) is
+    # get the power and the exponented value
+    pair(int, int) res = call _preRoundedLog(x, n);
+
+    # the power is the floored log
+    int count = fst res;
+
+    # free the temporary pair
+    free res;
+
+    return count
+  end
+  
+
+  # ============ Fraction Module Functions ============
+
+  # Gets the numerator of a fraction
+  int getNumerator(pair(int, int) frac) is
+    int num = fst frac;
+    return num
+  end
+
+  # Gets the denominator of a fraction
+  int getDenominator(pair(int, int) frac) is
+    int den = snd frac;
+    return den
+  end
+
+  # Sets the numerator of a fraction
+  bool setNumerator(pair(int, int) frac, int num) is
+    fst frac = num;
+    return true
+  end
+
+  # Sets the denominator of a fraction
+  bool setDenominator(pair(int, int) frac, int den) is
+    snd frac = den;
+    return true
+  end
+
+  # Creates a fraction from a numerator and a denominator
+  pair(int, int) toFraction(int num, int den) is
+    pair(int, int) frac = newpair(num, den);
+    return frac
+  end
+
+  # Simplifies a fraction
+  bool simplify(pair(int, int) frac) is
+    int num = call getNumerator(frac);
+    int den = call getDenominator(frac);
+
+    # divide the numerator and denominator by their gcd
+    int gcd = call gcd(num, den);
+    num = num / gcd;
+    den = den / gcd;
+
+    # update the numerator and denominator of the fraction
+    bool _ = call setNumerator(frac, num);
+    _ = call setDenominator(frac, den);
+    return true
+  end
+
+  # helper function to refactor out the logic for rounding up or down
+  int _roundedDiv(pair(int, int) frac, bool flag, int parity) is
+    # get the numerator and denominator of the fraction
+    int num = call getNumerator(frac);
+    int den = call getDenominator(frac);
+
+    # divide the numerator by the denominator to get the rounded down (or up if negative) value of the fraction
+    int res = num / den;
+
+    # if the fraction is not an integer, round up or down based on the flag (defined and explained in wrapper functions)
+    if num % den != 0 && flag then
+      # modify result
+      res = res + parity
+    else
+      skip
+    fi;
+    return res
+  end
+
+  # round fraction up to the nearest integer
+  int ceil(pair(int, int) frac) is
+    # only add one if fraction is positive as negative division automatically rounds up due to smaller absolute values now being considered larger
+    bool isPos = call fractionIsPositive(frac);
+    int ceiled = call _roundedDiv(frac, isPos, 1);
+    return ceiled
+  end
+
+  # round fraction down to the nearest integer
+  int floor(pair(int, int) frac) is
+    # only subtract one if fraction is negative as negative division automatically rounds up due to smaller absolute values now being considered larger
+    bool isNeg = call fractionIsNegative(frac);
+    int floored = call _roundedDiv(frac, isNeg, -1);
+    return floored
+  end
+
+  # prints a fraction
+  bool fractionPrint(pair(int, int) frac) is
+    int num = call getNumerator(frac);
+    int den = call getDenominator(frac);
+    print(num);
+    print("/");
+    print(den);
+    return true
+  end
+
+  # print a fraction as a float
+  bool fractionPrintAsFloat(pair(int, int) frac) is
+    # get the numerator and denominator of the fraction
+    int num = call getNumerator(frac);
+    int den = call getDenominator(frac);
+
+    # if the numerator is 0, print 0
+    if num == 0 then
+      print(0);
+      return true
+    else
+      skip
+    fi;
+
+    # find how many powers of 10 we can shift the number before it gets out of bound
+    # this is maximised to increase how many decimal points we can print to
+    int inf = call inf();
+    int absNum = call abs(num);
+    int digits = call flooredLog(inf / absNum, 10);
+    int factor = call pow(10, digits);
+
+    # shift the number accordingly and then divide to get the "decimal" value represented in integer
+    int approx = num * factor / den;
+
+    # manipulate the number and slice it into its digit and decimal parts
+    int nums = approx / factor;
+    int decs = approx % factor;
+
+    if (decs < 0 && nums >= 0) then
+      # if the number is negative, print the negative sign
+      print("-");
+
+      # make sure the negative sign doesn't come up again after the decimal point
+      decs = -decs
+    else
+      skip
+    fi;
+
+    # print the number separated by decimal point
+    print(nums);
+    print(".");
+    print(decs);
+
+    return true
+  end
+
+  # copy a fraction
+  pair(int, int) fractionCopy(pair(int, int) frac) is
+    int num = call getNumerator(frac);
+    int den = call getDenominator(frac);
+    pair(int, int) f = call toFraction(num, den);
+    return f
+  end
+
+  # invert the numerator and denominator of a fraction
+  bool fractionInvert(pair(int, int) frac) is
+    int num = call getNumerator(frac);
+    int den = call getDenominator(frac);
+    bool _ = call setNumerator(frac, den);
+    _ = call setDenominator(frac, num);
+    return true
+  end
+
+  # negate the fraction, e.g. 1/2 -> -1/2
+  bool fractionNegate(pair(int, int) frac) is
+    int num = call getNumerator(frac);
+    bool _ = call setNumerator(frac, -num);
+    return true
+  end
+
+  # check if a fraction is negative
+  bool fractionIsNegative(pair(int, int) frac) is
+    int num = call getNumerator(frac);
+    int den = call getDenominator(frac);
+    if (num < 0 && den > 0) || (num > 0 && den < 0) then
+      return true
+    else
+      return false
+    fi
+  end
+
+  # check if a fraction is positive
+  bool fractionIsPositive(pair(int, int) frac) is
+    bool isNeg = call fractionIsNegative(frac);
+    bool isZero = call fractionIsZero(frac);
+    return !isNeg && !isZero
+  end
+
+  # check if a fraction is zero
+  bool fractionIsZero(pair(int, int) frac) is
+    int num = call getNumerator(frac);
+    return num == 0
+  end
+
+  # Multiplies two fractions
+  pair(int, int) fractionMult(pair(int, int) frac1, pair(int, int) frac2) is
+    
+  # get the numerators and denominators of the fractions as ints
+    int num1 = call getNumerator(frac1);
+    int den1 = call getDenominator(frac1);
+    int num2 = call getNumerator(frac2);
+    int den2 = call getDenominator(frac2);
+
+    # multiply the numerators and denominators
+    int num = num1 * num2;
+    int den = den1 * den2;
+
+    # create a new fraction from the multiplied values
+    pair(int, int) frac = call toFraction(num, den);
+    bool _ = call simplify(frac);
+
+    return frac
+  end
+
+  # Divides two fractions
+  pair(int, int) fractionDiv(pair(int, int) frac1, pair(int, int) frac2) is
+    # invert the second fraction and multiply the two fractions
+    pair(int, int) inverted2 = call fractionCopy(frac2);
+    bool _ = call fractionInvert(inverted2);
+    pair(int, int) frac = call fractionMult(frac1, inverted2);
+
+    _ = call simplify(frac);
+
+    # free the temporary fractions
+    free inverted2;
+
+    return frac
+  end
+
+  # Adds two fractions
+  pair(int, int) fractionAdd(pair(int, int) frac1, pair(int, int) frac2) is
+    # get the numerators and denominators of the fractions as ints
+    int num1 = call getNumerator(frac1);
+    int den1 = call getDenominator(frac1);
+    int num2 = call getNumerator(frac2);
+    int den2 = call getDenominator(frac2);
+
+    # cross multiply so they share denominators then add the numerators
+    int num = num1 * den2 + num2 * den1;
+    int den = den1 * den2;
+
+    # create a new fraction from the added values
+    pair(int, int) frac = call toFraction(num, den);
+    bool _ = call simplify(frac);
+
+    return frac
+  end
+
+  # Subtracts two fractions
+  pair(int, int) fractionSub(pair(int, int) frac1, pair(int, int) frac2) is
+    # get the numerators and denominators of the fractions as ints
+    int num1 = call getNumerator(frac1);
+    int den1 = call getDenominator(frac1);
+    int num2 = call getNumerator(frac2);
+    int den2 = call getDenominator(frac2);
+
+    # cross multiply so they share denominators then subtract the numerators
+    int num = num1 * den2 - num2 * den1;
+    int den = den1 * den2;
+
+    # create a new fraction from the subtracted values
+    pair(int, int) frac = call toFraction(num, den);
+    bool _ = call simplify(frac);
+
+    return frac
+  end
+
+  # round a float to a fraction
+  pair(int, int) floatToFraction(int digits, int decimals) is 
+    # get the maximum value for the digits
+    int inf = call inf();
+    int infDigits = call ceiledLog(inf / 10, 10);
+
+    # find how many powers of 10 we can shift the number before it gets out of bound
+    # this is maximised to increase fraction accuracy
+    int digitsDigits = call ceiledLog(digits, 10);
+    int digitsToShift = infDigits - digitsDigits;
+    int factor = call pow(10, digitsToShift);
+    int decDigits = call ceiledLog(decimals, 10);
+    int decFactor = call pow(10, digitsToShift - decDigits);
+
+    # shift the number accordingly
+    int num = digits * factor;
+    int dec = decimals * decFactor;
+
+    # create the fraction and simplify it
+    pair(int, int) frac = call toFraction(num + dec, factor);
+    bool _ = call simplify(frac);
+
+    return frac
+  end
+
+  # generate π through the summing of an infinite sequence
+  pair(int, int) piIterative(int iteration) is
+    # implementation of π/4 = 1 - 1/3 + 1/5 - 1/7 + 1/9 ...
+    # the sequence is generated by alternating the sign of the fraction and incrementing the denominator by 2 each time
+    # parity to track the sign of the fraction, starts positive
+    int parity = 1;
+
+    # numerator and denominator of the fraction
+    int num = 1;
+    int den = 1;
+
+    # how many iterations (values summed) we have performed
+    int count = 0;
+
+    # accumulator for the sum of the sequence
+    pair(int, int) acc = call intToFraction(0);
+
+    # preconstruct the function to store value from each iteration so we dont have to loop malloc and free
+    pair(int, int) frac = call intToFraction(0);
+
+    # loop through the sequence and sum the values
+    while count < iteration do
+      bool _ = call setNumerator(frac, parity * num);
+      _ = call setDenominator(frac, den);
+      acc = call fractionAdd(acc, frac);
+
+      count = count + 1; 
+
+      # increment the denominator and flip the sign
+      den = den + 2;
+      parity = -parity
+
+    done;
+
+    # multiply by 4 as we can generated π/4
+    pair(int, int) four = call toFraction(4, 1);
+    pair(int, int) pi = call fractionMult(acc, four);
+
+    # free the temporary fractions
+    free acc;
+    free frac;
+    free four;
+
+    return pi
+  end
+
+  # constant estimate for pi to compensate for int size constraint limiting the sequence sum function
+  pair(int, int) pi() is
+    pair(int, int) pi = call toFraction(355, 113);
+    return pi
+  end
+
+  # generate e through the summing of an infinite sequence
+  pair(int, int) eIterative(int iteration) is
+    # implementation of e = 1 + 1/1! + 1/2! + 1/3! + 1/4! ...
+    # the sequence is generated by multiplying the denominator by itself + 1 each time
+    # numerator and denominator of the inital fraction
+    int num = 1;
+    int den = 1;
+
+    # how many iterations (values summed) we have performed
+    int count = 0;
+
+    # accumulator for the sum of the sequence
+    pair(int, int) acc = call toFraction(0, 1);
+
+    # preconstruct the function to store value from each iteration so we dont have to loop malloc and free
+    pair(int, int) frac = call intToFraction(0);
+    
+    # loop through the sequence and sum the values
+    while count < iteration do
+      bool _ = call setNumerator(frac, num);
+      _ = call setDenominator(frac, den);
+      acc = call fractionAdd(acc, frac);
+
+      count = count + 1;
+
+      # multiply the denominator
+      den = den * (count + 1)
+    done;
+
+    # free the temporary fraction
+    free frac;
+
+    return acc
+  end
+
+  # constant estimate for e to compensate for int size constraint limiting the sequence sum function
+  pair(int, int) e() is
+    pair(int, int) e = call toFraction(2721, 1001);
+    return e
+  end
+
+  # exponentiate a fraction
+  pair(int, int) fractionPow(pair(int, int) frac, int n) is
+    if n == 0 then
+      # if power is 0, return 1 in fraction form
+      pair(int, int) f = call toFraction(1, 1);
+      return f
+    else
+      if n == 1 then 
+        # if power is 1, return the fraction itself
+        return frac
+      else
+        # recursively calculate the power of the fraction by halving each time
+        pair(int, int) half = call fractionPow(frac, n / 2);
+        pair(int, int) f = call fractionMult(half, half);
+
+        # free the temporary fraction
+        free half;
+
+        if n % 2 == 0 then
+          # if power is even, return the fraction squared for 2n
+          return f
+        else
+          # if power is odd, multiply the squared value by the fraction for 2n + 1
+          pair(int, int) oddF = call fractionMult(f, frac);
+
+          # free the temporary fraction
+          free f;
+
+          return oddF
+        fi
+      fi
+    fi
+  end
+
+  # approximate 0-90 degrees of the sine function
+  pair(int, int) _sinApprox(int deg) is
+    # implementation of sin(Θ) ≈ 4Θ(180 - Θ) / (40500 - Θ(180 - Θ)) for 0 <= Θ <= 180
+
+    # calculate the numerator
+    int num = 4 * deg * (180 - deg);
+
+    # calculate the denominator
+    int den = 40500 - deg * (180 - deg);
+
+    # create the fraction and simplify it
+    pair(int, int) frac = call toFraction(num, den);
+    bool _ = call simplify(frac);
+
+    return frac
+  end
+
+  # approximate sine of a degree
+  pair(int, int) sin(int deg) is
+    # convert the angle to be within the principle values
+    int degPrinciple = deg % 360;
+    if degPrinciple < 0 then
+      degPrinciple = degPrinciple + 360
+    else
+      skip
+    fi;
+
+    # calculate the sine of the angle based on the new angle
+    if degPrinciple > 180 then
+
+      # the function only approximates between 0 - 180 so we manually negate the value
+      pair(int, int) x = call _sinApprox(degPrinciple - 180);
+      bool _ = call fractionNegate(x);
+      return x
+    else
+      pair(int, int) x = call _sinApprox(degPrinciple);
+      return x
+    fi
+  end
+
+  # approximate cosine of a degree
+  pair(int, int) cos(int deg) is
+    # cos(Θ) = sin(Θ + 90)
+    pair(int, int) x = call sin(deg + 90);
+    return x
+  end
+
+  # approximate tangent of a degree
+  pair(int, int) tan(int deg) is
+    # tan(Θ) = sin(Θ) / cos(Θ)
+    pair(int, int) x = call sin(deg);
+    pair(int, int) y = call cos(deg);
+    pair(int, int) z = call fractionDiv(x, y);
+
+    # free the temporary fractions
+    free x;
+    free y;
+
+    return z
+  end
+
+  # approximate the nth root of a fraction
+  pair(int, int) root(pair(int, int) frac, int n, int iterations) is
+    # implementation of the nth root of a fraction using Newton's method
+    # the newton's method is x = x - f(x) / f'(x) = x - (x^n - A) / (n * x^(n-1))
+    #                          = (n - 1) / n * x + A / n * 1 / (x^(n-1))
+    # where A is the number we are trying to root and n the number of roots
+
+    # calculate (n - 1) / n
+    pair(int, int) coef1 = call toFraction(n - 1, n);
+
+    # calculate A / n
+    pair(int, int) nFrac = call intToFraction(n);
+    pair(int, int) coef2 = call fractionDiv(frac, nFrac);
+
+    # initial guess for the root
+    pair(int, int) two = call intToFraction(2);
+    pair(int, int) acc = call fractionDiv(frac, two);
+
+    # loop through the iterations to approximate the root
+    int count = 0;
+    while count < iterations do
+      # calculate the (n - 1) / n * x
+      pair(int, int) f = call fractionMult(coef1, acc);
+
+      # calculate the A / n * 1 / (x^(n-1))
+      pair(int, int) g = call fractionCopy(acc);
+      bool _ = call fractionInvert(g);
+      pair(int, int) h = call fractionPow(g, n - 1);
+      pair(int, int ) i = call fractionMult(coef2, h);
+
+      # add the two values to get the new approximation
+      acc = call fractionAdd(f, i);
+
+      # increment the count
+      count = count + 1;
+
+      # free the temporary fractions
+      free f;
+      free g;
+      free h;
+      free i
+
+    done;
+
+    # free the temporary fractions
+    free coef1;
+    free nFrac;
+    free coef2;
+    free two;
+
+    return acc
+  end
+
+  # convert an integer to a fraction
+  pair(int, int) intToFraction(int n) is
+    pair(int, int) f = call toFraction(n, 1);
+    return f
+  end
+
+  bool _ = true
+end

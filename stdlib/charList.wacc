@@ -1,0 +1,496 @@
+begin
+
+# ========== CharList Module Functions ==========
+
+# helper function to get contents from a char list
+pair(char, pair) _charListContents(pair(int, pair) charList) is
+  pair(char, pair) node = snd charList;
+  return node
+end
+
+# helper function to get next node from a char list
+pair(char, pair) _charListNextNode(pair(char, pair) node) is
+  pair(char, pair) nextNode = snd node;
+  return nextNode
+end
+
+# helper function to get value from a char list node
+char _charListNodeVal(pair(char, pair) node) is
+  char v = fst node;
+  return v
+end
+
+# helper function to assign next node to a char list node
+bool _charListAsgnNextNode(pair(char, pair) node, pair(char, pair) newNode) is
+  snd node = newNode;
+  return true
+end
+
+# helper function to assign value to a char list node
+bool _charListAsgnVal(pair(char, pair) node, char v) is
+  fst node = v;
+  return true
+end
+
+# helper function to create a char list node
+pair(int, pair) _charList(int length, pair(char, pair) node) is
+  pair(int, pair) lenNode = newpair(length, node);
+  return lenNode
+end
+
+# helper function to create a char list node with value
+pair(char, pair) _charListNode(char v, pair(char, pair) node) is
+  pair(char, pair) newNode = newpair(v, node);
+  return newNode
+end
+
+# helper function to create an char list leaf node
+pair(char, pair) _charListLeafNode() is
+  return null
+end
+
+# helper function to add to an length of an char list
+bool _charListAddLength(pair(int, pair) charList, int diff) is
+  int length = call charListLen(charList);
+  fst charList = length + diff;
+  return true
+end
+
+# helper function to merge two char lists
+pair(int, pair) _charListMerge(pair(int, pair) charList1, pair(int, pair) charList2) is
+
+  # compute whether the lists are empty
+  bool isEmpty1 = call charListIsEmpty(charList1);
+  bool isEmpty2 = call charListIsEmpty(charList2);
+
+  # copy the lists so we dont modify the originals
+  pair(int, pair) charList1Copy = call charListCopy(charList1);
+  pair(int, pair) charList2Copy = call charListCopy(charList2);
+
+  if isEmpty1 then
+    # if the first list is empty, return the second list
+    bool _ = call charListFree(charList1Copy);
+    return charList2Copy
+  else
+    if isEmpty2 then
+      # if the second list is empty, return the first list
+      bool _ = call charListFree(charList2Copy);
+      return charList1Copy
+    else
+      # get the first node of each list
+      pair(char, pair) node1 = call _charListContents(charList1Copy);
+      pair(char, pair) node2 = call _charListContents(charList2Copy);
+
+
+      # get the leaf node for comparison and construction
+      pair(char, pair) leafNode = call _charListLeafNode();
+      pair(int, pair) sorted = call _charList(0, leafNode);
+      
+      # merge the two lists
+      while node1 != leafNode && node2 != leafNode do
+        # get the values of the nodes
+        char v1 = call _charListNodeVal(node1);
+        char v2 = call _charListNodeVal(node2);
+        
+        # compare the values and append the smaller one
+        if v1 < v2 then
+          sorted = call charListAppend(sorted, v1);
+          node1 = call _charListNextNode(node1)
+        else
+          sorted = call charListAppend(sorted, v2);
+          node2 = call _charListNextNode(node2)
+        fi
+
+      done;
+
+      # append the remaining elements of the non-empty list
+      if node1 != leafNode then
+
+        # first list is non-empty
+        while node1 != leafNode do
+          char v = call _charListNodeVal(node1);
+          sorted = call charListAppend(sorted, v);
+          node1 = call _charListNextNode(node1)
+        done
+      else
+
+        # otherwise second list is non-empty
+        while node2 != leafNode do
+          char v = call _charListNodeVal(node2);
+          sorted = call charListAppend(sorted, v);
+          node2 = call _charListNextNode(node2)
+        done
+      fi;
+
+      # free the copied lists
+      bool _ = call charListFree(charList1Copy);
+      _ = call charListFree(charList2Copy);
+
+      return sorted
+    fi
+  fi
+end
+
+# helper function to free the length node of a char list
+bool _charListFreeLenNode(pair(int, pair) charList) is
+  free charList;
+  return true
+end
+
+# helper function to free the contents of a char list
+bool _charListFreeContents(pair(char, pair) contents) is
+  pair(char, pair) node = contents;
+  pair(char, pair) leafNode = call _charListLeafNode();
+  while node != leafNode do
+    pair(char, pair) nextNode = call _charListNextNode(node);
+    free node;
+    node = nextNode
+  done;
+  return true
+end
+  
+# gets length of a char list
+int charListLen(pair(int, pair) charList) is
+  int l = fst charList;
+  return l
+end
+
+# checks if a char list is empty
+bool charListIsEmpty(pair(int, pair) charList) is
+  int length = call charListLen(charList);
+  return length == 0
+end
+
+# creates a singleton char list
+pair(int, pair) charListSingleton(char v) is
+  pair(char, pair) leaf = call _charListLeafNode();
+  pair(char, pair) node = call _charListNode(v, leaf);
+  pair(int, pair) charList = call _charList(1, node);
+  return charList
+end
+
+# inserts an element into a char list
+pair(int, pair) charListInsert(pair(int, pair) charList, int index, char v) is
+
+  # split the list at the index
+  pair(int, pair) dropped = call charListDrop(charList, index);
+  pair(int, pair) taken = call charListTake(charList, index);
+  
+  # create a new node for the value
+  pair(int, pair) newList = call charListSingleton(v);
+  pair(char, pair) newNode = call _charListContents(newList);
+
+  # get the contents of the dropped list
+  pair(char, pair) droppedContents = call _charListContents(dropped);
+
+  # free the length node of the dropped list
+  bool _ = call _charListFreeLenNode(dropped);
+
+  # link the new node to the dropped list
+  _ = call _charListAsgnNextNode(newNode, droppedContents);
+
+  # link the new node to the front of the list
+  pair(int, pair) concat = call charListConcat(taken, newList);
+
+  return concat
+end
+
+# concatenates two char lists
+pair(int, pair) charListConcat(pair(int, pair) charList1, pair(int, pair) charList2) is
+
+  # check if the lists are empty
+  bool isEmpty1 = call charListIsEmpty(charList1);
+  bool isEmpty2 = call charListIsEmpty(charList2);
+
+  # copy the lists so we dont modify the originals
+  pair(int, pair) charList1Copy = call charListCopy(charList1);
+  pair(int, pair) charList2Copy = call charListCopy(charList2);
+
+  # if one of the lists is empty, return the other
+  if isEmpty1 then
+    bool _ = call charListFree(charList1Copy);
+    return charList2Copy
+  else
+    if isEmpty2 then
+      bool _ = call charListFree(charList2Copy);
+      return charList1Copy
+    else
+      # find the last node of the first list
+      pair(char, pair) leafNode = call _charListLeafNode();
+      pair(char, pair) node1 = leafNode;
+      pair(char, pair) nextNode1 = call _charListContents(charList1Copy);
+      while nextNode1 != leafNode do
+        node1 = nextNode1;
+        nextNode1 = call _charListNextNode(node1)
+      done;
+
+      # link first node of the second list to the last node of the first list
+      pair(char, pair) node2 = call _charListContents(charList2Copy);
+      bool _ = call _charListAsgnNextNode(node1, node2);
+      int length2 = call charListLen(charList2Copy);
+      _ = call _charListAddLength(charList1Copy, length2);
+
+      # free the length node of second list
+      _ = call _charListFreeLenNode(charList2Copy);
+
+      return charList1Copy
+    fi
+  fi
+end
+
+# converts a char array to a char list
+pair(int, pair) toCharList(char[] arr) is
+  pair(char, pair) leafNode = call _charListLeafNode();
+  int length = len arr;
+  
+  # if arr is empty then we construct an empty list
+  if length == 0 then
+    pair(int, pair) charList = call _charList(0, leafNode);
+    return charList
+  else 
+    skip
+  fi;
+
+  # create a stub list
+  pair(char, pair) node = call _charListNode(arr[0], leafNode);
+  pair(int, pair) charList = call _charList(length, node);
+  int i = 1;
+
+  # iterate through the array and add elements to the list
+  while i < length do
+    pair(char, pair) newNode = call _charListNode(arr[i], leafNode);
+    bool _ = call _charListAsgnNextNode(node, newNode);
+    node = newNode;
+    i = i + 1
+  done;
+
+  return charList
+end
+
+# takes the first n elements of a char list
+pair(int, pair) charListTake(pair(int, pair) charList, int taking) is
+pair(char, pair) leafNode = call _charListLeafNode();
+
+  # if taking is 0, return a singleton list
+  if taking == 0 then
+    pair(int, pair) singleton = call _charList(0, leafNode);
+    return singleton
+  else
+
+    # create a new list with the first n elements
+    pair(int, pair) charListCopy = call charListCopy(charList);
+    pair(char, pair) node = call _charListContents(charListCopy);
+    int i = 0;
+    while i < taking - 1 do
+      node = call _charListNextNode(node);
+      i = i + 1
+    done;
+
+    pair(char, pair) nextNode = call _charListNextNode(node);
+    
+    # free the rest of the list
+    bool _ = call _charListFreeContents(nextNode);
+    
+    # assign a leaf node to cut off the rest of the array
+    _ = call _charListAsgnNextNode(node, leafNode);
+
+    # add the length of the new list
+    int length = call charListLen(charListCopy);
+    _ = call _charListAddLength(charListCopy, taking - length);
+    return charListCopy
+  fi
+end
+
+# drops the first n elements of a char list
+pair(int, pair) charListDrop(pair(int, pair) charList, int dropping) is
+
+  # get the node after the dropping index
+  pair(char, pair) node = call _charListContents(charList);
+  int i = 0;
+  while i < dropping do
+    node = call _charListNextNode(node);
+    i = i + 1
+  done;
+
+  # create a new list with the remaining elements
+  int length = call charListLen(charList);
+  pair(int, pair) wrapped = call _charList(length, node);
+
+  # subtract the length of the new list
+  bool _ = call _charListAddLength(wrapped, -dropping);
+
+  pair(int, pair) wrappedCopy = call charListCopy(wrapped);
+
+  # free the len node of wrapped
+  _ = call _charListFreeLenNode(wrapped);
+  
+  return wrappedCopy
+end
+
+# gets the element at an index of a char list
+char intListGet(pair(int, pair) charList, int index) is
+
+  # split the list at the index
+  pair(int, pair) dropped = call charListDrop(charList, index);
+  pair(char, pair) contents = call _charListContents(dropped);
+
+  # get the value of the ith node
+  char v = call _charListNodeVal(contents);
+
+  # free the dropped list
+  bool _ = call charListFree(dropped);
+
+  return v
+end
+
+# prints a char list
+bool charListPrint(pair(int, pair) charList) is
+  print '[';
+
+  # check if the list is empty
+  bool charListIsEmpty = call charListIsEmpty(charList);
+  if charListIsEmpty then
+    skip
+  else
+
+    # iterate through the list and print elements
+    pair(char, pair) node = call _charListContents(charList);
+    char v = call _charListNodeVal(node);
+    pair(char, pair) nextNode = call _charListNextNode(node);
+    pair(char, pair) leafNode = call _charListLeafNode();
+    while nextNode != leafNode do
+      print v;
+      print ", ";
+      node = nextNode;
+      v = call _charListNodeVal(node);
+      nextNode = call _charListNextNode(node)
+
+    done;
+    print v
+  fi;
+  println "]";
+  return true
+end
+
+# copies a char list
+pair(int, pair) charListCopy(pair(int, pair) charList) is
+  pair(char, pair) leafNode = call _charListLeafNode();
+  int length = call charListLen(charList);
+
+  # if the list is empty, return an empty list
+  if length == 0 then
+    pair(int, pair) charListCopy = call _charList(0, leafNode);
+    return charListCopy
+  else 
+    skip
+  fi;
+
+  # create a new list
+  pair(char, pair) node = call _charListContents(charList);
+  char v = call _charListNodeVal(node);
+  pair(char, pair) copyNode = call _charListNode(v, leafNode);
+  pair(int, pair) charListCopy = call _charList(length, copyNode);
+  node = call _charListNextNode(node);
+
+  # iterate through the list and copy elements
+  while node != leafNode do
+    char v = call _charListNodeVal(node);
+    pair(char, pair) newNode = call _charListNode(v, leafNode);
+    bool _ = call _charListAsgnNextNode(copyNode, newNode);
+    copyNode = newNode;
+    node = call _charListNextNode(node)
+  done;
+  return charListCopy
+end
+
+# replaces the element at an index of a char list
+pair(int, pair) charListReplace(pair(int, pair) charList, int index, char value) is
+  # split the list at the index
+  pair(int, pair) taken = call charListTake(charList, index);
+  pair(int, pair) dropped = call charListDrop(charList, index);
+  pair(char, pair) node = call _charListContents(dropped);
+
+  # assign the new value to the node
+  bool _ = call _charListAsgnVal(node, value);
+  pair(int, pair) concat = call charListConcat(taken, dropped);
+
+  return concat
+end
+
+# appends an element to char list
+pair(int, pair) charListAppend(pair(int, pair) charList, char value) is 
+  int length = call charListLen(charList);
+  pair(int, pair) charListInserted = call charListInsert(charList, length, value);
+  return charListInserted
+end
+
+# reverses an char list
+pair(int, pair) charListReversed(pair(int, pair) charList) is
+
+  # create a new list
+  pair(char, pair) leafNode = call _charListLeafNode();
+  pair(int, pair) charListReversed = call _charList(0, leafNode);
+
+  # get the first node
+  pair(char, pair) node = call _charListContents(charList);
+
+  # iterate through the list and appends elements to the new list in reverse
+  while node != leafNode do
+    # get the value of the node and make an inserted list
+    char v = call _charListNodeVal(node);
+    pair(int, pair) nextcharListReversed = call charListInsert(charListReversed, 0, v);
+
+    # free the old list
+    bool _ = call charListFree(charListReversed);
+
+    charListReversed = nextcharListReversed;
+    node = call _charListNextNode(node)
+  done;
+  return charListReversed
+end
+
+# sorts a char list
+pair(int, pair) charListSort(pair(int, pair) charList) is
+
+  # base case: if the list is empty or has one element, return it
+  int length = call charListLen(charList);
+  if length <= 1 then
+    return charList
+  else
+
+    # split the list in half
+    int mid = length / 2;
+    pair(int, pair) left = call charListTake(charList, mid);
+    pair(int, pair) right = call charListDrop(charList, mid);
+
+    # recursively sort the halves
+    pair(int, pair) sortedLeft = call charListSort(left);
+    pair(int, pair) sortedRight = call charListSort(right);
+
+    # merge the sorted halves
+    pair(int, pair) sorted = call _charListMerge(sortedLeft, sortedRight);
+    return sorted
+  fi
+end
+
+# frees every node in a char list
+bool charListFree(pair(int, pair) charList) is
+
+  # free the contents
+  pair(char, pair) contents = call _charListContents(charList);
+  bool _ = call _charListFreeContents(contents);
+
+  # free the length node
+  _ = call _charListFreeLenNode(charList);
+
+  return true
+end
+
+bool _ = true;
+
+char[] a = ['f', 'h', 'a', 'b', 'c', 'd', 'e'];
+pair(int, pair) charList = call toCharList(a);
+pair(int, pair) charListSorted = call charListSort(charList);
+_ = call charListPrint(charListSorted)
+
+end
