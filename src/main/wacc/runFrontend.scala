@@ -10,7 +10,7 @@ import parsley.errors.ErrorBuilder
  * @return A list of either the imported ASTs or a list of errors
  * 
 */
-private def getAllImports(ast_ : SyntaxAST.Program)(implicit
+private def getAllImports(ast_ : SyntaxAST.Program, filesImported: List[String])(implicit
     errBuilder: ErrorBuilder[WaccError],
     errCtx: ListContext[WaccError]
 ): List[Either[(Int, List[WaccError]), SyntaxAST.Program]] = {
@@ -18,7 +18,11 @@ private def getAllImports(ast_ : SyntaxAST.Program)(implicit
     readFile(file.filename.s) match {
       case Some(importedLines) =>
         parser.parse(importedLines.mkString("\n")) match {
-          case Success(ast) => Right(ast) :: getAllImports(ast)
+          case Success(ast) =>
+            if (filesImported.contains(file.filename.s))
+              println("got here")
+              getAllImports(ast, filesImported)
+            else Right(ast) :: getAllImports(ast, file.filename.s :: filesImported)
           case Failure(err) => Left((100, List(format(err, None, ErrType.Syntax)))) :: Nil
         }
       case None =>
@@ -55,7 +59,7 @@ def runFrontend(linesList: List[String], verbose: Boolean): Either[(Int, List[Wa
     _ = printVerboseInfo(verbose, "Pretty-Printed AST", prettyPrint(syntaxAST), Console.GREEN)
 
     // Parse the imported files
-    imports = getAllImports(syntaxAST)
+    imports = getAllImports(syntaxAST, List.empty)
     _ = printVerboseInfo(verbose, "Imports", imports, Console.CYAN)
 
     // Get the imported ASTs and report any errors in included files

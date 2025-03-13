@@ -50,7 +50,11 @@ class ImportsTests extends AnyFlatSpec {
     getFrontendErrors(dir + "nonExistentImport.wacc") should include("File not found")
   }
 
-  // Testing behaviour when a file is imported multiple times
+  // Testing whether an error is flagged if the same file is imported multiple times
+  it should "allow for the same file to be imported multiple times" taggedAs (Frontend, Imports) in pending /* {
+    println(getFrontendErrors(dir + "importsSameFile.wacc"))
+    frontendStatus(dir + "importsSameFile.wacc") shouldBe 0
+  } */
 
   // Testing an error for if a function in a different file shares the same name as a function in the current file
 
