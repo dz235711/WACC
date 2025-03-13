@@ -1,0 +1,4 @@
+pair(string, string) p = newpair("why dont scopes end with", "nigeb instead end")
+free p
+p = newpair("would be consistent with", "if statements")
+exit 0

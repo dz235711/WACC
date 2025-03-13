@@ -1,0 +1,4 @@
+int x = 0
+read x
+13
+exit 0

@@ -5,6 +5,7 @@ import org.scalatest.Tag
 
 object Frontend extends Tag("wacc.Frontend")
 object Backend extends Tag("wacc.Backend")
+object Repl extends Tag("wacc.Interpreter")
 object Debug extends Tag("wacc.Debug")
 object Imports extends Tag("wacc.Imports")
 

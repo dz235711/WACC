@@ -1,0 +1,4 @@
+char c = 'h'
+read c
+bad string
+exit 0

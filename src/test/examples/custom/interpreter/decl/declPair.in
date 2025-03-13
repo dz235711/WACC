@@ -1,0 +1,2 @@
+pair(bool, char) p = newpair(true, '7')
+exit 0

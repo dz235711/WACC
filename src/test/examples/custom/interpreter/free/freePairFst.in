@@ -1,0 +1,4 @@
+pair(int, int) p = newpair(1, 2)
+free p
+int x = fst p
+exit 0

@@ -6,11 +6,14 @@ import WaccErrorBuilder.constructSpecialised
 
 type Scope = Map[String, QualifiedName]
 
-class Renamer private {
-  private var uid: Int = 0
+class Renamer private (inheritedFunctionScope: Option[Map[String, (QualifiedName, Int)]], inheritedUid: Option[Int]) {
+  private var uid: Int = inheritedUid.getOrElse(0)
   // Map of function names to their qualified names and number of parameters
   private val functionIds: mutable.Map[String, (QualifiedName, Int)] =
-    mutable.Map()
+    inheritedFunctionScope match {
+      case Some(scope) => mutable.Map.from(scope)
+      case None        => mutable.Map.empty
+    }
 
   /** Generates a unique identifier.
    *
@@ -24,11 +27,12 @@ class Renamer private {
   /** Renames all functions and variables in the program.
    *
    * @param p The program to rename (ast)
+   * @param inheritedScope An inherited scope, used for the interpreter to preserve scopes between user inputs
    * @return The renamed program (RenamedAST)
    */
-  def renameProgram(p: SyntaxAST.Program, imports: List[SyntaxAST.Program])(using
+  def renameProgram(p: SyntaxAST.Program, inheritedScope: Option[Scope], imports: List[SyntaxAST.Program])(using
       ctx: ListContext[WaccError]
-  ): RenamedAST.Program = {
+  ): (RenamedAST.Program, Scope, Map[String, (QualifiedName, Int)], Int) = {
     // Get the imported functions and create a list of all functions
     val allFuncs = imports.flatMap(_.fs) ++ p.fs
     // Generate unique identifiers for all functions
@@ -56,11 +60,13 @@ class Renamer private {
     })
 
     // Rename all functions and the body
+    val parentScope = inheritedScope.getOrElse(Map.empty)
+
     val renamedFuncs = allFuncs.zip(fids).map(renameFunc)
-    val renamedBody = renameStmt(p.body, Map(), Map(), false)._1
+    val (renamedBody, renamedScope) = renameStmt(p.body, parentScope, Map.empty, false)
 
     // Return the renamed program
-    RenamedAST.Program(renamedFuncs, renamedBody)(p.pos)
+    (RenamedAST.Program(renamedFuncs, renamedBody)(p.pos), parentScope ++ renamedScope, functionIds.toMap, uid)
   }
 
   /** Translates between a syntactic type and a semantic type.
@@ -418,10 +424,26 @@ class Renamer private {
     }
 }
 
-object Renamer extends Renamer {
-  def rename(p: SyntaxAST.Program, imports: List[SyntaxAST.Program])(using
+object Renamer {
+
+  /** Renames all functions and variables in the program. If interpreter mode is on, the scopes and UID are preserved with every input. 
+   * 
+   * @param p The program to rename (ast)
+   * @param inheritedScope An inherited scope
+   * @param inheritedFunctionScope An inherited function scope
+   * @param inheritedUid An inherited unique identifier
+   * @param imports The list of imported program ASTs
+   * @return The renamed program (RenamedAST), the new scope, the new function scope, and the new unique identifier
+  */
+  def rename(
+      p: SyntaxAST.Program,
+      inheritedScope: Option[Scope] = None,
+      inheritedFunctionScope: Option[Map[String, (QualifiedName, Int)]] = None,
+      inheritedUid: Option[Int] = None,
+      imports: List[SyntaxAST.Program]
+  )(using
       ctx: ListContext[WaccError]
-  ): RenamedAST.Program =
-    val renamer = new Renamer()
-    renamer.renameProgram(p, imports)
+  ): (RenamedAST.Program, Scope, Map[String, (QualifiedName, Int)], Int) =
+    val renamer = new Renamer(inheritedFunctionScope, inheritedUid)
+    renamer.renameProgram(p, inheritedScope, imports)
 }

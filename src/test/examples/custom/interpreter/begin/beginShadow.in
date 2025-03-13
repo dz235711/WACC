@@ -1,0 +1,5 @@
+string s = "parent";
+begin
+    char s = 'c'
+end
+exit 0

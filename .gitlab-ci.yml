@@ -45,16 +45,15 @@ backend-test:
     reports:
       junit: reports/*.xml
 
-imports-test:
+interpreter-test:
   stage: test
   dependencies:
     - build
   script:
-    - scala test . -- -u reports -n wacc.Imports
+    - scala test . -- -u reports -n wacc.Interpreter
   artifacts:
     when: always
     paths:
       - reports/
     reports:
       junit: reports/*.xml
-

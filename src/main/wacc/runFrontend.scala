@@ -103,14 +103,14 @@ def runFrontend(
     _ = printVerboseInfo(verbose, "Imports", importASTs, Console.CYAN)
 
     // Semantic analysis
-    renamedAST = Renamer.rename(syntaxAST, importASTs)
+    renamedAST = Renamer.rename(syntaxAST, imports = importASTs)._1
     _ = printVerboseInfo(verbose, "Renamed AST", renamedAST, Console.BLUE)
 
     // Dead code elimination
     eliminatedAST = DeadCodeRemover().removeDeadCode(renamedAST)
     _ = printVerboseInfo(verbose, "Dead Code Eliminated AST", eliminatedAST, Console.CYAN)
 
-    typedAST = TypeChecker().checkProg(eliminatedAST)
+    typedAST = TypeChecker().checkProg(eliminatedAST)._1
     _ = printVerboseInfo(verbose, "Typed AST", typedAST, Console.MAGENTA)
 
     // Convert list buffer to list to allow mapping
