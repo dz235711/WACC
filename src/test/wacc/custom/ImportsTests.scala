@@ -44,7 +44,6 @@ class ImportsTests extends AnyFlatSpec {
 
   // Testing whether an error is flagged if the same file is imported multiple times
   it should "allow for the same file to be imported multiple times" taggedAs (Frontend, Imports) in {
-    println(getFrontendErrors(dir + "importsSameFile.wacc"))
     frontendStatus(dir + "importsSameFile.wacc") shouldBe 0
   }
 
@@ -61,5 +60,10 @@ class ImportsTests extends AnyFlatSpec {
   // Testing whether an error is flagged if a file imports itself
   it should "flag an error for a file importing itself" taggedAs (Frontend, Imports) in {
     frontendStatus(dir + "importsItself.wacc") shouldBe 0
+  }
+
+  // Testing whether the syntax error is reported to be in the imported file if there is one
+  it should "report the syntax error in the imported file" taggedAs (Frontend, Imports) in {
+    getFrontendErrors(dir + "importSyntaxError.wacc") should include("syntaxError.wacc")
   }
 }

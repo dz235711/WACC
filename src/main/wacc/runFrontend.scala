@@ -59,7 +59,7 @@ private def getAllImports(ast: SyntaxAST.Program, imported: Set[String])(implici
       // Parse the file
       importedAst <- parser.parse(file.mkString("\n")) match {
         case Success(ast) => Right(ast)
-        case Failure(err) => Left((100, List(format(err, None, ErrType.Syntax))))
+        case Failure(err) => Left((100, List(format(err, Some(importFile.filename.s), ErrType.Syntax))))
       }
 
       // Recurse through the imports
