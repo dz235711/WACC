@@ -1,0 +1,4 @@
+string[] arr = ["hello"]
+free arr
+string s = arr[0]
+exit 0

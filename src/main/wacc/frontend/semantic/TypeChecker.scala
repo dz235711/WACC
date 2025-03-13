@@ -18,12 +18,14 @@ object Constraint {
   val IsPair: Constraint = Is(PairType(?, ?))
 }
 
-sealed class TypeChecker {
+sealed class TypeChecker(inheritedFuncTable: Option[Map[Int, List[RenamedAST.Ident]]] = None) {
   import Constraint.*
 
   // Map from function UID to list of function parameters
-  private val funcTable: mutable.Map[Int, List[RenamedAST.Ident]] =
-    mutable.Map()
+  private val funcTable: mutable.Map[Int, List[RenamedAST.Ident]] = inheritedFuncTable match {
+    case Some(table) => mutable.Map.from(table)
+    case None        => mutable.Map.empty
+  }
 
   /** Determines whether two types are equal, and if so, what the most specific of them is. */
   extension (ty: SemType)
@@ -90,18 +92,18 @@ sealed class TypeChecker {
   /** Checks a program and returns a typed program.
    *
    * @param p The renamed program to check
-   * @return The typed program
+   * @return The typed program and the function table for preservation
    */
   def checkProg(
       p: RenamedAST.Program
-  )(using ctx: ListContext[WaccError]): TypedAST.Program = {
+  )(using ctx: ListContext[WaccError]): (TypedAST.Program, Map[Int, List[RenamedAST.Ident]]) = {
     // Populate funcTable
     p.fs.foreach(f => funcTable += (f.v.v.UID -> f.params))
 
     val funcs = p.fs.map(checkFunc)
     val body = checkStmt(p.body, Unconstrained)
 
-    TypedAST.Program(funcs, body)
+    (TypedAST.Program(funcs, body), funcTable.toMap)
   }
 
   /** Checks a function and returns a typed function.
@@ -495,4 +497,4 @@ sealed class TypeChecker {
   }
 }
 
-object TypeChecker extends TypeChecker
+object TypeChecker

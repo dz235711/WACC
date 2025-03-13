@@ -30,14 +30,14 @@ def runFrontend(linesList: List[String], verbose: Boolean): Either[(Int, List[Wa
     _ = printVerboseInfo(verbose, "Pretty-Printed AST", prettyPrint(syntaxAST), Console.GREEN)
 
     // Semantic analysis
-    renamedAST = Renamer.rename(syntaxAST)
+    renamedAST = Renamer.rename(syntaxAST)._1
     _ = printVerboseInfo(verbose, "Renamed AST", renamedAST, Console.BLUE)
 
     // Dead code elimination
     eliminatedAST = DeadCodeRemover().removeDeadCode(renamedAST)
     _ = printVerboseInfo(verbose, "Dead Code Eliminated AST", eliminatedAST, Console.CYAN)
 
-    typedAST = TypeChecker().checkProg(eliminatedAST)
+    typedAST = TypeChecker().checkProg(eliminatedAST)._1
     _ = printVerboseInfo(verbose, "Typed AST", typedAST, Console.MAGENTA)
 
     // Convert list buffer to list to allow mapping

@@ -1,5 +1,14 @@
 package wacc
 
+object AsciiConstants {
+
+  /** The minimum value of a char */
+  val MinChar = 0
+
+  /** The maximum value of a char */
+  val MaxChar = 127
+}
+
 import TypedAST.{
   Add as TypedAdd,
   And as TypedAnd,
@@ -176,12 +185,6 @@ class Translator {
 
   /** The value of FALSE */
   private val False = 0
-
-  /** The minimum value of a char */
-  private val MinChar = 0
-
-  /** The maximum value of a char */
-  private val MaxChar = 127
 
   /** The minimum value for an array to be indexed */
   private val MinArrSize = 0
@@ -772,14 +775,14 @@ class Translator {
         e,
         { l =>
           // Check that the value is greater than the minimum char value
-          locationCtx.regInstr1(l, IntSize, { reg => Compare(reg, MinChar)(IntSize) })
+          locationCtx.regInstr1(l, IntSize, { reg => Compare(reg, AsciiConstants.MinChar)(IntSize) })
           val postErrLabel1 = instructionCtx.getRuntimeErrorLabel()
           instructionCtx.addInstruction(Jmp(GreaterEqual, postErrLabel1))
           translateStmt(Throw(IntLiter(Clib.BadCharExceptionCode)))
           instructionCtx.addInstruction(DefineLabel(postErrLabel1))
 
           // Check that the value is less than the maximum char value
-          locationCtx.regInstr1(l, IntSize, { reg => Compare(reg, MaxChar)(IntSize) })
+          locationCtx.regInstr1(l, IntSize, { reg => Compare(reg, AsciiConstants.MaxChar)(IntSize) })
           val postErrLabel2 = instructionCtx.getRuntimeErrorLabel()
           instructionCtx.addInstruction(Jmp(LessEqual, postErrLabel2))
           translateStmt(Throw(IntLiter(Clib.BadCharExceptionCode)))

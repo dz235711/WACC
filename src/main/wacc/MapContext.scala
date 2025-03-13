@@ -2,7 +2,7 @@ package wacc
 
 import scala.collection.mutable.Map as MMap
 
-class MapContext[K, V](xs: MMap[K, V] = MMap.empty[K, V]) {
+case class MapContext[K, V](xs: MMap[K, V] = MMap.empty[K, V]) {
 
   /** Adds an object to the context list
     *

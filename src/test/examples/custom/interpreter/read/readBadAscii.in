@@ -1,0 +1,4 @@
+char c = '-'
+read c
+
+exit 0

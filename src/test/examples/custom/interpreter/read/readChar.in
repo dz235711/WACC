@@ -1,0 +1,4 @@
+char c = 'a'
+read c
+9
+exit 0

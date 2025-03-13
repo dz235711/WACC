@@ -1,0 +1,7 @@
+string x = "uninitialised"
+if true then
+    x = "in true"
+else
+    x = "in false"
+fi
+exit 0

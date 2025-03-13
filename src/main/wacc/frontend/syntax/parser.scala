@@ -14,6 +14,10 @@ object parser {
     parser.parse(input)
   private val parser = fully(prog)
 
+  def interpreterParse[Err: ErrorBuilder](input: String): Result[Err, Program] =
+    interpreterParser.parse(input)
+  private val interpreterParser = fully(interpreterProg)
+
   // Helpers
   private def endsInReturn(s: Stmt): Boolean = s match {
     case Exit(_)                     => true
@@ -150,4 +154,9 @@ object parser {
   )
   private lazy val arrayLiter: Parsley[ArrayLiter] =
     ArrayLiter("[".label("array literal") ~> sepBy(expr, ",") <~ "]")
+
+  // --- PARSER FOR INTERPRETER ---
+  private lazy val interpreterStmt: Parsley[Stmt] =
+    stmt.orElse(pure(Skip()(0, 0))) // We can insert a dummy position for the skip here, since it will never be used
+  private lazy val interpreterProg = Program(many(func), interpreterStmt)
 }
