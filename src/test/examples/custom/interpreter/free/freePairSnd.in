@@ -1,0 +1,4 @@
+pair(bool, char) p = newpair(true, '7')
+free p
+snd p = 'c'
+exit 0

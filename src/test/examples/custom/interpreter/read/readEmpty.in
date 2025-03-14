@@ -1,0 +1,4 @@
+int x = 59
+read x 
+
+exit 0

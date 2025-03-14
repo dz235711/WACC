@@ -1,0 +1,3 @@
+bool[] arr1 = [true, false]
+arr1[0] = false
+exit 0

@@ -1,0 +1,4 @@
+int x = 72
+read x
+c
+exit 0

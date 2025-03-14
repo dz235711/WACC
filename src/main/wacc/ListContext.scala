@@ -2,7 +2,7 @@ package wacc
 
 import scala.collection.mutable.ListBuffer
 
-class ListContext[T](xs: ListBuffer[T] = new ListBuffer[T]) {
+case class ListContext[T](xs: ListBuffer[T] = new ListBuffer[T]) {
 
   /** Adds an object to the context list
     *

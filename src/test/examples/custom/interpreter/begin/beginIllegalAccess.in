@@ -1,0 +1,5 @@
+begin
+    int x = 13
+end
+int y = x + 2
+exit 0

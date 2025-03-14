@@ -71,7 +71,7 @@ def printWaccError(wErr: WaccError, sBuilder: StringBuilder): StringBuilder = {
   else sBuilder.append("Error")
   if (wErr.source.isDefined) sBuilder.append(s" in ${wErr.source.get} ")
   val pos = wErr.pos
-  sBuilder.append(s"at ${pos._1}:${pos._2}\n")
+  sBuilder.append(s" at ${pos._1}:${pos._2}\n")
 
   // Delegating error lines to another function to recursively peel back information layers
   printLines(wErr.lines, sBuilder)
