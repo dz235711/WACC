@@ -1,6 +1,7 @@
 package wacc
 
 import wacc.RenamedAST.KnownType
+import wacc.InterpreterException._
 import wacc.TypedAST._
 
 import scala.compiletime.uninitialized
@@ -10,6 +11,7 @@ import os.SubProcess.OutputStream
 import wacc.AsciiConstants.MinChar
 import wacc.AsciiConstants.MaxChar
 import scala.util.{Try, Success, Failure}
+import scala.collection.mutable.Stack
 
 type BoolExpr = BoolLiter | Not | Greater | GreaterEq | Smaller | SmallerEq | Equals | NotEquals | And | Or
 type IntExpr = IntLiter | Negate | Ord | Len | Mult | Mod | Add | Div | Sub
@@ -54,6 +56,9 @@ final class Interpreter(
   /** The exit value of the interpreter. Only set if exit is called */
   private var exitValue: Option[Int] = None
 
+  /** The stack of catch statements. */
+  private val catchFinallyStmts: Stack[CatchFinally] = Stack()
+
   // Helper functions
 
   /** Returns an error message for when a variable is not found in the variable scope
@@ -69,6 +74,18 @@ final class Interpreter(
     * @return The error message
     */
   private def getFuncErrorString(id: Id): String = s"Function with id $id not found"
+
+  private def increaseTryDepth() = {
+    if !catchFinallyStmts.isEmpty then catchFinallyStmts.top.increaseDepth()
+  }
+
+  private def decreaseTryDepth() = {
+    if !catchFinallyStmts.isEmpty then catchFinallyStmts.top.decreaseDepth()
+  }
+
+  private def shouldEnterTryFinally: Boolean =
+    if !catchFinallyStmts.isEmpty then catchFinallyStmts.top.shouldEnterFinally
+    else false
 
   /** Interprets a program within a new scope.
     *
@@ -89,7 +106,21 @@ final class Interpreter(
     Try(interpretStmt(program.body)) match {
       case Success(_)                                  => ()
       case Failure(InterpreterExitException(exitCode)) => exitValue = Some(exitCode)
-      case Failure(exception)                          => throw exception
+      case Failure(InterpreterWACCException(exceptionCode)) =>
+        if catchFinallyStmts.isEmpty then exitValue = Some(exceptionCode)
+        else
+          val cf @ CatchFinally(catchIdent, catchStmt, finallyStmt) = catchFinallyStmts.pop()
+          scope.add(catchIdent.id, exceptionCode)
+          interpret(Program(List(), catchStmt), inheritedScope, inheritedFunctionScope)._3.isEmpty
+          // TODO: Proper Exit checking.
+          if shouldEnterTryFinally then
+            cf.enterFinally()
+            interpret(
+              Program(List(), finallyStmt),
+              inheritedScope,
+              inheritedFunctionScope
+            ) // TODO: Proper Exit checking.
+      case Failure(exception) => throw exception
     }
 
     (scope, functionScope, exitValue)
@@ -141,14 +172,12 @@ final class Interpreter(
         scope
       case Return(e) =>
         // Set the class-wide return value
+        if shouldEnterTryFinally then interpretStmt(catchFinallyStmts.pop().finallyStmt)
         returnValue = interpretExpr(e)
         scope
       case Exit(e) =>
         inputStream.write(ExitString)
-        interpretExpr(e) match {
-          case i: Int => throw InterpreterExitException(i & ExitCodeMask)
-          case _      => throw TypeMismatchException(ExitErrorString)
-        }
+        throw InterpreterExitException(interpretInt(e) & ExitCodeMask)
       case Print(e) =>
         val value = interpretExpr(e)
         value match {
@@ -168,23 +197,13 @@ final class Interpreter(
         inputStream.write("\n")
         scope
       case If(cond, s1, s2) =>
-        val evaluatedCond = interpretExpr(cond) match {
-          case b: Boolean => b
-          case _          => throw TypeMismatchException(ConditionErrorString)
-        }
-
-        if (evaluatedCond) {
+        if (interpretBool(cond)) {
           interpretStmt(s1)
         } else {
           interpretStmt(s2)
         }
       case While(cond, body) =>
-        val evaluatedCond = interpretExpr(cond) match {
-          case b: Boolean => b
-          case _          => throw TypeMismatchException(ConditionErrorString)
-        }
-
-        if (evaluatedCond) {
+        if (interpretBool(cond)) {
           val newScope = interpretStmt(body)
           interpretStmt(While(cond, body))(using newScope)
         } else {
@@ -194,6 +213,13 @@ final class Interpreter(
       case Semi(s1, s2) =>
         val newScope = interpretStmt(s1)
         interpretStmt(s2)(using newScope)
+      case Throw(e) => throw InterpreterWACCException(interpretInt(e))
+      case TryCatchFinally(body, catchIdent, catchBody, finallyBody) =>
+        catchFinallyStmts.push(CatchFinally(catchIdent, catchBody, finallyBody))
+        val newScope = interpretStmt(body)
+
+        if catchFinallyStmts.pop().shouldEnterFinally then interpretStmt(finallyBody)(using newScope)
+        else newScope
     }
 
   /** Interprets an RValue into an evaluated value.
@@ -218,7 +244,9 @@ final class Interpreter(
       }
 
       // Call the function. The result will be stored in returnValue as per the Return case in interpretStmt
+      increaseTryDepth()
       interpretStmt(body)(using newScope)
+      decreaseTryDepth()
 
       returnValue
     case e: Expr => interpretExpr(e)

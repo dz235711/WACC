@@ -1,5 +1,7 @@
 package wacc
 
+import wacc.InterpreterException.{AccessFreedValueException, FreedNonFreeableValueException}
+
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers.*
 import os.RelPath

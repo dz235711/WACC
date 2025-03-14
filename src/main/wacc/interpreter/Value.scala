@@ -1,5 +1,7 @@
 package wacc
 
+import wacc.InterpreterException.AccessFreedValueException
+
 import scala.collection.mutable.ListBuffer
 
 type Id = Int
