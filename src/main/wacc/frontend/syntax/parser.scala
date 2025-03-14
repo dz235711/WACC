@@ -160,5 +160,5 @@ object parser {
   // --- PARSER FOR INTERPRETER ---
   private lazy val interpreterStmt: Parsley[Stmt] =
     stmt.orElse(pure(Skip()(0, 0))) // We can insert a dummy position for the skip here, since it will never be used
-  private lazy val interpreterProg = Program(many(importFile), many(func), interpreterStmt)
+  private lazy val interpreterProg = Program(pure(List()), many(func), interpreterStmt)
 }
