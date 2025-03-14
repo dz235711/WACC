@@ -118,7 +118,7 @@ private def setupInterpreterScopes(includedFiles: List[String])(using
     _ <- {
       if (errsList.nonEmpty)
         Left(
-          (200, errsList.map(e => setLines(format(e, None, ErrType.Semantic), List())))
+          (SemanticErrorCode, errsList.map(e => setLines(format(e, None, ErrType.Semantic), List())))
         ) // TODO: Store main file lines.
       else
         Right(())

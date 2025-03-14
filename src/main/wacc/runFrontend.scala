@@ -4,6 +4,9 @@ import parsley.{Failure, Success}
 import WaccErrorBuilder.{constructSpecialised, format, setLines}
 import parsley.errors.ErrorBuilder
 
+val SyntaxErrorCode = 100
+val SemanticErrorCode = 200
+
 /** Recurses through all imports of the program and parses them
  * 
  * @param ast The main program AST
@@ -28,7 +31,7 @@ def getAllImports(astImports: List[SyntaxAST.Import], imported: Set[String])(imp
         else
           Left(
             (
-              100,
+              SyntaxErrorCode,
               List(
                 constructSpecialised(
                   importFile.pos,
@@ -42,7 +45,7 @@ def getAllImports(astImports: List[SyntaxAST.Import], imported: Set[String])(imp
       // Read the file
       file <- readFile(importFile.filename.s).toRight(
         (
-          100,
+          SyntaxErrorCode,
           List(
             constructSpecialised(
               importFile.pos,
@@ -56,7 +59,7 @@ def getAllImports(astImports: List[SyntaxAST.Import], imported: Set[String])(imp
       // Parse the file
       importedAst <- parser.parse(file.mkString("\n")) match {
         case Success(ast) => Right(ast)
-        case Failure(err) => Left((100, List(format(err, Some(importFile.filename.s), ErrType.Syntax))))
+        case Failure(err) => Left((SyntaxErrorCode, List(format(err, Some(importFile.filename.s), ErrType.Syntax))))
       }
 
       // Recurse through the imports
@@ -89,7 +92,7 @@ def runFrontend(
     // Parse the file
     syntaxAST <- parser.parse(lines) match {
       case Success(ast) => Right(ast)
-      case Failure(err) => Left((100, List(format(err, None, ErrType.Syntax))))
+      case Failure(err) => Left((SyntaxErrorCode, List(format(err, None, ErrType.Syntax))))
     }
 
     // Print pretty-printed AST
@@ -114,7 +117,7 @@ def runFrontend(
     errsList = errCtx.get
     result <-
       if (errsList.nonEmpty)
-        Left((200, errsList.map(e => setLines(format(e, None, ErrType.Semantic), linesList))))
+        Left((SemanticErrorCode, errsList.map(e => setLines(format(e, None, ErrType.Semantic), linesList))))
       else
         Right(typedAST)
   } yield result
