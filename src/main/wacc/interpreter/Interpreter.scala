@@ -50,12 +50,6 @@ final class Interpreter(using
 
   // VARIABLES
 
-  /** The exit value of the interpreter. Only set if exit is called */
-  private var exitValue: Option[Int] = None
-
-  /** The stack of catch statements. */
-  private val catchFinallyStmts: Stack[CatchFinally] = Stack()
-
   // Helper functions
 
   /** Returns an error message for when a variable is not found in the variable scope
@@ -72,20 +66,24 @@ final class Interpreter(using
     */
   private def getFuncErrorString(id: Id): String = s"Function with id $id not found"
 
-  private def increaseTryDepth() = {
-    if !catchFinallyStmts.isEmpty then catchFinallyStmts.top.increaseDepth()
+  /** Increases the depth of the recent Try-Catch block. */
+  private def increaseTryDepth()(using exceptionScope: Stack[CatchFinally]) = {
+    if !exceptionScope.isEmpty then exceptionScope.top.increaseDepth()
   }
 
-  private def decreaseTryDepth() = {
-    if !catchFinallyStmts.isEmpty then catchFinallyStmts.top.decreaseDepth()
+  /** Decreases the depth of the recent Try-Catch block. */
+  private def decreaseTryDepth()(using exceptionScope: Stack[CatchFinally]) = {
+    if !exceptionScope.isEmpty then exceptionScope.top.decreaseDepth()
   }
 
-  private def clearTryDepth() = {
-    if !catchFinallyStmts.isEmpty then catchFinallyStmts.top.clearDepth()
+  /** Resets the depth of the recent Try-Catch block. */
+  private def clearTryDepth()(using exceptionScope: Stack[CatchFinally]) = {
+    if !exceptionScope.isEmpty then exceptionScope.top.clearDepth()
   }
 
-  private def shouldEnterTryFinally: Boolean =
-    if !catchFinallyStmts.isEmpty then catchFinallyStmts.top.shouldEnterFinally
+  /** Checks if the most recent finally should be entered. */
+  private def shouldEnterTryFinally(using exceptionScope: Stack[CatchFinally]): Boolean =
+    if !exceptionScope.isEmpty then exceptionScope.top.shouldEnterFinally
     else false
 
   /** Interprets a program within a new scope.
@@ -98,10 +96,14 @@ final class Interpreter(using
   def interpret(
       program: Program,
       inheritedScope: VariableScope,
-      inheritedFunctionScope: FunctionScope
+      inheritedFunctionScope: FunctionScope,
+      inheritedExceptionScope: Stack[CatchFinally]
   ): (VariableScope, FunctionScope, Option[Int]) = {
     given scope: VariableScope = inheritedScope
     given functionScope: FunctionScope = inheritedFunctionScope
+    given exceptionScope: Stack[CatchFinally] = inheritedExceptionScope
+
+    var exitValue: Option[Int] = None
 
     program.fs.foreach(interpretFunction)
     Try(interpretStmt(program.body)) match {
@@ -134,7 +136,8 @@ final class Interpreter(using
     */
   private def interpretStmt(stmt: Stmt)(using
       scope: VariableScope,
-      funcScope: FunctionScope
+      funcScope: FunctionScope,
+      exceptionScope: Stack[CatchFinally]
   ): VariableScope =
     stmt match {
       case Skip       => scope
@@ -164,11 +167,13 @@ final class Interpreter(using
         }
         scope
       case Return(e) =>
-        // Set the class-wide return value
+        // Run the finally if we are in the correct scope for it.
         if shouldEnterTryFinally then
-          val cf = catchFinallyStmts.pop()
+          val cf = exceptionScope.pop()
           cf.enterFinally()
           interpretStmt(cf.finallyStmt)
+
+        // Return the value by bubbling back up to the call.
         throw ReturnException(interpretExpr(e))
         scope
       case Exit(e) =>
@@ -214,11 +219,11 @@ final class Interpreter(using
         throw WACCException(interpretInt(e))
       case TryCatchFinally(body, catchIdent, catchBody, finallyBody) =>
         val cf = CatchFinally(catchIdent, catchBody, finallyBody)
-        catchFinallyStmts.push(cf)
+        exceptionScope.push(cf)
         val newScope = interpretStmt(body)
 
         if cf.shouldEnterFinally then
-          catchFinallyStmts.pop()
+          exceptionScope.pop()
           cf.enterFinally()
           interpretStmt(finallyBody)(using newScope)
         else newScope
@@ -229,7 +234,9 @@ final class Interpreter(using
     * @param r The RValue to interpret
     * @return The value of the evaluated RValue
     */
-  private def interpretRValue(r: RValue)(using scope: VariableScope, funcScope: FunctionScope): Value = r match {
+  private def interpretRValue(
+      r: RValue
+  )(using scope: VariableScope, funcScope: FunctionScope, exceptionScope: Stack[CatchFinally]): Value = r match {
     case ArrayLiter(es, _)    => ArrayValue(es.map(interpretExpr).to(ListBuffer))
     case NewPair(e1, e2, _)   => PairValue(interpretExpr(e1), interpretExpr(e2))
     case pairVal: (Fst | Snd) => getLValue(pairVal)
@@ -247,7 +254,8 @@ final class Interpreter(using
 
       // Call the function. The result will be stored in returnValue as per the Return case in interpretStmt
       increaseTryDepth()
-      val returnValue = Try(interpretStmt(body)(using newScope)) match {
+      val returnValue = Try(interpret(Program(List(), body), newScope, funcScope, Stack())._3) match {
+        case Success(Some(exitValue))              => throw ExitException(exitValue)
         case Failure(ReturnException(returnValue)) => returnValue
         case Failure(exception)                    => throw exception
       }
@@ -432,7 +440,8 @@ final class Interpreter(using
     */
   private def handleAssignment(l: LValue, r: RValue)(using
       scope: VariableScope,
-      funcScope: FunctionScope
+      funcScope: FunctionScope,
+      exceptionScope: Stack[CatchFinally]
   ): VariableScope =
     l match {
       case Ident(id, _) =>
@@ -480,21 +489,31 @@ final class Interpreter(using
       case _                   => throw TypeMismatchException(UnpackPairErrorString)
     }
 
-  private def handleException(exceptionCode: Int)(using scope: VariableScope, funcScope: FunctionScope) = {
-    if catchFinallyStmts.isEmpty then exitValue = Some(exceptionCode)
+  /** Handles an exception with the given exception code and exception scope.
+    * 
+    * @param exceptionCode The exception code associated with the thrown exception.
+    */
+  private def handleException(
+      exceptionCode: Int
+  )(using scope: VariableScope, funcScope: FunctionScope, exceptionScope: Stack[CatchFinally]) = {
+    // Check if there are any catches to consider. If not, bubble up the exception.
+    if exceptionScope.isEmpty then throw WACCException(exceptionCode)
     else
-      val cf @ CatchFinally(catchIdent, catchStmt, finallyStmt) = catchFinallyStmts.top
+      val cf @ CatchFinally(catchIdent, catchStmt, finallyStmt) = exceptionScope.top
       scope.add(catchIdent.id, exceptionCode)
-      interpret(Program(List(), catchStmt), scope, funcScope)._3.isEmpty
+      val catchResult @ (_, _, catchExitValue) = interpret(Program(List(), catchStmt), scope, funcScope, exceptionScope)
 
-      if shouldEnterTryFinally && exitValue.isEmpty then
-        catchFinallyStmts.pop()
+      // If the finally has not been entered yet and the catch block did not exit, enter the finally.
+      if shouldEnterTryFinally && catchExitValue.isEmpty then
+        exceptionScope.pop()
         cf.enterFinally()
         interpret(
           Program(List(), finallyStmt),
           scope,
-          funcScope
+          funcScope,
+          exceptionScope
         )
+      else catchResult
   }
 }
 
@@ -508,5 +527,5 @@ object Interpreter {
       interpreterOut: OutputStream = OutputStream(System.in)
   ): (VariableScope, FunctionScope, Option[Int]) =
     val interpreter = new Interpreter()
-    interpreter.interpret(p, inheritedScope, inheritedFunctionScope)
+    interpreter.interpret(p, inheritedScope, inheritedFunctionScope, Stack())
 }
