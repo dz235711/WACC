@@ -4,7 +4,6 @@ import wacc.RenamedAST.KnownType
 import wacc.InterpreterException._
 import wacc.TypedAST._
 
-import scala.compiletime.uninitialized
 import scala.collection.mutable.ListBuffer
 import os.SubProcess.InputStream
 import os.SubProcess.OutputStream
