@@ -1,6 +1,6 @@
 begin
 
-# ========== CharList Module Functions ==========
+# ========== Private Helper Functions ==========
 
 # helper function to get contents from a char list
 pair(char, pair) _charListContents(pair(int, pair) charList) is
@@ -148,6 +148,8 @@ bool _charListFreeContents(pair(char, pair) contents) is
   done;
   return true
 end
+
+# ========== CharList Module Functions ==========
   
 # gets length of a char list
 int charListLen(pair(int, pair) charList) is
