@@ -22,43 +22,40 @@ def interpreterMain(includedFiles: List[String])(using
 ): (InterpreterVariableScope, InterpreterFunctionScope, Option[Int]) = {
   interpreterIn.writeLine("Welcome to the WACC interpreter!")
 
-  // Get all imports from the specified included files
-  val imports: List[Import] = includedFiles.map { f =>
-    Import(SyntaxAST.StringLiter(f)((1, 1)))((1, 1))
-  } // dummy positions because they're command line arguments
-  val parsedImports = getAllImports(imports, Set.empty)(using WaccErrorBuilder, ListContext())
-  val importASTs = parsedImports match {
+  var renamerScope: Option[RenamerScope] = None
+  var renamerFunctionScope: Option[RenamerFunctionScope] = None
+  var renamerUid: Option[Int] = None
+
+  var typeCheckerFunctionTable: Option[TypeCheckerFunctionScope] = None
+
+  var interpreterScope: InterpreterVariableScope = MapContext()
+  var interpreterFunctionScope: InterpreterFunctionScope = MapContext()
+  var exitValue: Option[Int] = None
+
+  setupInterpreterScopes(includedFiles) match {
     case Left((status, output)) =>
-      interpreterIn.write(output.foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc)).result())
-      Nil // TODO: Stuff.
-    case Right(asts) => asts
+      exitValue = Some(status)
+    case Right(
+          _renamerScope,
+          _renamerFunctionScope,
+          _renamerUid,
+          _typeCheckerFunctionTable,
+          _interpreterScope,
+          _interpreterFunctionScope,
+          _exitValue
+        ) =>
+      renamerScope = Some(_renamerScope)
+      renamerFunctionScope = Some(_renamerFunctionScope)
+      renamerUid = Some(_renamerUid)
+
+      typeCheckerFunctionTable = Some(_typeCheckerFunctionTable)
+
+      interpreterScope = _interpreterScope
+      interpreterFunctionScope = _interpreterFunctionScope
+      exitValue = _exitValue
   }
 
-  // Rename imports.
-  given errCtx: ListContext[WaccError] = new ListContext()
-  val importRenamerResult =
-    Renamer.rename(SyntaxAST.Program(List(), List(), SyntaxAST.Skip()((0, 0)))((0, 0)), imports = importASTs)
-
-  val importRenamedProg = importRenamerResult._1
-
-  // Set scopes.
-  var renamerScope: Option[RenamerScope] = Some(importRenamerResult._2)
-  var renamerFunctionScope: Option[RenamerFunctionScope] = Some(importRenamerResult._3)
-  var renamerUid: Option[RenamerUID] = Some(importRenamerResult._4)
-
-  // Type check imports.
-  val importTypeCheckerResult = TypeChecker().checkProg(importRenamedProg)
-
-  val importTypeCheckedProg = importTypeCheckerResult._1
-
-  // Set scopes.
-  var typeCheckerFunctionTable: Option[TypeCheckerFunctionScope] = Some(importTypeCheckerResult._2)
-
-  val importInterpreterResult = Interpreter.interpret(importTypeCheckedProg)
-
-  var (interpreterScope, interpreterFunctionScope, exitValue)
-      : (InterpreterVariableScope, InterpreterFunctionScope, Option[Int]) = importInterpreterResult
-
+  // Main loop for the REPL.
   while exitValue.isEmpty do
     val frontendResult =
       promptInputAndRunFrontend(renamerScope, renamerFunctionScope, renamerUid, typeCheckerFunctionTable)
@@ -76,7 +73,73 @@ def interpreterMain(includedFiles: List[String])(using
   (interpreterScope, interpreterFunctionScope, exitValue)
 }
 
-def promptInputAndRunFrontend(
+private def setupInterpreterScopes(includedFiles: List[String])(using
+    interpreterIn: InputStream = InputStream(System.out),
+    interpreterOut: OutputStream = OutputStream(System.in)
+): Either[
+  (Int, List[WaccError]),
+  (
+      RenamerScope,
+      RenamerFunctionScope,
+      RenamerUID,
+      TypeCheckerFunctionScope,
+      InterpreterVariableScope,
+      InterpreterFunctionScope,
+      Option[Int]
+  )
+] = {
+  interpreterIn.write("Loading files... ")
+
+  given ErrorBuilder[WaccError] = new WaccErrorBuilder
+  given errCtx: ListContext[WaccError] = new ListContext()
+
+  // Get all imports from the specified included files.
+  val imports: List[Import] = includedFiles.map { f =>
+    Import(SyntaxAST.StringLiter(f)((0, 0)))((0, 0))
+  } // dummy positions because they're command line arguments
+
+  for {
+    parsedImports <- getAllImports(imports, Set.empty)
+
+    // Rename imports and set scopes.
+    (importRenamedProg, renamerScope, renamerFunctionScope, renamerUid) = Renamer.rename(
+      SyntaxAST.Program(List(), List(), SyntaxAST.Skip()((0, 0)))((0, 0)),
+      imports = parsedImports
+    )
+
+    // Type check imports and set table.
+    (importTypeCheckedProg, typeCheckerFunctionTable) = TypeChecker().checkProg(importRenamedProg)
+
+    // Check if there are any semantic errors.
+    // Convert list buffer to list to allow mapping
+    errsList = errCtx.get
+    _ <- {
+      if (errsList.nonEmpty)
+        Left(
+          (200, errsList.map(e => setLines(format(e, None, ErrType.Semantic), List())))
+        ) // TODO: Store main file lines.
+      else
+        Right(())
+    }
+
+    // Fetch interpreter scopes.
+    (interpreterScope, interpreterFunctionScope, exitValue) = Interpreter.interpret(importTypeCheckedProg)
+
+    result <- Right(
+      (
+        renamerScope,
+        renamerFunctionScope,
+        renamerUid,
+        typeCheckerFunctionTable,
+        interpreterScope,
+        interpreterFunctionScope,
+        exitValue
+      )
+    )
+  } yield result
+}
+
+private def promptInputAndRunFrontend(
     inheritedRenamerScope: Option[Scope],
     inheritedRenamerFunctionScope: Option[RenamerFunctionScope],
     inheritedRenamerUid: Option[RenamerUID],
@@ -134,7 +197,7 @@ def promptInputAndRunFrontend(
   (typedProgram, newRenamedScope, newRenamedFunctionScope, newUid, newTypedFuncTable)
 }
 
-def promptInputAndParse()(using
+private def promptInputAndParse()(using
     wErr: ErrorBuilder[WaccError],
     interpreterIn: InputStream,
     interpreterOut: OutputStream
@@ -151,7 +214,6 @@ def promptInputAndParse()(using
 
     // We read input until all opened scopes have been closed.
     while
-      interpreterIn.flush()
       val line = interpreterOut.readLine()
       input.append(line + "\n")
 
