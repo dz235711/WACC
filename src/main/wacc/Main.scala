@@ -93,6 +93,7 @@ def main(args: Array[String]): Unit = {
     println("  --verbose, -v  Print verbose output")
     println("  --help, -h     Print this message")
     println("  --interpreter, -I, Launch the interpreter")
+    println("  --include [files], Loads the given files into the interpreter")
     exit(1)
   }
 
