@@ -21,6 +21,7 @@ def interpreterMain(includedFiles: List[String])(using
     interpreterOut: OutputStream = OutputStream(System.in)
 ): (InterpreterVariableScope, InterpreterFunctionScope, Option[Int]) = {
   interpreterIn.writeLine("Welcome to the WACC interpreter!")
+  interpreterIn.flush()
 
   var renamerScope: Option[RenamerScope] = None
   var renamerFunctionScope: Option[RenamerFunctionScope] = None
@@ -88,7 +89,8 @@ private def setupInterpreterScopes(includedFiles: List[String])(using
       Option[Int]
   )
 ] = {
-  interpreterIn.write("Loading files... ")
+  interpreterIn.writeLine("Loading files... ")
+  interpreterIn.flush()
 
   given ErrorBuilder[WaccError] = new WaccErrorBuilder
   given errCtx: ListContext[WaccError] = new ListContext()
@@ -192,6 +194,7 @@ private def promptInputAndRunFrontend(
         .foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc))
         .result()
     )
+    interpreterIn.flush()
     errCtx = ListContext()
 
   (typedProgram, newRenamedScope, newRenamedFunctionScope, newUid, newTypedFuncTable)
@@ -211,6 +214,7 @@ private def promptInputAndParse()(using
   // We prompt for input until it is syntactically correct.
   while
     interpreterIn.write("WACC> ")
+    interpreterIn.flush()
 
     // We read input until all opened scopes have been closed.
     while
@@ -228,12 +232,15 @@ private def promptInputAndParse()(using
           }
         case _ => false
       }
-    do interpreterIn.write("    | ")
+    do
+      interpreterIn.write("    | ")
+      interpreterIn.flush()
 
     // Print the errors, and prompt for new input if there are any errors, otherwise exit the loop.
     parserResult match {
       case Failure(msg) =>
         interpreterIn.writeLine(printWaccError(format(msg, None, ErrType.Syntax), StringBuilder()).result())
+        interpreterIn.flush()
         true
       case Success(p) =>
         program = p
