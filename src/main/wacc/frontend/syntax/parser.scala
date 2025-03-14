@@ -88,8 +88,10 @@ object parser {
   )
 
   // Statements
+  private lazy val importFile: Parsley[Import] = Import("import" ~> StringLiter(str))
   private lazy val prog: Parsley[Program] =
     Program(
+      sepBy(importFile, ";"),
       "begin".explain("Programs must start with begin") ~> many(func),
       stmt
         .explain(
@@ -158,5 +160,5 @@ object parser {
   // --- PARSER FOR INTERPRETER ---
   private lazy val interpreterStmt: Parsley[Stmt] =
     stmt.orElse(pure(Skip()(0, 0))) // We can insert a dummy position for the skip here, since it will never be used
-  private lazy val interpreterProg = Program(many(func), interpreterStmt)
+  private lazy val interpreterProg = Program(pure(List()), many(func), interpreterStmt)
 }

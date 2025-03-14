@@ -1,0 +1,4 @@
+import "src/test/examples/custom/imports/syntaxError.wacc"
+begin
+    skip
+end

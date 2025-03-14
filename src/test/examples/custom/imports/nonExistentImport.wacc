@@ -1,0 +1,4 @@
+import "nothing.wacc"
+begin
+  skip
+end

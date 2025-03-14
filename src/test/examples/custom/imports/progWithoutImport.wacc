@@ -1,0 +1,4 @@
+begin
+  int z = 2;
+  skip
+end

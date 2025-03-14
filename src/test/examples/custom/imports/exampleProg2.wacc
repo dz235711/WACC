@@ -1,0 +1,6 @@
+begin
+    int g() is
+        return 2
+    end
+    skip
+end
