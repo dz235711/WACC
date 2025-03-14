@@ -502,9 +502,10 @@ final class Interpreter(using
       val cf @ CatchFinally(catchIdent, catchStmt, finallyStmt) = exceptionScope.top
       scope.add(catchIdent.id, exceptionCode)
       val catchResult @ (_, _, catchExitValue) = interpret(Program(List(), catchStmt), scope, funcScope, exceptionScope)
+      cf.clearDepth()
 
       // If the finally has not been entered yet and the catch block did not exit, enter the finally.
-      if shouldEnterTryFinally && catchExitValue.isEmpty then
+      if cf.shouldEnterFinally && catchExitValue.isEmpty then
         exceptionScope.pop()
         cf.enterFinally()
         interpret(
@@ -527,5 +528,9 @@ object Interpreter {
       interpreterOut: OutputStream = OutputStream(System.in)
   ): (VariableScope, FunctionScope, Option[Int]) =
     val interpreter = new Interpreter()
-    interpreter.interpret(p, inheritedScope, inheritedFunctionScope, Stack())
+    Try(interpreter.interpret(p, inheritedScope, inheritedFunctionScope, Stack())) match {
+      case Success(interpreterResult)            => interpreterResult
+      case Failure(WACCException(exceptionCode)) => (inheritedScope, inheritedFunctionScope, Some(exceptionCode))
+      case Failure(exception)                    => throw exception
+    }
 }
