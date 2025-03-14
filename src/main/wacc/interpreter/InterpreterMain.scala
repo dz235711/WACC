@@ -28,9 +28,9 @@ def interpreterMain(includedFiles: List[String])(using
   } // dummy positions because they're command line arguments
   val parsedImports = getAllImports(imports, Set.empty)(using WaccErrorBuilder, ListContext())
   val importASTs = parsedImports match {
-    case Left(err) =>
-      Nil
-    // TODO: Exit the interpreter 
+    case Left((status, output)) =>
+      interpreterIn.write(output.foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc)).result())
+      Nil // TODO: Stuff.
     case Right(asts) => asts
   }
 
