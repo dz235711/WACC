@@ -64,14 +64,29 @@ def writeFile(path: String, content: String): File = {
   source
 }
 
+/** Gets the list of files to include from the command line arguments
+ *  
+ * @param args Command line arguments
+ * @return List of files to include
+*/
+def getIncludes(args: Array[String]): List[String] = {
+  val includeIndex = args.indexOf("--include")
+  if (includeIndex != -1) {
+    args.drop(includeIndex + 1).takeWhile(!_.startsWith("-")).toList
+  } else {
+    List()
+  }
+}
+
 def main(args: Array[String]): Unit = {
   println("Hello, WACC! 👋😃👍\n")
   val verbose = args.contains("--verbose") || args.contains("-v")
   val enterInterpreter = args.contains("--interpreter") || args.contains("-I")
+  val includedFilesInterpreter = getIncludes(args)
 
   // Enter the interpreter main function if the interpreter flag is set
   if (enterInterpreter) {
-    val exitValue = interpreterMain()._3.getOrElse(0)
+    val exitValue = interpreterMain(includedFilesInterpreter)._3.getOrElse(0)
     exit(exitValue)
   }
 

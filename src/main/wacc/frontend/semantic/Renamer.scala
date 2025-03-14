@@ -440,7 +440,7 @@ object Renamer {
       inheritedScope: Option[Scope] = None,
       inheritedFunctionScope: Option[Map[String, (QualifiedName, Int)]] = None,
       inheritedUid: Option[Int] = None,
-      imports: List[SyntaxAST.Program]
+      imports: List[SyntaxAST.Program] = List()
   )(using
       ctx: ListContext[WaccError]
   ): (RenamedAST.Program, Scope, Map[String, (QualifiedName, Int)], Int) =

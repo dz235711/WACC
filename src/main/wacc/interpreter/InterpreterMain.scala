@@ -6,6 +6,7 @@ import parsley.{Result, Failure, Success}
 import parsley.errors.ErrorBuilder
 import os.SubProcess.OutputStream
 import os.SubProcess.InputStream
+import wacc.SyntaxAST.Import
 
 type RenamerUID = Int
 // To distinguish between renamer and interpreter scopes.
@@ -15,22 +16,48 @@ type TypeCheckerFunctionScope = Map[RenamerUID, List[RenamedAST.Ident]]
 type InterpreterVariableScope = VariableScope
 type InterpreterFunctionScope = FunctionScope
 
-def interpreterMain()(using
+def interpreterMain(includedFiles: List[String])(using
     interpreterIn: InputStream = InputStream(System.out),
     interpreterOut: OutputStream = OutputStream(System.in)
 ): (InterpreterVariableScope, InterpreterFunctionScope, Option[Int]) = {
   interpreterIn.writeLine("Welcome to the WACC interpreter!")
 
-  var renamerScope: Option[RenamerScope] = None
-  var renamerFunctionScope: Option[RenamerFunctionScope] = None
-  var renamerUid: Option[RenamerUID] = None
+  // Get all imports from the specified included files
+  val imports: List[Import] = includedFiles.map { f =>
+    Import(SyntaxAST.StringLiter(f)((1, 1)))((1, 1))
+  } // dummy positions because they're command line arguments
+  val parsedImports = getAllImports(imports, Set.empty)(using WaccErrorBuilder, ListContext())
+  val importASTs = parsedImports match {
+    case Left(err) =>
+      Nil
+    // TODO: Exit the interpreter 
+    case Right(asts) => asts
+  }
 
-  var typeCheckerFunctionTable: Option[TypeCheckerFunctionScope] = None
+  // Rename imports.
+  given errCtx: ListContext[WaccError] = new ListContext()
+  val importRenamerResult =
+    Renamer.rename(SyntaxAST.Program(List(), List(), SyntaxAST.Skip()((0, 0)))((0, 0)), imports = importASTs)
 
-  var interpreterScope: InterpreterVariableScope = MapContext()
-  var interpreterFunctionScope: InterpreterFunctionScope = MapContext()
+  val importRenamedProg = importRenamerResult._1
 
-  var exitValue: Option[Int] = None
+  // Set scopes.
+  var renamerScope: Option[RenamerScope] = Some(importRenamerResult._2)
+  var renamerFunctionScope: Option[RenamerFunctionScope] = Some(importRenamerResult._3)
+  var renamerUid: Option[RenamerUID] = Some(importRenamerResult._4)
+
+  // Type check imports.
+  val importTypeCheckerResult = TypeChecker().checkProg(importRenamedProg)
+
+  val importTypeCheckedProg = importTypeCheckerResult._1
+
+  // Set scopes.
+  var typeCheckerFunctionTable: Option[TypeCheckerFunctionScope] = Some(importTypeCheckerResult._2)
+
+  val importInterpreterResult = Interpreter.interpret(importTypeCheckedProg)
+
+  var (interpreterScope, interpreterFunctionScope, exitValue)
+      : (InterpreterVariableScope, InterpreterFunctionScope, Option[Int]) = importInterpreterResult
 
   while exitValue.isEmpty do
     val frontendResult =
@@ -81,8 +108,8 @@ def promptInputAndRunFrontend(
 
     // Rename and type check
     val renamerResult =
-      Renamer.rename(parsedProgram, inheritedRenamerScope, inheritedRenamerFunctionScope, inheritedRenamerUid, Nil)(
-        using errCtx
+      Renamer.rename(parsedProgram, inheritedRenamerScope, inheritedRenamerFunctionScope, inheritedRenamerUid)(using
+        errCtx
       )
     val renamedProgram = renamerResult._1
     newRenamedScope = renamerResult._2

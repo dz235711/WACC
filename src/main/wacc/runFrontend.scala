@@ -10,15 +10,12 @@ import parsley.errors.ErrorBuilder
  * @return Either a list of errors (syntax) or a list of the imported syntax ASTs
  * 
 */
-private def getAllImports(ast: SyntaxAST.Program, imported: Set[String])(implicit
+def getAllImports(astImports: List[SyntaxAST.Import], imported: Set[String])(implicit
     errBuilder: ErrorBuilder[WaccError],
     errCtx: ListContext[WaccError]
 ): Either[(Int, List[WaccError]), List[SyntaxAST.Program]] = {
-  // Get this file's imports
-  val imports = ast.imports
-
   // Filter out already imported files
-  val newImports = imports.filterNot(file => imported.contains(file.filename.s)).toSet
+  val newImports = astImports.filterNot(file => imported.contains(file.filename.s)).toSet
 
   // Add the new imports to the set of imported files
   val allImports = imported ++ newImports.map(_.filename.s)
@@ -63,7 +60,7 @@ private def getAllImports(ast: SyntaxAST.Program, imported: Set[String])(implici
       }
 
       // Recurse through the imports
-      res <- getAllImports(importedAst, allImports)
+      res <- getAllImports(importedAst.imports, allImports)
     } yield importedAst :: (res ++ acc.getOrElse(Nil))
   }
 }
@@ -99,7 +96,7 @@ def runFrontend(
     _ = printVerboseInfo(verbose, "Pretty-Printed AST", prettyPrint(syntaxAST), Console.GREEN)
 
     // Parse the imported files
-    importASTs <- getAllImports(syntaxAST, Set(path))
+    importASTs <- getAllImports(syntaxAST.imports, Set(path))
     _ = printVerboseInfo(verbose, "Imports", importASTs, Console.CYAN)
 
     // Semantic analysis
