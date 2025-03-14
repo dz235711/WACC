@@ -24,8 +24,7 @@ def interpreterMain(
     interpreterIn: InputStream = InputStream(System.out),
     interpreterOut: OutputStream = OutputStream(System.in)
 ): (InterpreterVariableScope, InterpreterFunctionScope, Option[Int]) = {
-  interpreterIn.writeLine("Welcome to the WACC interpreter!")
-  interpreterIn.flush()
+  writeInputLine("Welcome to the WACC interpreter!")
 
   var renamerScope: Option[RenamerScope] = None
   var renamerFunctionScope: Option[RenamerFunctionScope] = None
@@ -216,7 +215,7 @@ private def promptInputAndRunFrontend(
     // If there are errors, print them and then prompt for input again.
     errCtx.get.nonEmpty
   do
-    interpreterIn.write(
+    writeInput(
       errCtx.get
         .map(e => setLines(format(e, None, ErrType.Semantic), lines))
         .foldRight(new StringBuilder)((e, acc) => printWaccError(e, acc))
@@ -241,8 +240,7 @@ private def promptInputAndParse()(using
 
   // We prompt for input until it is syntactically correct.
   while
-    interpreterIn.write("WACC> ")
-    interpreterIn.flush()
+    writeInput("WACC> ")
 
     // We read input until all opened scopes have been closed.
     while
@@ -260,15 +258,12 @@ private def promptInputAndParse()(using
           }
         case _ => false
       }
-    do
-      interpreterIn.write("    | ")
-      interpreterIn.flush()
+    do writeInput("    | ")
 
     // Print the errors, and prompt for new input if there are any errors, otherwise exit the loop.
     parserResult match {
       case Failure(msg) =>
-        interpreterIn.writeLine(printWaccError(format(msg, None, ErrType.Syntax), StringBuilder()).result())
-        interpreterIn.flush()
+        writeInputLine(printWaccError(format(msg, None, ErrType.Syntax), StringBuilder()).result())
         true
       case Success(p) =>
         program = p
@@ -280,3 +275,10 @@ private def promptInputAndParse()(using
 
   (program, input.result().split("\n").toList)
 }
+
+def writeInput(s: String)(using interpreterIn: InputStream) = {
+  interpreterIn.write(s)
+  interpreterIn.flush()
+}
+
+def writeInputLine(s: String)(using interpreterIn: InputStream) = writeInput(s + "\n")

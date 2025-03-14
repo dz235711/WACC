@@ -1,15 +1,23 @@
 package wacc
 
 import wacc.RenamedAST.KnownType
+import wacc.InterpreterException._
 import wacc.TypedAST._
 
-import scala.compiletime.uninitialized
 import scala.collection.mutable.ListBuffer
 import os.SubProcess.InputStream
 import os.SubProcess.OutputStream
 import wacc.AsciiConstants.MinChar
 import wacc.AsciiConstants.MaxChar
 import scala.util.{Try, Success, Failure}
+import scala.collection.mutable.Stack
+import wacc.Clib.{
+  NullPairExceptionCode,
+  DivZeroExceptionCode,
+  ArrBoundsExceptionCode,
+  OverflowExceptionCode,
+  BadCharExceptionCode
+}
 
 type BoolExpr = BoolLiter | Not | Greater | GreaterEq | Smaller | SmallerEq | Equals | NotEquals | And | Or
 type IntExpr = IntLiter | Negate | Ord | Len | Mult | Mod | Add | Div | Sub
@@ -18,9 +26,9 @@ type CharExpr = Chr | CharLiter
 type VariableScope = MapContext[Id, Value]
 type FunctionScope = MapContext[Id, (List[Ident], Stmt)]
 
-final class Interpreter(
-    private val inputStream: InputStream = InputStream(System.out),
-    private val outputStream: OutputStream = OutputStream(System.in)
+final class Interpreter(using
+    interpreterIn: InputStream = InputStream(System.out),
+    interpreterOut: OutputStream = OutputStream(System.in)
 ) {
 
   // CONSTANTS
@@ -34,12 +42,6 @@ final class Interpreter(
   /** Exit message */
   private val ExitString = "Exiting interpreter..."
 
-  /** System call exit error message */
-  private val ExitErrorString = "Exit expression must evaluate to an integer"
-
-  /** Condition error message */
-  private val ConditionErrorString = "Condition must evaluate to a boolean"
-
   /** Comparison type mismatch error message */
   private val ComparisonErrorString = "Comparison must be between two values of the same type"
 
@@ -47,12 +49,6 @@ final class Interpreter(
   private val UnpackPairErrorString = "Expected pair, got something else"
 
   // VARIABLES
-
-  /** The return value of a function, initialised once it is called */
-  private var returnValue: Value = uninitialized
-
-  /** The exit value of the interpreter. Only set if exit is called */
-  private var exitValue: Option[Int] = None
 
   // Helper functions
 
@@ -70,6 +66,26 @@ final class Interpreter(
     */
   private def getFuncErrorString(id: Id): String = s"Function with id $id not found"
 
+  /** Increases the depth of the recent Try-Catch block. */
+  private def increaseTryDepth()(using exceptionScope: Stack[CatchFinally]) = {
+    if !exceptionScope.isEmpty then exceptionScope.top.increaseDepth()
+  }
+
+  /** Decreases the depth of the recent Try-Catch block. */
+  private def decreaseTryDepth()(using exceptionScope: Stack[CatchFinally]) = {
+    if !exceptionScope.isEmpty then exceptionScope.top.decreaseDepth()
+  }
+
+  /** Resets the depth of the recent Try-Catch block. */
+  private def clearTryDepth()(using exceptionScope: Stack[CatchFinally]) = {
+    if !exceptionScope.isEmpty then exceptionScope.top.clearDepth()
+  }
+
+  /** Checks if the most recent finally should be entered. */
+  private def shouldEnterTryFinally(using exceptionScope: Stack[CatchFinally]): Boolean =
+    if !exceptionScope.isEmpty then exceptionScope.top.shouldEnterFinally
+    else false
+
   /** Interprets a program within a new scope.
     *
     * @param program The program to be interpreted
@@ -80,16 +96,26 @@ final class Interpreter(
   def interpret(
       program: Program,
       inheritedScope: VariableScope,
-      inheritedFunctionScope: FunctionScope
+      inheritedFunctionScope: FunctionScope,
+      inheritedExceptionScope: Stack[CatchFinally]
   ): (VariableScope, FunctionScope, Option[Int]) = {
     given scope: VariableScope = inheritedScope
     given functionScope: FunctionScope = inheritedFunctionScope
+    given exceptionScope: Stack[CatchFinally] = inheritedExceptionScope
+
+    var exitValue: Option[Int] = None
 
     program.fs.foreach(interpretFunction)
     Try(interpretStmt(program.body)) match {
-      case Success(_)                                  => ()
-      case Failure(InterpreterExitException(exitCode)) => exitValue = Some(exitCode)
-      case Failure(exception)                          => throw exception
+      case Success(_)                            => ()
+      case Failure(ExitException(exitCode))      => exitValue = Some(exitCode)
+      case Failure(_: NullDereferencedException) => handleException(NullPairExceptionCode)
+      case Failure(_: DivZeroException)          => handleException(DivZeroExceptionCode)
+      case Failure(_: IntOverflowException)      => handleException(OverflowExceptionCode)
+      case Failure(_: BadCharException)          => handleException(BadCharExceptionCode)
+      case Failure(_: IndexOutOfBoundsException) => handleException(ArrBoundsExceptionCode)
+      case Failure(WACCException(exceptionCode)) => handleException(exceptionCode)
+      case Failure(exception)                    => throw exception
     }
 
     (scope, functionScope, exitValue)
@@ -110,7 +136,8 @@ final class Interpreter(
     */
   private def interpretStmt(stmt: Stmt)(using
       scope: VariableScope,
-      funcScope: FunctionScope
+      funcScope: FunctionScope,
+      exceptionScope: Stack[CatchFinally]
   ): VariableScope =
     stmt match {
       case Skip       => scope
@@ -119,9 +146,9 @@ final class Interpreter(
       case Read(l) =>
         Try(
           l.getType match {
-            case KnownType.IntType => IntLiter(outputStream.readLine().toInt)
+            case KnownType.IntType => IntLiter(interpreterOut.readLine().toInt)
             case KnownType.CharType =>
-              val inputString = outputStream.readLine()
+              val inputString = interpreterOut.readLine()
               if (inputString.length != 1) throw BadInputException("Read malformed input. Expected char.")
               if ((MinChar > inputString.head.toInt) || (inputString.head.toInt > MaxChar))
                 throw BadInputException("Read malformed input. Char is not ASCII 0-127.")
@@ -140,51 +167,44 @@ final class Interpreter(
         }
         scope
       case Return(e) =>
-        // Set the class-wide return value
-        returnValue = interpretExpr(e)
+        // Run the finally if we are in the correct scope for it.
+        if shouldEnterTryFinally then
+          val cf = exceptionScope.pop()
+          cf.enterFinally()
+          interpretStmt(cf.finallyStmt)
+
+        // Return the value by bubbling back up to the call.
+        throw ReturnException(interpretExpr(e))
         scope
       case Exit(e) =>
-        inputStream.write(ExitString)
-        interpretExpr(e) match {
-          case i: Int => throw InterpreterExitException(i & ExitCodeMask)
-          case _      => throw TypeMismatchException(ExitErrorString)
-        }
+        writeInput(ExitString)
+        throw ExitException(interpretInt(e) & ExitCodeMask)
       case Print(e) =>
         val value = interpretExpr(e)
         value match {
           // An array of characters should print as a string.
           case ArrayValue(es) if es.exists(_.getClass == classOf[Character]) => {
             val resString = StringBuilder().addAll(es.asInstanceOf[ListBuffer[Char]]).result()
-            inputStream.write(resString)
+            writeInput(resString)
           }
           // WACC prints the pointers of arrays and pairs, but the closest we can get in Scala is the hashcode
-          case pointer: (ArrayValue | PairValue) => inputStream.write(pointer.hashCode)
-          case _: UninitalizedPair               => inputStream.write(NullPointerString)
-          case _                                 => inputStream.write(value.toString)
+          case pointer: (ArrayValue | PairValue) => writeInput(pointer.hashCode.toString)
+          case _: UninitalizedPair               => writeInput(NullPointerString)
+          case _                                 => writeInput(value.toString)
         }
         scope
       case PrintLn(e) =>
         interpretStmt(Print(e))
-        inputStream.write("\n")
+        writeInput("\n")
         scope
       case If(cond, s1, s2) =>
-        val evaluatedCond = interpretExpr(cond) match {
-          case b: Boolean => b
-          case _          => throw TypeMismatchException(ConditionErrorString)
-        }
-
-        if (evaluatedCond) {
+        if (interpretBool(cond)) {
           interpretStmt(s1)
         } else {
           interpretStmt(s2)
         }
       case While(cond, body) =>
-        val evaluatedCond = interpretExpr(cond) match {
-          case b: Boolean => b
-          case _          => throw TypeMismatchException(ConditionErrorString)
-        }
-
-        if (evaluatedCond) {
+        if (interpretBool(cond)) {
           val newScope = interpretStmt(body)
           interpretStmt(While(cond, body))(using newScope)
         } else {
@@ -194,6 +214,19 @@ final class Interpreter(
       case Semi(s1, s2) =>
         val newScope = interpretStmt(s1)
         interpretStmt(s2)(using newScope)
+      case Throw(e) =>
+        clearTryDepth()
+        throw WACCException(interpretInt(e))
+      case TryCatchFinally(body, catchIdent, catchBody, finallyBody) =>
+        val cf = CatchFinally(catchIdent, catchBody, finallyBody)
+        exceptionScope.push(cf)
+        val newScope = interpretStmt(body)
+
+        if cf.shouldEnterFinally then
+          exceptionScope.pop()
+          cf.enterFinally()
+          interpretStmt(finallyBody)(using newScope)
+        else newScope
     }
 
   /** Interprets an RValue into an evaluated value.
@@ -201,7 +234,9 @@ final class Interpreter(
     * @param r The RValue to interpret
     * @return The value of the evaluated RValue
     */
-  private def interpretRValue(r: RValue)(using scope: VariableScope, funcScope: FunctionScope): Value = r match {
+  private def interpretRValue(
+      r: RValue
+  )(using scope: VariableScope, funcScope: FunctionScope, exceptionScope: Stack[CatchFinally]): Value = r match {
     case ArrayLiter(es, _)    => ArrayValue(es.map(interpretExpr).to(ListBuffer))
     case NewPair(e1, e2, _)   => PairValue(interpretExpr(e1), interpretExpr(e2))
     case pairVal: (Fst | Snd) => getLValue(pairVal)
@@ -218,7 +253,13 @@ final class Interpreter(
       }
 
       // Call the function. The result will be stored in returnValue as per the Return case in interpretStmt
-      interpretStmt(body)(using newScope)
+      increaseTryDepth()
+      val returnValue = Try(interpret(Program(List(), body), newScope, funcScope, Stack())._3) match {
+        case Success(Some(exitValue))              => throw ExitException(exitValue)
+        case Failure(ReturnException(returnValue)) => returnValue
+        case Failure(exception)                    => throw exception
+      }
+      decreaseTryDepth()
 
       returnValue
     case e: Expr => interpretExpr(e)
@@ -301,11 +342,11 @@ final class Interpreter(
       case Ord(e)    => interpretChar(e).toInt // TODO: Check if this is consistent with WACC ord
       case Len(e)    => interpretExpr(e).asInstanceOf[ArrayValue].length
 
-      case Mult(e1, e2) => binaryArithmetic(e1, e2, _ * _)
-      case Mod(e1, e2)  => binaryArithmetic(e1, e2, _ % _)
-      case Add(e1, e2)  => binaryArithmetic(e1, e2, _ + _)
-      case Div(e1, e2)  => binaryArithmetic(e1, e2, _ / _)
-      case Sub(e1, e2)  => binaryArithmetic(e1, e2, _ - _)
+      case Mult(e1, e2) => Try(binaryArithmetic(e1, e2, Math.multiplyExact)).getOrElse(throw IntOverflowException())
+      case Mod(e1, e2)  => Try(binaryArithmetic(e1, e2, _ % _)).getOrElse(throw DivZeroException())
+      case Add(e1, e2)  => Try(binaryArithmetic(e1, e2, Math.addExact)).getOrElse(throw IntOverflowException())
+      case Div(e1, e2)  => Try(binaryArithmetic(e1, e2, _ / _)).getOrElse(throw DivZeroException())
+      case Sub(e1, e2)  => Try(binaryArithmetic(e1, e2, Math.subtractExact)).getOrElse(throw IntOverflowException())
 
       case IntLiter(x) => x
 
@@ -326,7 +367,10 @@ final class Interpreter(
     */
   private def interpretChar(e: Expr)(using scope: VariableScope): Char =
     e match {
-      case Chr(e)       => interpretInt(e).toChar // TODO: Check if this is consistent with WACC chr
+      case Chr(e) =>
+        val chrInt = interpretInt(e)
+        if chrInt < MinChar || MaxChar < chrInt then throw BadCharException()
+        chrInt.toChar // TODO: Check if this is consistent with WACC chr
       case CharLiter(c) => c
 
       case Ident(id, KnownType.CharType) =>
@@ -396,7 +440,8 @@ final class Interpreter(
     */
   private def handleAssignment(l: LValue, r: RValue)(using
       scope: VariableScope,
-      funcScope: FunctionScope
+      funcScope: FunctionScope,
+      exceptionScope: Stack[CatchFinally]
   ): VariableScope =
     l match {
       case Ident(id, _) =>
@@ -443,6 +488,33 @@ final class Interpreter(
       case _: UninitalizedPair => throw NullDereferencedException()
       case _                   => throw TypeMismatchException(UnpackPairErrorString)
     }
+
+  /** Handles an exception with the given exception code and exception scope.
+    * 
+    * @param exceptionCode The exception code associated with the thrown exception.
+    */
+  private def handleException(
+      exceptionCode: Int
+  )(using scope: VariableScope, funcScope: FunctionScope, exceptionScope: Stack[CatchFinally]) = {
+    // Check if there are any catches to consider. If not, bubble up the exception.
+    if exceptionScope.isEmpty then throw WACCException(exceptionCode)
+    else
+      val cf @ CatchFinally(catchIdent, catchStmt, finallyStmt) = exceptionScope.top
+      scope.add(catchIdent.id, exceptionCode)
+      val catchResult @ (_, _, catchExitValue) = interpret(Program(List(), catchStmt), scope, funcScope, exceptionScope)
+
+      // If the finally has not been entered yet and the catch block did not exit, enter the finally.
+      if shouldEnterTryFinally && catchExitValue.isEmpty then
+        exceptionScope.pop()
+        cf.enterFinally()
+        interpret(
+          Program(List(), finallyStmt),
+          scope,
+          funcScope,
+          exceptionScope
+        )
+      else catchResult
+  }
 }
 
 object Interpreter {
@@ -451,9 +523,9 @@ object Interpreter {
       inheritedScope: VariableScope = MapContext(),
       inheritedFunctionScope: FunctionScope = MapContext()
   )(using
-      inputStream: InputStream = InputStream(System.out),
-      outputStream: OutputStream = OutputStream(System.in)
+      interpreterIn: InputStream = InputStream(System.out),
+      interpreterOut: OutputStream = OutputStream(System.in)
   ): (VariableScope, FunctionScope, Option[Int]) =
-    val interpreter = new Interpreter(inputStream, outputStream)
-    interpreter.interpret(p, inheritedScope, inheritedFunctionScope)
+    val interpreter = new Interpreter()
+    interpreter.interpret(p, inheritedScope, inheritedFunctionScope, Stack())
 }

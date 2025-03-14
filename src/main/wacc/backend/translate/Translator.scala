@@ -1423,10 +1423,10 @@ object Clib {
   private val RuntimeErrStringLabel = Label(".runtimeErrString")
 
   private val OutOfMemoryString = "fatal error: out of memory"
-  private val NullPairString = "fatal error: null pair dereferenced or freed"
-  private val DivZeroString = "fatal error: division or modulo by zero"
-  private val OverflowString = "fatal error: integer overflow or underflow occurred"
-  private val BadCharString = "fatal error: attempted to read a character outside the ascii range"
+  val NullPairString = "fatal error: null pair dereferenced or freed"
+  val DivZeroString = "fatal error: division or modulo by zero"
+  val OverflowString = "fatal error: integer overflow or underflow occurred"
+  val BadCharString = "fatal error: attempted to read a character outside the ascii range"
   private val ArrBoundsString = "fatal error: array index out of bounds"
   private val RuntimeErrString = "fatal error: uncaught error"
 
