@@ -27,6 +27,8 @@ object InterpreterException {
   case class ExitException(exitCode: Int) extends Exception("Exited WACC Interpreter.")
   case class WACCException(exceptionCode: Int) extends Exception(s"WACC Exception: $exceptionCode.")
 
+  case class ReturnException(returnValue: Value) extends Exception("Returning from function...")
+
   case class AccessFreedValueException(message: String = "Cannot dereference freed pair") extends Exception(message)
   case class FreedNonFreeableValueException(message: String = "Cannot free non-freeable value")
       extends Exception(message)

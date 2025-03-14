@@ -51,9 +51,6 @@ final class Interpreter(using
 
   // VARIABLES
 
-  /** The return value of a function, initialised once it is called */
-  private var returnValue: Value = uninitialized
-
   /** The exit value of the interpreter. Only set if exit is called */
   private var exitValue: Option[Int] = None
 
@@ -140,7 +137,6 @@ final class Interpreter(using
       scope: VariableScope,
       funcScope: FunctionScope
   ): VariableScope =
-    // writeInputLine(stmt.toString)
     stmt match {
       case Skip       => scope
       case Decl(v, r) => handleAssignment(v, r)
@@ -174,7 +170,7 @@ final class Interpreter(using
           val cf = catchFinallyStmts.pop()
           cf.enterFinally()
           interpretStmt(cf.finallyStmt)
-        returnValue = interpretExpr(e)
+        throw ReturnException(interpretExpr(e))
         scope
       case Exit(e) =>
         writeInput(ExitString)
@@ -252,7 +248,10 @@ final class Interpreter(using
 
       // Call the function. The result will be stored in returnValue as per the Return case in interpretStmt
       increaseTryDepth()
-      interpretStmt(body)(using newScope)
+      val returnValue = Try(interpretStmt(body)(using newScope)) match {
+        case Failure(ReturnException(returnValue)) => returnValue
+        case Failure(exception)                    => throw exception
+      }
       decreaseTryDepth()
 
       returnValue
@@ -488,7 +487,6 @@ final class Interpreter(using
       val cf @ CatchFinally(catchIdent, catchStmt, finallyStmt) = catchFinallyStmts.top
       scope.add(catchIdent.id, exceptionCode)
       interpret(Program(List(), catchStmt), scope, funcScope)._3.isEmpty
-      // writeInputLine(shouldEnterTryFinally.toString)
 
       if shouldEnterTryFinally && exitValue.isEmpty then
         catchFinallyStmts.pop()
