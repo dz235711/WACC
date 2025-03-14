@@ -201,7 +201,9 @@ class Translator {
     translateCtx.addLibraryFunction(Clib.printsLabel)
 
     // Translate the program body
+    locationCtx.enterScope()
     translateStmt(program.body)
+    locationCtx.exitScope()
 
     // Return 0 from main body
     translateCtx.addInstruction(Mov(RETURN, 0)(W64))
