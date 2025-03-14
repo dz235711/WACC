@@ -1,0 +1,8 @@
+import "src/test/examples/custom/imports/exampleProg.wacc";
+import "src/test/examples/custom/imports/exampleProg2.wacc"
+
+begin
+    int x = call f(3);
+    int y = call g();
+    println (x + y)
+end

@@ -1,0 +1,7 @@
+import "src/test/examples/custom/imports/exampleProg.wacc"
+begin
+    bool f() is 
+        return true
+    end
+    skip
+end

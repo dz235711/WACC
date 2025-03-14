@@ -1,0 +1,5 @@
+import "src/test/examples/custom/imports/nestedImports2.wacc"
+begin
+    int x = call f(5);
+    println(x)
+end

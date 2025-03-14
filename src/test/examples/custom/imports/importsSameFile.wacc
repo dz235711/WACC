@@ -1,0 +1,7 @@
+import "src/test/examples/custom/imports/exampleProg.wacc";
+import "src/test/examples/custom/imports/exampleProg.wacc"
+
+begin
+    int x = call f(5);
+    print x
+end

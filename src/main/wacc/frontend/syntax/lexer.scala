@@ -53,6 +53,7 @@ object lexer {
         "len",
         "ord",
         "chr",
+        "import",
         // Exception keywords
         "throw",
         "try",

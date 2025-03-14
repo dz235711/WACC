@@ -30,11 +30,13 @@ class Renamer private (inheritedFunctionScope: Option[Map[String, (QualifiedName
    * @param inheritedScope An inherited scope, used for the interpreter to preserve scopes between user inputs
    * @return The renamed program (RenamedAST)
    */
-  def renameProgram(p: SyntaxAST.Program, inheritedScope: Option[Scope])(using
+  def renameProgram(p: SyntaxAST.Program, inheritedScope: Option[Scope], imports: List[SyntaxAST.Program])(using
       ctx: ListContext[WaccError]
   ): (RenamedAST.Program, Scope, Map[String, (QualifiedName, Int)], Int) = {
+    // Get the imported functions and create a list of all functions
+    val allFuncs = imports.flatMap(_.fs) ++ p.fs
     // Generate unique identifiers for all functions
-    val fids = p.fs.map(f => {
+    val fids = allFuncs.map(f => {
       val (t, id) = f.decl
       val name = id.v
       val uid = generateUid()
@@ -60,7 +62,7 @@ class Renamer private (inheritedFunctionScope: Option[Map[String, (QualifiedName
     // Rename all functions and the body
     val parentScope = inheritedScope.getOrElse(Map.empty)
 
-    val renamedFuncs = p.fs.zip(fids).map(renameFunc)
+    val renamedFuncs = allFuncs.zip(fids).map(renameFunc)
     val (renamedBody, renamedScope) = renameStmt(p.body, parentScope, Map.empty, false)
 
     // Return the renamed program
@@ -430,16 +432,18 @@ object Renamer {
    * @param inheritedScope An inherited scope
    * @param inheritedFunctionScope An inherited function scope
    * @param inheritedUid An inherited unique identifier
+   * @param imports The list of imported program ASTs
    * @return The renamed program (RenamedAST), the new scope, the new function scope, and the new unique identifier
   */
   def rename(
       p: SyntaxAST.Program,
       inheritedScope: Option[Scope] = None,
       inheritedFunctionScope: Option[Map[String, (QualifiedName, Int)]] = None,
-      inheritedUid: Option[Int] = None
+      inheritedUid: Option[Int] = None,
+      imports: List[SyntaxAST.Program] = List()
   )(using
       ctx: ListContext[WaccError]
   ): (RenamedAST.Program, Scope, Map[String, (QualifiedName, Int)], Int) =
     val renamer = new Renamer(inheritedFunctionScope, inheritedUid)
-    renamer.renameProgram(p, inheritedScope)
+    renamer.renameProgram(p, inheritedScope, imports)
 }

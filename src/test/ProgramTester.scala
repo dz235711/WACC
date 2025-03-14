@@ -85,7 +85,7 @@ class ProgramTester(path: String) {
    * @return The exit status and output of the program
    */
   def run(input: String): (Option[Int], String) = {
-    val prog = runFrontend(lines, false).getOrElse(throw new Exception("Compilation error"))
+    val prog = runFrontend(lines, false, path).getOrElse(throw new Exception("Compilation error"))
 
     // Write the program to a temporary file
     val source = writeFile("test.s", runBackend(prog, false))
