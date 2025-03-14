@@ -84,12 +84,6 @@ def main(args: Array[String]): Unit = {
   val enterInterpreter = args.contains("--interpreter") || args.contains("-I")
   val includedFilesInterpreter = getIncludes(args)
 
-  // Enter the interpreter main function if the interpreter flag is set
-  if (enterInterpreter) {
-    val exitValue = interpreterMain(includedFilesInterpreter)._3.getOrElse(0)
-    exit(exitValue)
-  }
-
   val path = args.headOption
 
   // If no file path is provided, print usage message
@@ -104,6 +98,13 @@ def main(args: Array[String]): Unit = {
 
   // Read the file
   val file = readFile(path.get)
+
+  // Enter the interpreter main function if the interpreter flag is set
+  if (enterInterpreter) {
+    val exitValue = interpreterMain(path, file, includedFilesInterpreter)._3.getOrElse(0)
+    exit(exitValue)
+  }
+
   if (file.isEmpty) {
     println(s"Error: File '${path.get}' not found")
     exit(1)

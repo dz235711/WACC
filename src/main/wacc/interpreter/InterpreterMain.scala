@@ -16,7 +16,11 @@ type TypeCheckerFunctionScope = Map[RenamerUID, List[RenamedAST.Ident]]
 type InterpreterVariableScope = VariableScope
 type InterpreterFunctionScope = FunctionScope
 
-def interpreterMain(includedFiles: List[String])(using
+def interpreterMain(
+    path: Option[String] = None,
+    mainFile: Option[List[String]] = None,
+    includedFiles: List[String] = List()
+)(using
     interpreterIn: InputStream = InputStream(System.out),
     interpreterOut: OutputStream = OutputStream(System.in)
 ): (InterpreterVariableScope, InterpreterFunctionScope, Option[Int]) = {
@@ -33,7 +37,7 @@ def interpreterMain(includedFiles: List[String])(using
   var interpreterFunctionScope: InterpreterFunctionScope = MapContext()
   var exitValue: Option[Int] = None
 
-  setupInterpreterScopes(includedFiles) match {
+  setupInterpreterScopes(path, mainFile, includedFiles) match {
     case Left((status, output)) =>
       exitValue = Some(status)
     case Right(
@@ -74,7 +78,11 @@ def interpreterMain(includedFiles: List[String])(using
   (interpreterScope, interpreterFunctionScope, exitValue)
 }
 
-private def setupInterpreterScopes(includedFiles: List[String])(using
+private def setupInterpreterScopes(
+    path: Option[String],
+    mainLinesList: Option[List[String]],
+    includedFiles: List[String]
+)(using
     interpreterIn: InputStream = InputStream(System.out),
     interpreterOut: OutputStream = OutputStream(System.in)
 ): Either[
@@ -95,17 +103,34 @@ private def setupInterpreterScopes(includedFiles: List[String])(using
   given ErrorBuilder[WaccError] = new WaccErrorBuilder
   given errCtx: ListContext[WaccError] = new ListContext()
 
+  val lines = mainLinesList.getOrElse(List()).mkString("\n")
+
+  val mainSyntaxAST =
+    if mainLinesList.isEmpty then Success(SyntaxAST.Program(List(), List(), SyntaxAST.Skip()((0, 0)))((0, 0)))
+    else parser.parse(lines)
+
   // Get all imports from the specified included files.
   val imports: List[Import] = includedFiles.map { f =>
     Import(SyntaxAST.StringLiter(f)((0, 0)))((0, 0))
   } // dummy positions because they're command line arguments
 
   for {
-    parsedImports <- getAllImports(imports, Set.empty)
+    // Parse the file
+    syntaxAST <- mainSyntaxAST match {
+      case Success(ast) => Right(ast)
+      case Failure(err) => Left((SyntaxErrorCode, List(format(err, None, ErrType.Syntax))))
+    }
+
+    initialImports = path match {
+      case Some(pathString) => Set(pathString)
+      case None             => Set.empty
+    }
+
+    parsedImports <- getAllImports(syntaxAST.imports ::: imports, initialImports)
 
     // Rename imports and set scopes.
     (importRenamedProg, renamerScope, renamerFunctionScope, renamerUid) = Renamer.rename(
-      SyntaxAST.Program(List(), List(), SyntaxAST.Skip()((0, 0)))((0, 0)),
+      syntaxAST,
       imports = parsedImports
     )
 
@@ -118,8 +143,11 @@ private def setupInterpreterScopes(includedFiles: List[String])(using
     _ <- {
       if (errsList.nonEmpty)
         Left(
-          (SemanticErrorCode, errsList.map(e => setLines(format(e, None, ErrType.Semantic), List())))
-        ) // TODO: Store main file lines.
+          (
+            SemanticErrorCode,
+            errsList.map(e => setLines(format(e, None, ErrType.Semantic), mainLinesList.getOrElse(List())))
+          )
+        )
       else
         Right(())
     }

@@ -17,7 +17,7 @@ class InterpreterTester(path: Path) {
   private val testResult = Future(runInterpreter())
 
   private def runInterpreter(): (InterpreterVariableScope, InterpreterFunctionScope, Option[Int]) = {
-    interpreterMain(Nil)(using InputStream(testOut), OutputStream(lines))
+    interpreterMain()(using InputStream(testOut), OutputStream(lines))
   }
 
   def getResult(): (InterpreterVariableScope, InterpreterFunctionScope, Option[Int]) =
