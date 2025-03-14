@@ -387,11 +387,14 @@ bool boolListFree(pair(int, pair) boolList) is
   return true
 end
 
-bool _ = true;
+# removes an element from a bool list
+pair(int, pair) intListRemove(pair(int, pair) boolList, int index) is 
+  pair(int, pair) taken = call boolListTake(boolList, index);
+  pair(int, pair) dropped = call boolListDrop(boolList, index + 1);
+  pair(int, pair) boolListRemoved = call boolListConcat(taken, dropped);
+  return boolListRemoved
+end
 
-bool[] a = [true, true, true, false, true, false];
-pair(int, pair) boolList = call toBoolList(a);
-pair(int, pair) boolListSorted = call boolListCopy(boolList);
-_ = call boolListPrint(boolListSorted)
+bool _ = true
 
 end

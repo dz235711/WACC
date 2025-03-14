@@ -1,6 +1,6 @@
 begin
 
-# ========== CharList Module Functions ==========
+# ========== Private Helper Functions ==========
 
 # helper function to get contents from a char list
 pair(char, pair) _charListContents(pair(int, pair) charList) is
@@ -148,6 +148,8 @@ bool _charListFreeContents(pair(char, pair) contents) is
   done;
   return true
 end
+
+# ========== CharList Module Functions ==========
   
 # gets length of a char list
 int charListLen(pair(int, pair) charList) is
@@ -486,11 +488,14 @@ bool charListFree(pair(int, pair) charList) is
   return true
 end
 
-bool _ = true;
+# removes an element from a char list
+pair(int, pair) intListRemove(pair(int, pair) charList, int index) is 
+  pair(int, pair) taken = call charListTake(charList, index);
+  pair(int, pair) dropped = call charListDrop(charList, index + 1);
+  pair(int, pair) charListRemoved = call charListConcat(taken, dropped);
+  return charListRemoved
+end
 
-char[] a = ['f', 'h', 'a', 'b', 'c', 'd', 'e'];
-pair(int, pair) charList = call toCharList(a);
-pair(int, pair) charListSorted = call charListSort(charList);
-_ = call charListPrint(charListSorted)
+bool _ = true
 
 end
