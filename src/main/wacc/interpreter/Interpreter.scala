@@ -84,6 +84,10 @@ final class Interpreter(using
     if !catchFinallyStmts.isEmpty then catchFinallyStmts.top.decreaseDepth()
   }
 
+  private def clearTryDepth() = {
+    if !catchFinallyStmts.isEmpty then catchFinallyStmts.top.clearDepth()
+  }
+
   private def shouldEnterTryFinally: Boolean =
     if !catchFinallyStmts.isEmpty then catchFinallyStmts.top.shouldEnterFinally
     else false
@@ -136,6 +140,7 @@ final class Interpreter(using
       scope: VariableScope,
       funcScope: FunctionScope
   ): VariableScope =
+    // writeInputLine(stmt.toString)
     stmt match {
       case Skip       => scope
       case Decl(v, r) => handleAssignment(v, r)
@@ -209,7 +214,9 @@ final class Interpreter(using
       case Semi(s1, s2) =>
         val newScope = interpretStmt(s1)
         interpretStmt(s2)(using newScope)
-      case Throw(e) => throw WACCException(interpretInt(e))
+      case Throw(e) =>
+        clearTryDepth()
+        throw WACCException(interpretInt(e))
       case TryCatchFinally(body, catchIdent, catchBody, finallyBody) =>
         val cf = CatchFinally(catchIdent, catchBody, finallyBody)
         catchFinallyStmts.push(cf)
@@ -481,6 +488,7 @@ final class Interpreter(using
       val cf @ CatchFinally(catchIdent, catchStmt, finallyStmt) = catchFinallyStmts.top
       scope.add(catchIdent.id, exceptionCode)
       interpret(Program(List(), catchStmt), scope, funcScope)._3.isEmpty
+      // writeInputLine(shouldEnterTryFinally.toString)
 
       if shouldEnterTryFinally && exitValue.isEmpty then
         catchFinallyStmts.pop()

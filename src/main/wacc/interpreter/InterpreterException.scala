@@ -17,6 +17,9 @@ object InterpreterException {
     def decreaseDepth() =
       depthCounter -= 1
 
+    def clearDepth() =
+      depthCounter = 0
+
     def enterFinally() =
       enteredFinally = true
   }
